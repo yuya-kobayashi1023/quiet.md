@@ -4,16 +4,35 @@
 > 仕様書（`.specs/`）で決まっていたことは、ここには書かない。ここにあるのは**仕様に書かれていなかった判断**だけ。
 >
 > - `[AUTO-xxx]` … 私が決めたもの。要確認。
-> - 重要度 **High** は、あとで変えると作り直しが発生するもの。
+> - **High** … あとで変えると作り直しが発生するもの。先に見てほしい。
 
 ## 一覧
 
 | ID | 判断 | 重要度 |
 |---|---|---|
-| AUTO-001 | アプリを1リポジトリのルート直下に置く（`src/` と `src-tauri/`） | Low |
-| AUTO-002 | Vite + React 19 + TypeScript を手書きでscaffoldする | Low |
-| AUTO-003 | 状態管理ライブラリを入れず、React標準（Context + useSyncExternalStore）で始める | Medium |
-| AUTO-004 | パッケージ名・アプリ識別子を `quiet-md` / `com.quiet-md.app` にする | Medium |
+| AUTO-001 | アプリをリポジトリのルート直下に置く | Low |
+| AUTO-002 | Vite + React 19 + TypeScript を手書きで scaffold | Low |
+| AUTO-003 | 状態管理ライブラリを入れず React 標準で始める | Medium |
+| AUTO-004 | パッケージ名・アプリ識別子を `quiet-md` / `com.quiet-md.app` に | **High** |
+| AUTO-005 | `workspace-service` を追加（architecture のモジュール一覧にない） | Low |
+| AUTO-006 | Tauri の外で動かすためのフォールバックを用意した | Medium |
+| AUTO-007 | ignore 対象に `target` `dist` `build` を追加 | Medium |
+| AUTO-008 | Workspace 走査の上限を 20,000 ファイル / 深さ 16 に | Medium |
+| AUTO-009 | content hash に blake3 を採用 | Low |
+| AUTO-010 | crash recovery の snapshot 間隔を 4 秒に | Low |
+| AUTO-011 | Editor は本文だけを扱い、Front Matter は Metadata UI が持つ | **High** |
+| AUTO-012 | 文字数の定義を「空白と改行を除いた文字数」に | Low |
+| AUTO-013 | Duplicate のファイル名を `name copy.md` に | Low |
+| AUTO-014 | Undo 付き Toast は Archive だけに使う | Low |
+| AUTO-015 | Quick Open と Command Palette を 1 つの入口に統合 | Medium |
+| AUTO-016 | 見出し id の prefix を sanitize の既定のままにした | Low |
+| AUTO-017 | ESLint を入れていない | Medium |
+| AUTO-018 | UI 文言を日本語にした | **High** |
+| AUTO-019 | Window の初期サイズを 1200×820 に | Low |
+| AUTO-020 | Windows インストーラを NSIS / ユーザー単位に | Medium |
+| AUTO-021 | Rename 失敗時は元の名前へ戻し、inline error を出す | Low |
+
+**まだ実装していないもの**は末尾の「未実装リスト」を参照。
 
 ---
 
@@ -26,36 +45,197 @@ quiet.md/
 ├─ .specs/          仕様書
 ├─ src/             Frontend
 ├─ src-tauri/       Rust
-├─ index.html
 └─ package.json
 ```
 
-理由: 単一アプリのリポジトリで、`apps/` のような階層を先に作る理由がない（YAGNI）。
-`architecture/architecture.md` §3 のモジュール構成はそのまま `src/` 配下へ適用する。
+単一アプリのリポジトリで `apps/` のような階層を先に作る理由がないため（YAGNI）。
+`architecture/architecture.md` §3 のモジュール構成はそのまま `src/` 配下へ適用した。
 
-## AUTO-002 scaffold方法
+## AUTO-002 scaffold 方法
 
 `npm create vite` は対話プロンプトが出て非対話実行が不安定なため、
-必要なファイル（`package.json` / `vite.config.ts` / `tsconfig.json` / `index.html`）を直接書いた。
+`package.json` / `vite.config.ts` / `tsconfig.json` / `index.html` を直接書いた。
 生成物は create-vite の react-ts テンプレートと同等。
 
-React は執筆時点の最新（19系）を使う。仕様書はバージョンを指定していない。
+React は執筆時点の最新（19系）。仕様書はバージョンを指定していない。
 
 ## AUTO-003 状態管理
 
-`architecture/architecture.md` §7 が「Global state libraryを最初から大きく入れすぎない」としているため、
-Redux / Zustand / Jotai を入れず、React標準の機能だけで始める。
+`architecture/architecture.md` §7 の「Global state library を最初から大きく入れすぎない」に従い、
+Redux / Zustand / Jotai を入れず、`useSyncExternalStore` と小さな Store クラスだけで始めた。
 
-- Persistent app state（Theme / Settings）: Context
-- Workspace state / Document session state: 小さなstore + `useSyncExternalStore`
+必要になれば差し替えられる。変更コストは中程度。
 
-**後から必要になれば差し替える。**この判断は変更コストが中程度。
-
-## AUTO-004 名前と識別子
+## AUTO-004 名前と識別子 — **要確認**
 
 - npm package name: `quiet-md`
+- Rust crate: `quiet-md`
 - Tauri identifier: `com.quiet-md.app`
-- Window title: `Quiet`
+- productName / Window title: `Quiet`
 
-仕様書にプロダクト名の正式表記（英語名・識別子）がなかったため、リポジトリ名 `quiet.md` から機械的に決めた。
-配布物の名前に直結するので、変えるなら実装が進む前が良い。
+仕様書にプロダクト名の正式表記がなかったため、リポジトリ名から機械的に決めた。
+**identifier は配布後に変えるとアップデート経路が切れる**ので、リリース前に確定してほしい。
+
+## AUTO-005 workspace-service の追加
+
+`architecture/architecture.md` §3 の services は
+`document-service` / `settings-service` / `native-bridge` の 3 つだが、
+ファイル一覧・フォルダツリー・Archive 状態の置き場が無かったため `workspace-service` を足した。
+
+document-service に混ぜると、1 文書の責任と Workspace 全体の責任が混ざるため。
+
+## AUTO-006 ブラウザ用フォールバック
+
+`src/services/native-bridge/browser-fallback.ts`。
+
+Tauri の外（ブラウザ / テスト）では、メモリ上の偽 Workspace へ落ちる。
+用途は「UI を目視確認する」と「Document service のテストを回す」の 2 つだけで、
+本番では `isNative()` が true になるため使われない。
+
+これがないと、UI の確認に毎回デスクトップアプリのビルドが必要になる。
+
+## AUTO-007 ignore 対象
+
+U-024 で決まったのは dotfolder / `.quiet/` / `node_modules/` の 3 つ。
+実装では `target` `dist` `build` `.git` も足した。
+Rust / フロントエンドのリポジトリを Workspace として開いたときに、
+ビルド生成物の Markdown を拾わないため。
+
+## AUTO-008 走査の上限
+
+- 最大 20,000 ファイル
+- 最大深さ 16
+
+U-024 の NFR は「5000 ファイル程度で固まらないこと」なので、
+その 4 倍を打ち切り点にした。超えた場合は `truncated: true` を返す（UI は未対応）。
+
+## AUTO-009 content hash に blake3
+
+U-028 は hash を必須にしたがアルゴリズムを指定していない。
+SHA-256 より速く、5MB の文書でも保存のたびに計算しても体感に響かないため blake3 にした。
+暗号学的な用途ではなく変更検知なので、この選択で問題ない。
+
+## AUTO-010 recovery snapshot の間隔
+
+4 秒。U-014 は「短周期 Snapshot」としか書いていない。
+Autosave が 700ms なので、通常はそちらが先に走る。
+snapshot が要るのは「保存できていない状態が続いているとき」なので、頻度は低くてよいと判断した。
+
+## AUTO-011 Editor は本文だけを扱う — **要確認**
+
+Editor（CodeMirror）に渡すのは Front Matter を除いた本文だけで、
+Front Matter は Metadata UI が持つ。保存時に結合して 1 つのファイルへ戻す。
+
+理由: 両方に生の YAML を出すと、ADR-002 の「Metadata として折りたたむ」意味がなくなるため。
+プロトタイプも同じ構造だった。
+
+ただし副作用がある。**Editor の Ctrl+F は本文だけを検索し、Front Matter は対象外**になる。
+Metadata を開いて Raw で編集する必要がある。
+
+## AUTO-012 文字数の定義
+
+U-030 で「既定は文字数」と決まったが、何を数えるかは未定だった。
+**空白と改行を除いた文字数**にした。日本語の原稿量の目安として実用的なため。
+語数モードは英数字の連続と CJK 1 文字を 1 語として数える。
+
+## AUTO-013 Duplicate のファイル名
+
+`note.md` → `note copy.md` → `note copy 2.md`。
+仕様書に規則がなかった。Explorer の「- コピー」ではなく、
+U-015 の `Untitled 2.md` と同じ「スペース + 連番」に揃えた。
+
+## AUTO-014 Toast の使いどころ
+
+U-026 で Toast は 1 種類だけ許可された。実際に使っているのは次だけ。
+
+- Archive（Undo 付き、6 秒）
+- Duplicate / Copy Path / 各種操作の失敗（Action なし、3 秒）
+
+保存失敗・競合・外部削除は Toast ではなく Inline banner（U-022）。
+
+## AUTO-015 Quick Open と Command Palette の統合
+
+`interactions.md` §10 に「将来的に統合してよい」とあったので、最初から統合した。
+
+- `Ctrl+K` と `Ctrl+P` は同じパレットを開く
+- 入力なし → コマンドを先に表示
+- 入力あり → ファイルを先に表示
+- `>` で始めるとコマンドだけに絞る
+
+**別々の UI にしたい場合は分離が必要。**
+
+## AUTO-016 見出し id の prefix
+
+`rehype-sanitize` の既定で見出し id に `user-content-` が付く（DOM clobbering 対策）。
+これを外さず、TOC 側が prefix を付けて参照するようにした。
+`HEADING_ID_PREFIX` として 1 か所に定義してある。
+
+## AUTO-017 ESLint を入れていない — **要確認**
+
+`npm run check` は typecheck（TypeScript strict）と vitest だけ。
+TypeScript の strict 設定（`noUncheckedIndexedAccess` 等）でかなり拾えるため、
+初期段階では ESLint の設定に時間を使わない判断をした。
+
+**入れるなら早い方が良い。**あとから入れると既存コード全体に警告が出る。
+
+## AUTO-018 UI 文言を日本語にした — **要確認**
+
+プロトタイプの UI 文言は英語だったが、実装では日本語にした
+（「新規ノート」「設定」「この文書内を検索」など）。
+
+理由: 使うのが日本語話者であるため。
+ただし次は英語のまま残している。
+
+- `Notes` / `Archive` のセクション見出し
+- `Write` / `Split` / `Read`
+- `Metadata` / `Fields` / `Raw`
+- `Settings` の見出しと `Done`
+
+プロトタイプの見た目を保つため、画面の骨格に当たる短い語は英語のままにした。
+**全部英語に戻す / 全部日本語にする、どちらでも変更可能。**
+
+## AUTO-019 Window の初期サイズ
+
+1200×820。最小は desktop-ux.md §13 の通り 760×520。
+初期サイズの指定が仕様書になかった。
+
+## AUTO-020 Windows インストーラ
+
+NSIS、`currentUser` インストール（管理者権限を求めない）。
+`architecture.md` §14 は「MSI / NSIS 等」としか書いていない。
+
+## AUTO-021 Rename 失敗時の挙動
+
+Title を編集して確定 → 失敗（同名衝突・禁止文字・権限）した場合、
+**表示を元のファイル名へ戻し、タイトルの下に inline error を出す。**
+
+`file-lifecycle.md` §7 は「Inline error」とだけ書いていて、
+入力を残すか戻すかが未定だった。戻す方を選んだのは、
+画面のタイトルとディスク上のファイル名が食い違う状態を作らないため（U-006 の前提）。
+
+---
+
+## 未実装リスト
+
+MVP に含まれるが、まだ手を付けていないもの。
+
+| 項目 | 仕様 | 状態 |
+|---|---|---|
+| Drag & Drop で `.md` を開く | desktop-ux.md §3 | 未実装 |
+| ウィンドウを閉じるときの保存確認 | file-lifecycle.md §13 | 未実装（Autosave のみ） |
+| Crash recovery の復元 UI | U-014 | snapshot の書き込みだけ実装。起動時に提示していない |
+| 単体 `.md` ファイルを開く導線 | U-001 | Rust コマンドはあるが UI がない |
+| `Open in New Window` の受け側 | U-021 | ウィンドウは開くが `?path=` を読んでいない |
+| File association | requirements §4 P1 | 未実装 |
+| TOC の active heading 追従 | ui-spec.md §10 | 一覧と移動は動く。スクロール追従は未実装 |
+| Settings の Default location | requirements §3.7 | UI 未実装 |
+| Search All | U-013（P1） | 仕様通り後回し |
+| macOS 対応 | U-009 | 仕様通り後回し。Rust 側は分岐済み |
+
+## 検証状況
+
+- `cargo test`: 15 passed（改行コード・BOM 保持、atomic save、Windows のファイル名検証、ignore 規則）
+- `npm run check`（typecheck + vitest）: 54 passed（Front Matter の lossless、Markdown、save state machine、フォルダツリー）
+- ブラウザでの目視: Light / Dark、Write / Split、Metadata、Find bar、Command Palette
+- **デスクトップアプリとしての起動は未確認。**`npm run tauri:dev` はまだ実行していない
+- IME での日本語入力は未確認（test-strategy.md §5 は手動確認必須としている）

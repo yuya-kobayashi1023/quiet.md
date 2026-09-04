@@ -1,6 +1,8 @@
 /* Editor surface — ui-spec.md §7 */
 
 .editor-pane {
+  /* Find bar（U-025）を pane の右上へ置くための基準。 */
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;

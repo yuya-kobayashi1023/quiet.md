@@ -14,8 +14,13 @@ import { Metadata } from "@/features/frontmatter/Metadata";
 import { TocPopover } from "@/features/toc/TocPopover";
 import { SettingsModal } from "@/features/settings/SettingsModal";
 import { CommandPalette, type Command } from "@/features/command-palette/CommandPalette";
+import { FindBar } from "@/features/search/FindBar";
 import { ProblemBanner, Toast, type ToastState } from "@/ui/components/Banner";
-import { detectFrontmatter, parseFrontmatter } from "@/domain/document/frontmatter";
+import {
+  addFrontmatter,
+  detectFrontmatter,
+  parseFrontmatter,
+} from "@/domain/document/frontmatter";
 import { extractHeadings, HEADING_ID_PREFIX } from "@/domain/document/markdown";
 import { filenameWithExtension, type DocumentSummary } from "@/domain/document/types";
 import { documentService } from "@/services/document-service";
@@ -38,6 +43,8 @@ export function App() {
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
@@ -333,6 +340,7 @@ export function App() {
       { id: "split", label: "Split", shortcut: "Ctrl+2", run: () => setView("split") },
       { id: "read", label: "Read", shortcut: "Ctrl+3", run: () => setView("read") },
       { id: "settings", label: "設定", shortcut: "Ctrl+,", run: () => setSettingsOpen(true) },
+      { id: "find", label: "この文書内を検索", shortcut: "Ctrl+F", run: () => setFindOpen(true) },
       { id: "toc", label: "目次", run: () => setTocOpen(true) },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -356,6 +364,9 @@ export function App() {
       } else if (key === "k" || (key === "p" && !e.shiftKey)) {
         e.preventDefault();
         setPaletteOpen(true);
+      } else if (key === "f") {
+        e.preventDefault();
+        setFindOpen(true);
       } else if (key === "n") {
         e.preventDefault();
         void newNote();
@@ -456,7 +467,7 @@ export function App() {
             onViewMode={setView}
             onToggleToc={() => setTocOpen((v) => !v)}
             onOpenPalette={() => setPaletteOpen(true)}
-            onMore={() => showToast("More メニューは未実装です")}
+            onMore={(position) => setMoreMenu(position)}
           >
             {tocOpen ? (
               <TocPopover
@@ -472,6 +483,9 @@ export function App() {
             {session ? (
               <>
                 <section className="pane editor-pane" ref={editorPane}>
+                  {findOpen ? (
+                    <FindBar view={editorView.current} onClose={() => setFindOpen(false)} />
+                  ) : null}
                   <div className="editor-wrap">
                     {session.problem ? (
                       <ProblemBanner problem={session.problem} actions={problemActions} />
@@ -594,6 +608,59 @@ export function App() {
           onClose={() => setContextMenu(null)}
           onAction={(action, doc) => void onContextAction(action, doc)}
         />
+      ) : null}
+
+      {moreMenu ? (
+        <div
+          className="context-menu"
+          role="menu"
+          style={{ left: moreMenu.x, top: moreMenu.y }}
+          onMouseLeave={() => setMoreMenu(null)}
+        >
+          {/* Front Matter がない文書にだけ出す導線（U-018）。常設ボタンは増やさない。 */}
+          {session && slice.raw == null ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                documentService.edit(addFrontmatter(session.text));
+                setMoreMenu(null);
+              }}
+            >
+              Metadata を追加
+            </button>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setFindOpen(true);
+              setMoreMenu(null);
+            }}
+          >
+            この文書内を検索
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              void openWorkspace();
+              setMoreMenu(null);
+            }}
+          >
+            フォルダを開く…
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setSettingsOpen(true);
+              setMoreMenu(null);
+            }}
+          >
+            設定
+          </button>
+        </div>
       ) : null}
 
       {settingsOpen ? <SettingsModal onClose={() => setSettingsOpen(false)} /> : null}
