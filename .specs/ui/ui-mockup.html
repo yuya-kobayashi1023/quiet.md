@@ -1,0 +1,2094 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiet Markdown Editor — Cursor-inspired UI Concept</title>
+  <script>
+    (() => {
+      try {
+        const savedTheme = localStorage.getItem('quiet-theme');
+        if (savedTheme === 'light' || savedTheme === 'dark') {
+          document.documentElement.dataset.theme = savedTheme;
+        }
+      } catch (_) {}
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme:light;
+
+      /* Light theme — warm paper, never pure white/black. */
+      --parchment:#f7f7f4;
+      --bone:#f2f1ed;
+      --linen:#e6e5e0;
+      --stone:#cdcdc9;
+      --mist:#a1a19f;
+      --driftwood:#84847e;
+      --ash:#7a7974;
+      --ink:#26251e;
+      --ember:#f54e00;
+      --selection:#8bc4f8;
+      --editor-text:#34332d;
+      --syntax-marker:#a36a43;
+      --prose:#3b3a34;
+      --success:#34785c;
+      --settings-overlay:rgba(38,37,30,.12);
+      --palette-overlay:rgba(38,37,30,.11);
+      --shadow-tooltip:0 8px 24px rgba(0,0,0,.14);
+      --shadow-flyout:0 10px 30px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.08);
+      --shadow-modal:0 28px 70px rgba(0,0,0,.14), 0 14px 32px rgba(0,0,0,.08);
+      --shadow-palette:0 28px 70px rgba(0,0,0,.14), 0 14px 32px rgba(0,0,0,.1);
+
+      --radius:4px;
+      --sidebar-width:226px;
+      --sidebar-collapsed-width:56px;
+      --titlebar-height:52px;
+      --statusbar-height:28px;
+      --ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    /* Dark theme — a separate warm-charcoal palette, not an inversion. */
+    :root[data-theme="dark"] {
+      color-scheme:dark;
+      --parchment:#171713;
+      --bone:#1e1d19;
+      --linen:#292823;
+      --stone:#3b3932;
+      --mist:#77756c;
+      --driftwood:#aaa79c;
+      --ash:#918e84;
+      --ink:#ebe8df;
+      --ember:#ff6a2a;
+      --selection:#355f82;
+      --editor-text:#d9d5ca;
+      --syntax-marker:#d19368;
+      --prose:#d2cfc5;
+      --success:#67a987;
+      --settings-overlay:rgba(5,5,4,.58);
+      --palette-overlay:rgba(5,5,4,.52);
+      --shadow-tooltip:0 8px 24px rgba(0,0,0,.42);
+      --shadow-flyout:0 12px 34px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.28);
+      --shadow-modal:0 32px 84px rgba(0,0,0,.52), 0 14px 34px rgba(0,0,0,.32);
+      --shadow-palette:0 32px 84px rgba(0,0,0,.52), 0 14px 34px rgba(0,0,0,.34);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]):not([data-theme="dark"]) {
+        color-scheme:dark;
+        --parchment:#171713;
+        --bone:#1e1d19;
+        --linen:#292823;
+        --stone:#3b3932;
+        --mist:#77756c;
+        --driftwood:#aaa79c;
+        --ash:#918e84;
+        --ink:#ebe8df;
+        --ember:#ff6a2a;
+        --selection:#355f82;
+        --editor-text:#d9d5ca;
+        --syntax-marker:#d19368;
+        --prose:#d2cfc5;
+        --success:#67a987;
+        --settings-overlay:rgba(5,5,4,.58);
+        --palette-overlay:rgba(5,5,4,.52);
+        --shadow-tooltip:0 8px 24px rgba(0,0,0,.42);
+        --shadow-flyout:0 12px 34px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.28);
+        --shadow-modal:0 32px 84px rgba(0,0,0,.52), 0 14px 34px rgba(0,0,0,.32);
+        --shadow-palette:0 32px 84px rgba(0,0,0,.52), 0 14px 34px rgba(0,0,0,.34);
+      }
+    }
+
+    *{box-sizing:border-box}
+    *::selection{background:var(--selection);color:var(--ink)}
+    html,body{height:100%}
+    body{
+      margin:0;
+      overflow:hidden;
+      background:var(--parchment);
+      color:var(--ink);
+      font-family:var(--ui);
+      font-weight:400;
+      letter-spacing:.004em;
+    }
+
+    button,input,textarea{font:inherit}
+    button{color:inherit}
+
+    .app{
+      height:100vh;
+      display:grid;
+      grid-template-columns:var(--sidebar-width) 1fr;
+      grid-template-rows:var(--titlebar-height) 1fr var(--statusbar-height);
+      background:var(--parchment);
+      transition:grid-template-columns 180ms cubic-bezier(.22,.8,.22,1);
+    }
+
+    .sidebar{
+      grid-column:1;
+      grid-row:1 / 4;
+      min-width:0;
+      background:var(--bone);
+      border-right:1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      position:relative;
+      transition:width 180ms cubic-bezier(.22,.8,.22,1), transform 180ms ease, opacity 180ms ease;
+    }
+
+    .sidebar-top{
+      height:var(--titlebar-height);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:0 12px;
+      justify-content:flex-start;
+      border-bottom:1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+      flex:0 0 auto;
+    }
+
+    .sidebar-body{
+      display:flex;flex-direction:column;min-height:0;flex:1;
+      opacity:1;transform:translateX(0);visibility:visible;
+      transition:opacity 80ms ease,transform 120ms ease,visibility 0s linear;
+    }
+
+
+
+
+    .icon-btn{
+      width:28px;height:28px;display:grid;place-items:center;
+      border:0;background:transparent;border-radius:var(--radius);cursor:pointer;color:var(--ash);flex:0 0 auto;
+    }
+    .icon-btn:hover{background:var(--parchment);color:var(--ink)}
+    .icon-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+
+    .tree{padding:14px 8px 16px;overflow:auto;flex:1}
+    .section-head{display:flex;align-items:center;justify-content:space-between;padding:8px 6px 5px 8px;margin-bottom:8px}
+    .section-head.archive-head{margin-top:14px}
+    .section-label{font-size:10.5px;color:var(--mist);text-transform:uppercase;letter-spacing:.08em}
+    .section-action{
+      width:24px;height:24px;display:grid;place-items:center;border:0;background:transparent;border-radius:var(--radius);cursor:pointer;color:var(--ash);padding:0;
+    }
+    .section-action:hover{background:var(--parchment);color:var(--ink)}
+    .section-action svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+    .tree-item{
+      width:100%;height:30px;border:0;background:transparent;border-radius:var(--radius);
+      display:flex;align-items:center;gap:8px;padding:0 8px;text-align:left;cursor:pointer;
+      color:var(--driftwood);font-size:12px;position:relative;overflow:hidden;
+      transition:background-color 120ms ease,color 120ms ease,height 160ms cubic-bezier(.22,.8,.22,1),opacity 140ms ease,transform 160ms cubic-bezier(.22,.8,.22,1);
+    }
+    .tree-item:hover{background:color-mix(in srgb, var(--linen) 65%, transparent);color:var(--ink)}
+    .tree-item.active{background:var(--linen);color:var(--ink)}
+    .tree-item.active::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:1px;background:var(--ink)}
+    .tree-item svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.3;flex:0 0 auto}
+    .file-name{
+      min-width:0;
+      flex:1 1 auto;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+    .unsaved-dot{
+      width:6px;
+      height:6px;
+      margin-left:4px;
+      border-radius:50%;
+      background:var(--ember);
+      flex:0 0 auto;
+      opacity:1;
+      transform:scale(1);
+      transition:opacity 130ms ease,transform 150ms cubic-bezier(.2,.85,.25,1.25);
+    }
+    .unsaved-dot.hidden{opacity:0;transform:scale(.55)}
+    .tree-item.new-note-enter{height:0;opacity:0;transform:translateY(-5px)}
+
+    .sidebar-utility{
+      padding:10px 8px 12px;
+      flex:0 0 auto;
+      opacity:1;transform:translateX(0);visibility:visible;
+      transition:opacity 80ms ease,transform 120ms ease,visibility 0s linear;
+    }
+    .utility-item{
+      width:100%;height:32px;border:0;background:transparent;border-radius:var(--radius);
+      display:flex;align-items:center;gap:8px;padding:0 8px;text-align:left;cursor:pointer;
+      color:var(--driftwood);font-size:12px;
+      transition:background-color 120ms ease,color 120ms ease;
+    }
+    .utility-item:hover{
+      background:color-mix(in srgb, var(--linen) 86%, var(--bone));
+      color:var(--ink);
+    }
+    .utility-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+    .collapsed-rail{
+      display:flex;
+      position:absolute;
+      top:var(--titlebar-height);bottom:0;left:0;right:0;
+      min-height:0;
+      flex-direction:column;
+      align-items:center;
+      padding:12px 0 10px;
+      opacity:0;visibility:hidden;pointer-events:none;
+      transition:opacity 110ms ease 70ms,visibility 0s linear 180ms;
+    }
+    .rail-main{display:flex;flex-direction:column;align-items:center;gap:6px}
+    .rail-bottom{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:6px}
+    .rail-btn{
+      width:34px;height:34px;display:grid;place-items:center;position:relative;
+      border:0;background:transparent;border-radius:var(--radius);cursor:pointer;color:var(--ash);padding:0;
+      transition:background-color 120ms ease,color 120ms ease;
+    }
+    .rail-btn:hover{background:color-mix(in srgb, var(--linen) 86%, var(--bone));color:var(--ink)}
+    .rail-btn.active{background:var(--linen);color:var(--ink)}
+    .rail-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
+    .rail-btn::after{
+      content:attr(data-tooltip);
+      position:absolute;left:calc(100% + 9px);top:50%;transform:translateY(-50%) translateX(-2px);
+      padding:6px 8px 7px;border-radius:4px;background:var(--ink);color:var(--parchment);
+      font:10.5px/1.2 var(--mono);white-space:nowrap;box-shadow:var(--shadow-tooltip);
+      opacity:0;pointer-events:none;transition:opacity 100ms ease,transform 100ms ease;z-index:40;
+    }
+    .rail-btn:hover::after,.rail-btn:focus-visible::after{opacity:1;transform:translateY(-50%) translateX(0)}
+    .rail-unsaved-dot{
+      position:absolute;right:5px;top:5px;width:5px;height:5px;border-radius:50%;background:var(--ember);
+      box-shadow:0 0 0 2px var(--bone);opacity:0;transform:scale(.55);
+      transition:opacity 130ms ease,transform 150ms cubic-bezier(.2,.85,.25,1.25);
+    }
+    .rail-unsaved-dot.visible{opacity:1;transform:scale(1)}
+
+    .topbar{
+      grid-column:2;
+      grid-row:1;
+      min-width:0;
+      display:grid;
+      grid-template-columns:1fr 92px;
+      align-items:center;
+      border-bottom:1px solid color-mix(in srgb, var(--ink) 9%, transparent);
+      background:color-mix(in srgb, var(--parchment) 94%, transparent);
+      user-select:none;
+    }
+
+    .docbar{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:0 12px 0 18px;
+    }
+
+    .filecrumb{
+      min-width:0;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:var(--ash);
+      font-family:var(--mono);
+      font-size:11.5px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      flex:1 1 auto;
+    }
+    .filecrumb .current{
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      color:var(--ink);
+    }
+
+    .view-switch{
+      display:flex;
+      align-items:center;
+      gap:2px;
+      padding:2px;
+      background:var(--bone);
+      border:1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+      border-radius:var(--radius);
+      flex:0 0 auto;
+    }
+    .view-switch button{
+      height:26px;border:0;background:transparent;border-radius:3px;padding:0 10px;font-size:11.5px;color:var(--ash);cursor:pointer;
+      transition:background-color 120ms ease,color 120ms ease,box-shadow 120ms ease;
+    }
+    .view-switch button:hover{color:var(--ink)}
+    .view-switch button.active{background:var(--parchment);color:var(--ink);box-shadow:0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent);animation:mode-settle 150ms cubic-bezier(.22,.8,.22,1)}
+    @keyframes mode-settle{from{transform:translateY(1px);opacity:.72}to{transform:translateY(0);opacity:1}}
+
+    .toc-control{
+      position:relative;
+      display:flex;
+      align-items:center;
+    }
+    .toc-button.active{
+      background:var(--bone);
+      color:var(--ink);
+    }
+    .toc-popover{
+      position:absolute;
+      top:calc(100% + 9px);
+      right:-2px;
+      width:246px;
+      max-height:min(420px,calc(100vh - 90px));
+      padding:8px;
+      overflow:auto;
+      border:1px solid color-mix(in srgb,var(--ink) 10%,transparent);
+      border-radius:6px;
+      background:var(--parchment);
+      box-shadow:var(--shadow-flyout);
+      opacity:0;
+      visibility:hidden;
+      transform:translateY(-3px);
+      pointer-events:none;
+      transition:opacity 120ms ease,transform 140ms cubic-bezier(.22,.8,.22,1),visibility 0s linear 140ms;
+      z-index:55;
+    }
+    .toc-control.open .toc-popover{
+      opacity:1;
+      visibility:visible;
+      transform:translateY(0);
+      pointer-events:auto;
+      transition:opacity 120ms ease,transform 140ms cubic-bezier(.22,.8,.22,1);
+    }
+    .toc-label{
+      padding:5px 8px 7px;
+      color:var(--mist);
+      font:9.8px/1 var(--mono);
+      letter-spacing:.065em;
+      text-transform:uppercase;
+      user-select:none;
+    }
+    .toc-list{display:flex;flex-direction:column;gap:1px}
+    .toc-item{
+      width:100%;
+      min-height:30px;
+      display:flex;
+      align-items:center;
+      position:relative;
+      border:0;
+      border-radius:4px;
+      background:transparent;
+      color:var(--driftwood);
+      padding:5px 8px;
+      text-align:left;
+      font-size:11.5px;
+      line-height:1.35;
+      cursor:pointer;
+      overflow:hidden;
+      transition:background-color 100ms ease,color 100ms ease;
+    }
+    .toc-item:hover{
+      background:color-mix(in srgb,var(--linen) 70%,transparent);
+      color:var(--ink);
+    }
+    .toc-item.active{
+      color:var(--ink);
+      background:color-mix(in srgb,var(--linen) 48%,transparent);
+    }
+    .toc-item.active::before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:8px;
+      bottom:8px;
+      width:1px;
+      background:var(--ink);
+    }
+    .toc-item.level-2{padding-left:16px}
+    .toc-item.level-3{padding-left:26px;color:var(--mist)}
+    .toc-item.level-3:hover,.toc-item.level-3.active{color:var(--ink)}
+    .toc-item-text{
+      min-width:0;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+    .toc-empty{
+      padding:10px 8px 12px;
+      color:var(--mist);
+      font:10.5px/1.45 var(--mono);
+    }
+
+    .top-actions{
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+      padding:0 12px;
+      justify-content:flex-start;
+      border-left:1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+    }
+
+    .workspace{
+      grid-column:2;
+      grid-row:2;
+      min-width:0;
+      min-height:0;
+      display:grid;
+      grid-template-columns:1fr;
+      background:var(--parchment);
+    }
+
+    .pane{min-width:0;min-height:0;overflow:auto;position:relative}
+    .editor-pane{display:block}
+    .preview-pane{display:none;border-left:1px solid color-mix(in srgb, var(--ink) 8%, transparent);background:color-mix(in srgb, var(--parchment) 97%, var(--bone))}
+
+    .workspace.mode-split{grid-template-columns:minmax(360px,1fr) minmax(360px,1fr)}
+    .workspace.mode-split .preview-pane{display:block;animation:pane-reveal 160ms ease}
+    .workspace.mode-read .editor-pane{display:none}
+    .workspace.mode-read .preview-pane{display:block;border-left:0;animation:pane-reveal 160ms ease}
+    @keyframes pane-reveal{from{opacity:0;transform:translateX(4px)}to{opacity:1;transform:translateX(0)}}
+
+    .editor-wrap{
+      width:min(760px, calc(100% - 64px));
+      margin:0 auto;
+      padding:42px 0 120px;
+    }
+
+    .doc-kicker{font-family:var(--mono);font-size:10.5px;color:var(--mist);margin-bottom:16px}
+
+    .frontmatter{
+      margin:0 0 16px;
+    }
+    .frontmatter-summary{
+      width:100%;
+      min-height:28px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:0;
+      border:0;
+      background:transparent;
+      color:var(--mist);
+      cursor:pointer;
+      font-family:var(--mono);
+      font-size:10.5px;
+      letter-spacing:.015em;
+      text-align:left;
+    }
+    .frontmatter-summary:hover{color:var(--ash)}
+    .frontmatter-summary-copy{display:flex;align-items:center;gap:5px;min-width:0}
+    .frontmatter-summary strong{font-weight:400;color:var(--ash)}
+    .frontmatter-summary svg{
+      width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;
+      transition:transform 150ms ease;
+    }
+    .frontmatter.open .frontmatter-summary svg{transform:rotate(180deg)}
+    .frontmatter-panel{
+      max-height:0;
+      opacity:0;
+      overflow:hidden;
+      transform:translateY(-2px);
+      transition:max-height 180ms cubic-bezier(.22,.8,.22,1), opacity 120ms ease, transform 160ms ease;
+    }
+    .frontmatter.open .frontmatter-panel{
+      max-height:520px;
+      opacity:1;
+      transform:translateY(0);
+    }
+    .frontmatter-panel-inner{
+      padding:6px 0 18px;
+      border-bottom:1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+    }
+    .frontmatter-toolbar{
+      display:flex;
+      justify-content:flex-end;
+      align-items:center;
+      min-height:28px;
+      margin-bottom:2px;
+    }
+    .frontmatter-modes{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-family:var(--mono);
+      font-size:10px;
+    }
+    .frontmatter-mode{
+      border:0;background:transparent;padding:3px 0;color:var(--mist);cursor:pointer;position:relative;
+    }
+    .frontmatter-mode:hover{color:var(--ash)}
+    .frontmatter-mode.active{color:var(--ink)}
+    .frontmatter-mode.active::after{
+      content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--ink);
+    }
+    .frontmatter-view{display:none}
+    .frontmatter-view.active{display:block}
+    .meta-field{
+      display:grid;
+      grid-template-columns:76px minmax(0,1fr);
+      align-items:center;
+      min-height:38px;
+      border-bottom:1px solid color-mix(in srgb, var(--ink) 6%, transparent);
+    }
+    .meta-field:last-child{border-bottom:0}
+    .meta-key{
+      font-family:var(--mono);
+      font-size:10.5px;
+      color:var(--mist);
+    }
+    .meta-input{
+      width:100%;
+      border:0;
+      outline:0;
+      background:transparent;
+      color:var(--editor-text);
+      font-family:var(--ui);
+      font-size:12.5px;
+      line-height:1.4;
+      padding:7px 0;
+      border-radius:0;
+    }
+    .meta-input::placeholder{color:var(--mist)}
+    .meta-input:focus{box-shadow:0 1px 0 color-mix(in srgb, var(--ink) 22%, transparent)}
+
+    .yaml-shell{
+      position:relative;
+      min-height:148px;
+      margin-top:4px;
+    }
+    .yaml-highlight,
+    .yaml-editor{
+      width:100%;
+      min-height:148px;
+      margin:0;
+      padding:10px 0 6px;
+      border:0;
+      outline:0;
+      resize:none;
+      overflow:hidden;
+      background:transparent;
+      font-family:var(--mono);
+      font-size:11.5px;
+      line-height:1.65;
+      letter-spacing:0;
+      white-space:pre-wrap;
+      overflow-wrap:break-word;
+      tab-size:2;
+    }
+    .yaml-highlight{
+      position:absolute;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+      color:var(--editor-text);
+      user-select:none;
+    }
+    .yaml-editor{
+      position:relative;
+      z-index:1;
+      display:block;
+      color:transparent;
+      -webkit-text-fill-color:transparent;
+      caret-color:var(--ink);
+    }
+    .yaml-editor::selection{
+      background:var(--selection);
+      color:var(--editor-text);
+      -webkit-text-fill-color:var(--editor-text);
+    }
+    .yaml-mark,.yaml-key{color:var(--syntax-marker)}
+    .yaml-key{font-weight:500}
+
+    .preview-meta{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:6px 12px;
+      margin:-18px 0 30px;
+      color:var(--mist);
+      font-family:var(--mono);
+      font-size:10.5px;
+      line-height:1.5;
+    }
+    .preview-meta-group{display:inline-flex;align-items:center;gap:6px}
+    .preview-meta-dot{color:var(--stone)}
+
+    .title-input{
+      width:100%;
+      display:block;
+      height:64px;
+      border:0;
+      outline:0;
+      resize:none;
+      overflow:hidden;
+      background:transparent;
+      color:var(--ink);
+      font-family:var(--ui);
+      font-size:36px;
+      font-weight:400;
+      line-height:1.28;
+      letter-spacing:-.028em;
+      padding:2px 0 12px;
+      margin:0 0 24px;
+      appearance:none;
+      -webkit-appearance:none;
+    }
+    .title-input::placeholder{color:color-mix(in srgb, var(--mist) 70%, transparent)}
+
+    .editor-shell{
+      position:relative;
+      width:100%;
+      min-height:740px;
+    }
+    .editor-highlight,
+    .editor{
+      width:100%;
+      min-height:740px;
+      border:0;
+      outline:0;
+      resize:none;
+      overflow:hidden;
+      background:transparent;
+      font-family:var(--mono);
+      font-size:14px;
+      line-height:1.84;
+      letter-spacing:-.008em;
+      padding:0;
+      margin:0;
+      tab-size:2;
+      white-space:pre-wrap;
+      overflow-wrap:break-word;
+      word-break:normal;
+    }
+    .editor-highlight{
+      position:absolute;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+      color:var(--editor-text);
+      user-select:none;
+    }
+    .md-syntax{
+      color:var(--syntax-marker);
+    }
+    .editor{
+      position:relative;
+      z-index:1;
+      display:block;
+      color:transparent;
+      -webkit-text-fill-color:transparent;
+      caret-color:var(--ink);
+    }
+    .editor::selection{
+      background:var(--selection);
+      color:var(--editor-text);
+      -webkit-text-fill-color:var(--editor-text);
+    }
+
+    .preview-wrap{
+      width:min(700px, calc(100% - 72px));
+      margin:0 auto;
+      padding:42px 0 120px;
+      color:var(--ink);
+    }
+    .preview-wrap .doc-kicker{margin-bottom:14px}
+    .preview h1{font-size:36px;font-weight:400;line-height:1.13;letter-spacing:-.028em;margin:0 0 32px}
+    .preview h2{font-size:23px;font-weight:400;line-height:1.25;letter-spacing:-.012em;margin:40px 0 13px}
+    .preview h3{font-size:17px;font-weight:500;margin:28px 0 10px;letter-spacing:-.006em}
+    .preview p,.preview li{font-family:var(--serif);font-size:17px;line-height:1.62;color:var(--prose)}
+    .preview p{margin:0 0 17px}
+    .preview ul{padding-left:21px;margin:6px 0 18px}
+    .preview li{margin:5px 0}
+    .preview code{font-family:var(--mono);font-size:12.5px;background:var(--bone);padding:2px 4px;border-radius:3px}
+    .preview pre{background:var(--bone);border:1px solid color-mix(in srgb, var(--ink) 8%, transparent);border-radius:var(--radius);padding:14px 15px;overflow:auto;margin:18px 0 22px}
+    .preview pre code{background:transparent;padding:0;color:var(--editor-text);line-height:1.65}
+    .preview blockquote{margin:20px 0;padding:1px 0 1px 16px;border-left:1px solid var(--stone);color:var(--driftwood)}
+    .preview blockquote p{color:var(--driftwood);font-style:italic}
+    .preview a{color:var(--ember);text-decoration:none}
+    .preview a:hover{text-decoration:underline}
+    .preview hr{border:0;border-top:1px solid var(--stone);margin:34px 0}
+    .preview .table-wrap{width:100%;overflow-x:auto;margin:20px 0 28px}
+    .preview table{width:100%;border-collapse:collapse;border-spacing:0}
+    .preview th,.preview td{padding:11px 12px;border-bottom:1px solid color-mix(in srgb, var(--ink) 10%, transparent);text-align:left;vertical-align:top}
+    .preview th{font-family:var(--ui);font-size:12px;font-weight:500;line-height:1.35;color:var(--ash);letter-spacing:.02em;background:color-mix(in srgb, var(--bone) 60%, transparent)}
+    .preview td{font-family:var(--serif);font-size:15.5px;line-height:1.5;color:var(--prose)}
+    .preview tr:last-child td{border-bottom:1px solid color-mix(in srgb, var(--ink) 14%, transparent)}
+
+    .statusbar{
+      grid-column:2;
+      grid-row:3;
+      min-width:0;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 10px 0 14px;
+      border-top:1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+      background:var(--parchment);
+      color:var(--mist);
+      font-family:var(--mono);
+      font-size:9.8px;
+      user-select:none;
+    }
+    .status-group{display:flex;gap:14px;align-items:center;min-width:0}
+    .status-link{color:var(--ash);cursor:pointer}
+    .status-link:hover{color:var(--ink)}
+
+    .file-tooltip{
+      position:fixed;
+      z-index:50;
+      max-width:min(360px, calc(100vw - 24px));
+      padding:7px 9px 8px;
+      border:1px solid color-mix(in srgb, var(--parchment) 12%, transparent);
+      border-radius:4px;
+      background:var(--ink);
+      color:var(--parchment);
+      box-shadow:var(--shadow-flyout);
+      font-family:var(--mono);
+      font-size:10.5px;
+      line-height:1.35;
+      letter-spacing:0;
+      white-space:nowrap;
+      pointer-events:none;
+      opacity:0;
+      transform:translateY(-50%) translateX(-2px);
+      transition:opacity 110ms ease, transform 110ms ease;
+    }
+    .file-tooltip::before{
+      content:"";
+      position:absolute;
+      left:-4px;
+      top:50%;
+      width:7px;
+      height:7px;
+      background:var(--ink);
+      transform:translateY(-50%) rotate(45deg);
+    }
+    .file-tooltip.left-facing::before{
+      left:auto;
+      right:-4px;
+    }
+    .file-tooltip.visible{
+      opacity:1;
+      transform:translateY(-50%) translateX(0);
+    }
+
+    .settings-backdrop{
+      position:fixed;
+      inset:0;
+      z-index:60;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+      background:var(--settings-overlay);
+      backdrop-filter:blur(2px);
+      opacity:0;visibility:hidden;pointer-events:none;
+      transition:opacity 140ms ease,visibility 0s linear 160ms;
+    }
+    .settings-backdrop.open{opacity:1;visibility:visible;pointer-events:auto;transition:opacity 140ms ease}
+    .settings-panel{
+      width:min(760px,calc(100vw - 40px));
+      height:min(590px,calc(100vh - 56px));
+      display:grid;
+      grid-template-columns:176px 1fr;
+      grid-template-rows:54px 1fr;
+      overflow:hidden;
+      background:var(--parchment);
+      border:1px solid color-mix(in srgb,var(--ink) 12%, transparent);
+      border-radius:8px;
+      box-shadow:var(--shadow-modal);
+      opacity:0;transform:translateY(7px);
+      transition:opacity 150ms ease,transform 170ms cubic-bezier(.22,.8,.22,1);
+    }
+    .settings-backdrop.open .settings-panel{opacity:1;transform:translateY(0)}
+    .settings-titlebar{
+      grid-column:1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 14px 0 18px;
+      border-bottom:1px solid color-mix(in srgb,var(--ink) 8%, transparent);
+    }
+    .settings-title{font-size:14px;font-weight:500;letter-spacing:-.01em}
+    .settings-title-actions{display:flex;align-items:center;gap:8px}
+    .settings-feedback{
+      display:flex;align-items:center;gap:5px;color:var(--ash);font:10px var(--mono);
+      opacity:0;transform:translateY(2px);transition:opacity 120ms ease,transform 120ms ease;
+    }
+    .settings-feedback.visible{opacity:1;transform:translateY(0)}
+    .settings-feedback i{width:5px;height:5px;border-radius:50%;background:var(--success);display:block}
+    .settings-done{
+      height:28px;
+      padding:0 10px;
+      border:0;
+      border-radius:4px;
+      background:transparent;
+      color:var(--ash);
+      font-size:11.5px;
+      cursor:pointer;
+    }
+    .settings-done:hover{background:var(--bone);color:var(--ink)}
+    .settings-nav{
+      padding:12px 8px;
+      background:var(--bone);
+      border-right:1px solid color-mix(in srgb,var(--ink) 8%, transparent);
+    }
+    .settings-nav button{
+      width:100%;
+      height:32px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:0 9px;
+      border:0;
+      border-radius:4px;
+      background:transparent;
+      color:var(--driftwood);
+      font-size:12px;
+      text-align:left;
+      cursor:pointer;
+    }
+    .settings-nav button:hover{background:color-mix(in srgb,var(--linen) 70%,transparent);color:var(--ink)}
+    .settings-nav button.active{background:var(--linen);color:var(--ink)}
+    .settings-nav svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
+    .settings-content{overflow:auto;padding:26px 30px 42px}
+    .settings-page{display:none}
+    .settings-page.active{display:block}
+    .settings-heading{margin:0 0 6px;font-size:22px;font-weight:400;letter-spacing:-.018em}
+    .settings-description{margin:0 0 26px;color:var(--ash);font-size:12.5px;line-height:1.55}
+    .settings-section{margin-top:26px}
+    .settings-section:first-of-type{margin-top:0}
+    .settings-section-title{
+      margin:0 0 8px;
+      color:var(--mist);
+      font-family:var(--mono);
+      font-size:10px;
+      letter-spacing:.07em;
+      text-transform:uppercase;
+    }
+    .setting-row{
+      min-height:54px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:24px;
+      border-bottom:1px solid color-mix(in srgb,var(--ink) 7%, transparent);
+    }
+    .setting-row:last-child{border-bottom:0}
+    .setting-copy{min-width:0;padding:10px 0}
+    .setting-label{font-size:12.5px;color:var(--ink);margin-bottom:3px}
+    .setting-hint{font-size:11px;color:var(--mist);line-height:1.4}
+    .segmented{
+      display:flex;
+      align-items:center;
+      gap:2px;
+      padding:2px;
+      background:var(--bone);
+      border:1px solid color-mix(in srgb,var(--ink) 7%,transparent);
+      border-radius:4px;
+      flex:0 0 auto;
+    }
+    .segmented button{
+      height:26px;
+      min-width:54px;
+      padding:0 9px;
+      border:0;
+      border-radius:3px;
+      background:transparent;
+      color:var(--ash);
+      font-size:11px;
+      cursor:pointer;
+    }
+    .segmented button.active{background:var(--parchment);color:var(--ink);box-shadow:0 0 0 1px color-mix(in srgb,var(--ink) 7%,transparent)}
+    .setting-select{
+      height:30px;
+      min-width:116px;
+      border:1px solid color-mix(in srgb,var(--ink) 9%,transparent);
+      border-radius:4px;
+      background:var(--bone);
+      color:var(--ink);
+      padding:0 28px 0 9px;
+      font:11px var(--mono);
+      outline:0;
+    }
+    .setting-shortcut{font:10.5px var(--mono);color:var(--ash)}
+    .switch{
+      width:34px;
+      height:19px;
+      position:relative;
+      border:1px solid color-mix(in srgb,var(--ink) 13%,transparent);
+      border-radius:999px;
+      background:var(--linen);
+      cursor:pointer;
+      flex:0 0 auto;
+      transition:background 120ms ease,border-color 120ms ease;
+    }
+    .switch::after{
+      content:"";
+      position:absolute;
+      width:13px;
+      height:13px;
+      top:2px;
+      left:2px;
+      border-radius:50%;
+      background:var(--parchment);
+      border:1px solid color-mix(in srgb,var(--ink) 14%,transparent);
+      transition:transform 120ms ease;
+    }
+    .switch.on{background:var(--ink);border-color:var(--ink)}
+    .switch.on::after{transform:translateX(15px);border-color:transparent}
+    .settings-note{
+      margin-top:24px;
+      padding:11px 12px;
+      border:1px solid color-mix(in srgb,var(--ink) 7%, transparent);
+      border-radius:4px;
+      background:color-mix(in srgb,var(--bone) 58%, transparent);
+      color:var(--ash);
+      font-size:11px;
+      line-height:1.55;
+    }
+    @media (max-width:700px){
+      .settings-backdrop{padding:12px}
+      .settings-panel{width:100%;height:calc(100vh - 24px);grid-template-columns:132px 1fr}
+      .settings-content{padding:22px 20px 36px}
+      .setting-row{align-items:flex-start;flex-direction:column;gap:8px;padding:8px 0 12px}
+    }
+
+    .palette-backdrop{
+      position:fixed;inset:0;background:var(--palette-overlay);display:none;align-items:flex-start;justify-content:center;padding-top:12vh;z-index:20;
+    }
+    .palette-backdrop.open{display:flex}
+    .palette{
+      width:min(560px,calc(100vw - 40px));
+      background:var(--parchment);
+      border:1px solid color-mix(in srgb,var(--ink) 11%, transparent);
+      border-radius:8px;
+      box-shadow:var(--shadow-palette);
+      overflow:hidden;
+    }
+    .palette-input{height:46px;width:100%;border:0;border-bottom:1px solid color-mix(in srgb,var(--ink) 8%, transparent);outline:0;background:transparent;padding:0 15px;font-size:13px;color:var(--ink)}
+    .palette-input::placeholder{color:var(--mist)}
+    .palette-list{padding:6px}
+    .palette-row{height:34px;border-radius:4px;display:flex;align-items:center;gap:10px;padding:0 9px;font-size:12px;color:var(--driftwood)}
+    .palette-row.active{background:var(--bone);color:var(--ink)}
+    .palette-row kbd{margin-left:auto;font:10px var(--mono);color:var(--mist)}
+
+    body.sidebar-collapsed .app{grid-template-columns:var(--sidebar-collapsed-width) 1fr}
+    body.sidebar-collapsed .sidebar{overflow:visible}
+    body.sidebar-precollapse .sidebar-body,
+    body.sidebar-precollapse .sidebar-utility,
+    body.sidebar-collapsed .sidebar-body,
+    body.sidebar-collapsed .sidebar-utility{opacity:0;transform:translateX(-5px);visibility:hidden;pointer-events:none}
+    body.sidebar-collapsed .sidebar-top{justify-content:center;padding:0}
+    body.sidebar-collapsed .collapsed-rail{opacity:1;visibility:visible;pointer-events:auto;transition:opacity 110ms ease 80ms,visibility 0s linear 0s}
+
+    @media (prefers-reduced-motion: reduce){
+      *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+    }
+
+    @media (max-width:900px){
+      .app{grid-template-columns:0 1fr}
+      .sidebar{display:none}
+      .topbar{grid-column:1 / -1;grid-template-columns:1fr 92px}
+      .workspace{grid-column:1 / -1}
+      .statusbar{grid-column:1 / -1}
+      .editor-wrap,.preview-wrap{width:min(100% - 36px,700px);padding-top:42px}
+      .workspace.mode-split{grid-template-columns:1fr}
+      .workspace.mode-split .preview-pane{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <button class="icon-btn" id="sidebarToggle" aria-label="Toggle sidebar" title="Toggle sidebar">
+          <svg viewBox="0 0 16 16"><rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M5.5 2.5v11"/></svg>
+        </button>
+      </div>
+
+      <div class="sidebar-body">
+        <nav class="tree">
+          <div class="section-head">
+            <div class="section-label">Notes</div>
+            <button class="section-action new-note-trigger" aria-label="New note" title="New note">
+              <svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>
+            </button>
+          </div>
+          <button class="tree-item active" id="activeFileItem" data-filename="designing-quieter-software.md">
+            <svg viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>
+            <span class="file-name">designing-quieter-software.md</span>
+            <span class="unsaved-dot hidden" id="activeUnsavedDot" aria-label="Unsaved changes" title="Unsaved changes"></span>
+          </button>
+          <button class="tree-item" data-filename="editor-principles.md">
+            <svg viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>
+            <span class="file-name">editor-principles.md</span>
+          </button>
+          <button class="tree-item" data-filename="scratch.md">
+            <svg viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>
+            <span class="file-name">scratch.md</span>
+            <span class="unsaved-dot" aria-label="Unsaved changes" title="Unsaved changes"></span>
+          </button>
+
+          <div class="section-head archive-head" style="margin-top:10px"><div class="section-label">Archive</div></div>
+          <button class="tree-item">
+            <svg viewBox="0 0 16 16"><path d="M3 4.5h10v8H3z"/><path d="M2.5 2.5h11v2h-11zM6 7h4"/></svg>
+            <span>2026</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="collapsed-rail" aria-label="Collapsed sidebar navigation">
+        <div class="rail-main">
+          <button class="rail-btn active" data-tooltip="Notes" aria-label="Notes">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>
+            <span class="rail-unsaved-dot" id="railUnsavedDot" aria-hidden="true"></span>
+          </button>
+          <button class="rail-btn new-note-trigger" data-tooltip="New note" aria-label="New note">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/><path d="M8 8v4M6 10h4"/></svg>
+          </button>
+          <button class="rail-btn" data-tooltip="Archive" aria-label="Archive">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10v8H3z"/><path d="M2.5 2.5h11v2h-11zM6 7h4"/></svg>
+          </button>
+        </div>
+        <div class="rail-bottom">
+          <button class="rail-btn settings-trigger" data-tooltip="Settings" aria-label="Settings">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3 4.5h10"/>
+              <path d="M3 8h10"/>
+              <path d="M3 11.5h10"/>
+              <circle cx="6" cy="4.5" r="1.25" fill="var(--bone)"/>
+              <circle cx="10.5" cy="8" r="1.25" fill="var(--bone)"/>
+              <circle cx="7.5" cy="11.5" r="1.25" fill="var(--bone)"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-utility">
+        <button class="utility-item settings-trigger" aria-label="Settings">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3 4.5h10"/>
+            <path d="M3 8h10"/>
+            <path d="M3 11.5h10"/>
+            <circle cx="6" cy="4.5" r="1.25" fill="var(--bone)"/>
+            <circle cx="10.5" cy="8" r="1.25" fill="var(--bone)"/>
+            <circle cx="7.5" cy="11.5" r="1.25" fill="var(--bone)"/>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </div>
+
+    </aside>
+
+    <header class="topbar">
+      <div class="docbar">
+        <div class="filecrumb"><span>notes</span><span>/</span><span class="current">designing-quieter-software.md</span></div>
+        <div class="view-switch" role="tablist" aria-label="View mode">
+          <button class="active" data-mode="write">Write</button>
+          <button data-mode="split">Split</button>
+          <button data-mode="read">Read</button>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <div class="toc-control" id="tocControl">
+          <button class="icon-btn toc-button" id="tocButton" aria-label="Table of contents" aria-expanded="false" aria-controls="tocPopover">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="3.2" cy="4" r=".7" fill="currentColor" stroke="none"/>
+              <circle cx="3.2" cy="8" r=".7" fill="currentColor" stroke="none"/>
+              <circle cx="3.2" cy="12" r=".7" fill="currentColor" stroke="none"/>
+              <path d="M6 4h7M6 8h5.5M6 12h6.3"/>
+            </svg>
+          </button>
+          <div class="toc-popover" id="tocPopover" aria-hidden="true">
+            <div class="toc-label">Contents</div>
+            <nav class="toc-list" id="tocList" aria-label="Document outline"></nav>
+          </div>
+        </div>
+        <button class="icon-btn" id="searchBtn" aria-label="Command palette" title="Command palette (Ctrl/Cmd+K)">
+          <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.2"/><path d="m10.3 10.3 3 3"/></svg>
+        </button>
+        <button class="icon-btn" aria-label="More" title="More">
+          <svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".8" fill="currentColor" stroke="none"/><circle cx="8" cy="8" r=".8" fill="currentColor" stroke="none"/><circle cx="12.5" cy="8" r=".8" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace" id="workspace">
+      <section class="pane editor-pane">
+        <div class="editor-wrap">
+          <section class="frontmatter" id="frontmatter">
+            <button class="frontmatter-summary" id="frontmatterToggle" type="button" aria-expanded="false" aria-controls="frontmatterPanel">
+              <span class="frontmatter-summary-copy"><strong>Metadata</strong><span id="frontmatterCount">· 4 fields</span></span>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+            </button>
+            <div class="frontmatter-panel" id="frontmatterPanel">
+              <div class="frontmatter-panel-inner">
+                <div class="frontmatter-toolbar">
+                  <div class="frontmatter-modes" role="tablist" aria-label="Front matter view">
+                    <button class="frontmatter-mode active" type="button" data-frontmatter-mode="fields" role="tab" aria-selected="true">Fields</button>
+                    <button class="frontmatter-mode" type="button" data-frontmatter-mode="raw" role="tab" aria-selected="false">Raw</button>
+                  </div>
+                </div>
+                <div class="frontmatter-view active" data-frontmatter-view="fields">
+                  <label class="meta-field"><span class="meta-key">title</span><input class="meta-input" id="fmTitle" value="Designing quieter software" /></label>
+                  <label class="meta-field"><span class="meta-key">tags</span><input class="meta-input" id="fmTags" value="design, editor" /></label>
+                  <label class="meta-field"><span class="meta-key">status</span><input class="meta-input" id="fmStatus" value="draft" /></label>
+                  <label class="meta-field"><span class="meta-key">created</span><input class="meta-input" id="fmCreated" value="2026-09-04" /></label>
+                </div>
+                <div class="frontmatter-view" data-frontmatter-view="raw">
+                  <div class="yaml-shell">
+                    <pre class="yaml-highlight" id="yamlHighlight" aria-hidden="true"></pre>
+                    <textarea class="yaml-editor" id="yamlEditor" spellcheck="false" aria-label="YAML front matter"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <textarea class="title-input" id="titleInput" rows="1" spellcheck="false" aria-label="Document title">Designing quieter software</textarea>
+          <div class="editor-shell">
+            <pre class="editor-highlight" id="editorHighlight" aria-hidden="true"></pre>
+            <textarea class="editor" id="editor" spellcheck="false" aria-label="Markdown editor">A good writing tool should disappear before the first sentence is finished.
+
+## The interface is not the work
+
+Most editors keep reminding us that they are editors: toolbars, borders, mode labels, formatting controls. Each element can be justified on its own, yet together they compete with the page.
+
+This editor takes the opposite position.
+
+- Commands exist, but stay behind `⌘K`.
+- Preview exists, but never owns the screen by default.
+- Files exist, but the sidebar can disappear completely.
+- Markdown stays visible because the syntax is part of the material.
+
+> The interface should feel less like software and more like a clean surface with memory.
+
+## One warm system
+
+The palette is deliberately narrow. The canvas is not pure white, the text is not pure black, and the single accent color is reserved for links and emphasis.
+
+```css
+--canvas: #f7f7f4;
+--surface: #f2f1ed;
+--text: #26251e;
+--accent: #f54e00;
+```
+
+The result is quiet, but not sterile. Structure comes from spacing, type, and hairline rules rather than cards stacked inside cards.
+
+## What stays visible
+
+| Element | Default | Reason |
+| --- | --- | --- |
+| File tree | Visible | Keeps document context nearby |
+| Preview | Hidden | Writing remains the primary mode |
+| Commands | Hidden | Available through `⌘K` when needed |
+| Save state | Inline | A small dot appears only while unsaved |
+
+## What remains
+
+The harder question is not how to add features. It is deciding which features deserve to become visible.
+
+A useful rule: if an action is not needed while writing the current sentence, it probably does not need permanent screen space.</textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="pane preview-pane">
+        <div class="preview-wrap">
+          <article class="preview" id="preview"></article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <div class="status-group">
+        <span id="cursorPos">Ln 1, Col 1</span>
+        <span id="wordCount">0 words</span>
+      </div>
+      <div class="status-group"><span class="status-link">UTF-8</span><span class="status-link">Markdown</span><span class="status-link">Spaces: 2</span></div>
+    </footer>
+  </div>
+
+  <div class="file-tooltip" id="fileTooltip" role="tooltip" aria-hidden="true"></div>
+
+  <div class="settings-backdrop" id="settingsBackdrop" aria-hidden="true">
+    <section class="settings-panel" role="dialog" aria-modal="true" aria-label="Settings">
+      <header class="settings-titlebar">
+        <div class="settings-title">Settings</div>
+        <div class="settings-title-actions">
+          <span class="settings-feedback" id="settingsFeedback" aria-live="polite"><i></i><span>Saved</span></span>
+          <button class="settings-done" id="settingsDone">Done</button>
+        </div>
+      </header>
+
+      <nav class="settings-nav" aria-label="Settings sections">
+        <button class="active" data-settings-page="general">
+          <svg viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h10"/><circle cx="6" cy="4.5" r="1.1" fill="var(--bone)"/><circle cx="10.5" cy="8" r="1.1" fill="var(--bone)"/><circle cx="7.5" cy="11.5" r="1.1" fill="var(--bone)"/></svg>
+          <span>General</span>
+        </button>
+        <button data-settings-page="editor">
+          <svg viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3M6 8h4M6 10.5h3"/></svg>
+          <span>Editor</span>
+        </button>
+        <button data-settings-page="appearance">
+          <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4.6"/><path d="M8 3.4v9.2"/></svg>
+          <span>Appearance</span>
+        </button>
+      </nav>
+
+      <div class="settings-content">
+        <div class="settings-page active" data-page="general">
+          <h2 class="settings-heading">General</h2>
+          <p class="settings-description">Keep the application quiet by default. Most behavior stays automatic until you choose otherwise.</p>
+
+          <section class="settings-section">
+            <div class="settings-section-title">Files</div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Autosave</div><div class="setting-hint">Save changes shortly after you stop typing.</div></div>
+              <button class="switch on" role="switch" aria-checked="true" aria-label="Autosave"></button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Open last note on launch</div><div class="setting-hint">Return to the document you were editing most recently.</div></div>
+              <button class="switch on" role="switch" aria-checked="true" aria-label="Open last note on launch"></button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Default location</div><div class="setting-hint">New notes are created in this location.</div></div>
+              <select class="setting-select" aria-label="Default location"><option>Notes</option><option>Scratch</option><option>Choose folder…</option></select>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-title">Behavior</div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Command palette</div><div class="setting-hint">Open commands and file search from anywhere.</div></div>
+              <span class="setting-shortcut">⌘ K</span>
+            </div>
+          </section>
+        </div>
+
+        <div class="settings-page" data-page="editor">
+          <h2 class="settings-heading">Editor</h2>
+          <p class="settings-description">Small typography and behavior choices that affect the writing surface itself.</p>
+
+          <section class="settings-section">
+            <div class="settings-section-title">Writing</div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Font size</div><div class="setting-hint">Size of Markdown source text.</div></div>
+              <select class="setting-select" aria-label="Editor font size"><option>13 px</option><option selected>14 px</option><option>15 px</option><option>16 px</option></select>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Line wrap</div><div class="setting-hint">Wrap long lines to the width of the writing column.</div></div>
+              <button class="switch on" role="switch" aria-checked="true" aria-label="Line wrap"></button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Spell check</div><div class="setting-hint">Use the operating system spell checker while writing.</div></div>
+              <button class="switch" role="switch" aria-checked="false" aria-label="Spell check"></button>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-title">Markdown</div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Tab width</div><div class="setting-hint">Number of spaces inserted by Tab.</div></div>
+              <select class="setting-select" aria-label="Tab width"><option selected>2 spaces</option><option>4 spaces</option></select>
+            </div>
+          </section>
+        </div>
+
+        <div class="settings-page" data-page="appearance">
+          <h2 class="settings-heading">Appearance</h2>
+          <p class="settings-description">The interface stays intentionally restrained; these settings only adjust its tone and reading comfort.</p>
+
+          <section class="settings-section">
+            <div class="settings-section-title">Theme</div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Color mode</div><div class="setting-hint">Follow the system or choose a fixed appearance.</div></div>
+              <div class="segmented" data-segmented data-theme-control>
+                <button class="active" data-theme-value="system" aria-pressed="true">System</button><button data-theme-value="light" aria-pressed="false">Light</button><button data-theme-value="dark" aria-pressed="false">Dark</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Preview typeface</div><div class="setting-hint">Typeface used for rendered prose.</div></div>
+              <select class="setting-select" aria-label="Preview typeface"><option selected>Serif</option><option>Sans serif</option></select>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy"><div class="setting-label">Compact sidebar</div><div class="setting-hint">Reduce vertical spacing between file rows.</div></div>
+              <button class="switch" role="switch" aria-checked="false" aria-label="Compact sidebar"></button>
+            </div>
+          </section>
+
+          <div class="settings-note">Light uses warm paper and ink; Dark uses its own warm-charcoal surfaces and softened text hierarchy rather than inverting the light palette. Accent color stays reserved for small state changes and links.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="palette-backdrop" id="paletteBackdrop" aria-hidden="true">
+    <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+      <input class="palette-input" id="paletteInput" placeholder="Type a command or search files…" />
+      <div class="palette-list">
+        <div class="palette-row active"><span>Open file</span><kbd>↵</kbd></div>
+        <div class="palette-row"><span>Toggle sidebar</span><kbd>⌘ B</kbd></div>
+        <div class="palette-row"><span>Switch to split view</span><kbd>⌘ ⇧ P</kbd></div>
+        <div class="palette-row"><span>Export as HTML</span><kbd>⌘ E</kbd></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const editor = document.getElementById('editor');
+    const editorHighlight = document.getElementById('editorHighlight');
+    const titleInput = document.getElementById('titleInput');
+    const frontmatter = document.getElementById('frontmatter');
+    const frontmatterToggle = document.getElementById('frontmatterToggle');
+    const frontmatterPanel = document.getElementById('frontmatterPanel');
+    const frontmatterCount = document.getElementById('frontmatterCount');
+    const frontmatterModeButtons = [...document.querySelectorAll('[data-frontmatter-mode]')];
+    const frontmatterViews = [...document.querySelectorAll('[data-frontmatter-view]')];
+    const fmTitle = document.getElementById('fmTitle');
+    const fmTags = document.getElementById('fmTags');
+    const fmStatus = document.getElementById('fmStatus');
+    const fmCreated = document.getElementById('fmCreated');
+    const yamlEditor = document.getElementById('yamlEditor');
+    const yamlHighlight = document.getElementById('yamlHighlight');
+    const preview = document.getElementById('preview');
+    const workspace = document.getElementById('workspace');
+    const cursorPos = document.getElementById('cursorPos');
+    const wordCount = document.getElementById('wordCount');
+    const activeUnsavedDot = document.getElementById('activeUnsavedDot');
+    const railUnsavedDot = document.getElementById('railUnsavedDot');
+    const modeButtons = [...document.querySelectorAll('[data-mode]')];
+    const backdrop = document.getElementById('paletteBackdrop');
+    const paletteInput = document.getElementById('paletteInput');
+    const fileTooltip = document.getElementById('fileTooltip');
+    let fileRows = [...document.querySelectorAll('.tree-item[data-filename]')];
+    const settingsBackdrop = document.getElementById('settingsBackdrop');
+    const settingsDone = document.getElementById('settingsDone');
+    const settingsTriggers = [...document.querySelectorAll('.settings-trigger')];
+    const settingsNavButtons = [...document.querySelectorAll('[data-settings-page]')];
+    const settingsPages = [...document.querySelectorAll('.settings-page')];
+    const settingsFeedback = document.getElementById('settingsFeedback');
+    const themeControl = document.querySelector('[data-theme-control]');
+    const newNoteTriggers = [...document.querySelectorAll('.new-note-trigger')];
+    const tocControl = document.getElementById('tocControl');
+    const tocButton = document.getElementById('tocButton');
+    const tocPopover = document.getElementById('tocPopover');
+    const tocList = document.getElementById('tocList');
+    const editorPane = document.querySelector('.editor-pane');
+    const previewPane = document.querySelector('.preview-pane');
+    let tocEntries = [];
+    let activeTocIndex = 0;
+
+    function showFileTooltip(row){
+      const label = row.querySelector('.file-name');
+      if(!label || label.scrollWidth <= label.clientWidth) return;
+
+      fileTooltip.textContent = row.dataset.filename;
+      fileTooltip.classList.add('visible');
+      fileTooltip.setAttribute('aria-hidden','false');
+
+      const rect = row.getBoundingClientRect();
+      const tooltipWidth = Math.min(360, Math.max(180, row.dataset.filename.length * 7.2 + 20));
+      let left = rect.right + 9;
+      const rightEdge = left + tooltipWidth;
+      if(rightEdge > window.innerWidth - 12){
+        left = Math.max(12, rect.left - tooltipWidth - 9);
+        fileTooltip.classList.add('left-facing');
+      } else {
+        fileTooltip.classList.remove('left-facing');
+      }
+
+      fileTooltip.style.left = `${left}px`;
+      fileTooltip.style.top = `${rect.top + rect.height / 2}px`;
+    }
+
+    function hideFileTooltip(){
+      fileTooltip.classList.remove('visible');
+      fileTooltip.setAttribute('aria-hidden','true');
+    }
+
+    function activateFileRow(row){
+      document.querySelectorAll('.tree-item[data-filename]').forEach(item => item.classList.toggle('active', item === row));
+      const crumb = document.querySelector('.filecrumb .current');
+      if(crumb) crumb.textContent = row.dataset.filename;
+    }
+
+    function attachFileRowInteractions(row){
+      row.addEventListener('mouseenter', () => showFileTooltip(row));
+      row.addEventListener('mouseleave', hideFileTooltip);
+      row.addEventListener('focus', () => showFileTooltip(row));
+      row.addEventListener('blur', hideFileTooltip);
+      row.addEventListener('click', () => activateFileRow(row));
+    }
+
+    fileRows.forEach(attachFileRowInteractions);
+
+
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    }
+
+    function inline(text){
+      return escapeHtml(text)
+        .replace(/`([^`]+)`/g,'<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g,'<em>$1</em>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2">$1</a>');
+    }
+
+    function parseTocEntries(){
+      const lines = editor.value.replace(/\r/g,'').split('\n');
+      const entries = [{ level:1, label:(titleInput.value || 'Untitled').trim() || 'Untitled', lineIndex:-1, start:0 }];
+      let offset = 0;
+      lines.forEach((line,index) => {
+        const match = line.match(/^(#{1,3})\s+(.+?)\s*$/);
+        if(match){
+          entries.push({
+            level:Math.min(3,match[1].length + 1),
+            label:match[2].replace(/[`*_\[\]]/g,'').trim(),
+            lineIndex:index,
+            start:offset
+          });
+        }
+        offset += line.length + 1;
+      });
+      return entries;
+    }
+
+    function renderToc(){
+      if(!tocList) return;
+      tocEntries = parseTocEntries();
+      tocList.innerHTML = '';
+      if(tocEntries.length === 1 && !titleInput.value.trim()){
+        tocList.innerHTML = '<div class="toc-empty">Headings will appear here as you write.</div>';
+        return;
+      }
+      tocEntries.forEach((entry,index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `toc-item level-${entry.level}${index === activeTocIndex ? ' active' : ''}`;
+        button.dataset.tocIndex = String(index);
+        button.title = entry.label;
+        button.innerHTML = `<span class="toc-item-text">${escapeHtml(entry.label)}</span>`;
+        button.addEventListener('click', () => navigateToToc(index));
+        tocList.appendChild(button);
+      });
+    }
+
+    function setActiveToc(index){
+      activeTocIndex = Math.max(0,Math.min(index,tocEntries.length - 1));
+      tocList?.querySelectorAll('.toc-item').forEach((item,itemIndex) => item.classList.toggle('active',itemIndex === activeTocIndex));
+    }
+
+    function scrollEditorToEntry(entry){
+      if(!editorPane) return;
+      if(entry.lineIndex < 0){
+        editorPane.scrollTo({top:0,behavior:'smooth'});
+        titleInput.focus({preventScroll:true});
+        return;
+      }
+      editor.focus({preventScroll:true});
+      editor.setSelectionRange(entry.start,entry.start);
+      const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 25;
+      const editorRect = editor.getBoundingClientRect();
+      const paneRect = editorPane.getBoundingClientRect();
+      const editorTop = editorRect.top - paneRect.top + editorPane.scrollTop;
+      const target = Math.max(0,editorTop + entry.lineIndex * lineHeight - 72);
+      editorPane.scrollTo({top:target,behavior:'smooth'});
+      updateMeta();
+    }
+
+    function scrollPreviewToEntry(index){
+      if(!previewPane) return;
+      const headings = [...preview.querySelectorAll('h1,h2,h3')];
+      const heading = headings[index];
+      if(!heading){
+        if(index === 0) previewPane.scrollTo({top:0,behavior:'smooth'});
+        return;
+      }
+      const paneRect = previewPane.getBoundingClientRect();
+      const headingRect = heading.getBoundingClientRect();
+      const target = Math.max(0,headingRect.top - paneRect.top + previewPane.scrollTop - 42);
+      previewPane.scrollTo({top:target,behavior:'smooth'});
+    }
+
+    function navigateToToc(index){
+      const entry = tocEntries[index];
+      if(!entry) return;
+      setActiveToc(index);
+      const isRead = workspace.classList.contains('mode-read');
+      const isSplit = workspace.classList.contains('mode-split');
+      if(!isRead) scrollEditorToEntry(entry);
+      if(isRead || isSplit) scrollPreviewToEntry(index);
+      closeToc();
+    }
+
+    function openToc(){
+      renderToc();
+      tocControl?.classList.add('open');
+      tocButton?.classList.add('active');
+      tocButton?.setAttribute('aria-expanded','true');
+      tocPopover?.setAttribute('aria-hidden','false');
+    }
+    function closeToc(){
+      tocControl?.classList.remove('open');
+      tocButton?.classList.remove('active');
+      tocButton?.setAttribute('aria-expanded','false');
+      tocPopover?.setAttribute('aria-hidden','true');
+    }
+    function toggleToc(){
+      if(tocControl?.classList.contains('open')) closeToc();
+      else openToc();
+    }
+
+
+    let frontmatterState = {
+      title:'Designing quieter software',
+      tags:['design','editor'],
+      status:'draft',
+      created:'2026-09-04'
+    };
+    let syncingFrontmatter = false;
+
+    function cleanYamlScalar(value){
+      const trimmed = String(value ?? '').trim();
+      if((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))){
+        return trimmed.slice(1,-1);
+      }
+      return trimmed;
+    }
+
+    function serializeFrontmatter(state = frontmatterState){
+      const tags = Array.isArray(state.tags) ? state.tags.filter(Boolean) : [];
+      return [
+        '---',
+        `title: ${state.title || ''}`,
+        'tags:',
+        ...tags.map(tag => `  - ${tag}`),
+        `status: ${state.status || ''}`,
+        `created: ${state.created || ''}`,
+        '---'
+      ].join('\n');
+    }
+
+    function parseFrontmatterYaml(raw){
+      const lines = raw.replace(/\r/g,'').split('\n');
+      const next = {title:'',tags:[],status:'',created:''};
+      let currentKey = '';
+      for(const line of lines){
+        const trimmed = line.trim();
+        if(!trimmed || trimmed === '---' || trimmed.startsWith('#')) continue;
+        const listItem = line.match(/^\s*-\s+(.+)$/);
+        if(listItem && currentKey === 'tags'){
+          next.tags.push(cleanYamlScalar(listItem[1]));
+          continue;
+        }
+        const pair = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+        if(!pair) continue;
+        currentKey = pair[1];
+        const value = cleanYamlScalar(pair[2]);
+        if(currentKey === 'tags'){
+          if(value.startsWith('[') && value.endsWith(']')){
+            next.tags = value.slice(1,-1).split(',').map(item => cleanYamlScalar(item)).filter(Boolean);
+          }
+        } else if(Object.prototype.hasOwnProperty.call(next,currentKey)){
+          next[currentKey] = value;
+        }
+      }
+      return next;
+    }
+
+    function renderYamlHighlight(raw){
+      const mark = value => `<span class="yaml-mark">${escapeHtml(value)}</span>`;
+      const key = value => `<span class="yaml-key">${escapeHtml(value)}</span>`;
+      const lines = raw.replace(/\r/g,'').split('\n');
+      yamlHighlight.innerHTML = lines.map(line => {
+        if(/^\s*---\s*$/.test(line)) return mark(line);
+        const list = line.match(/^(\s*)(-)(\s+)(.*)$/);
+        if(list) return escapeHtml(list[1]) + mark(list[2]) + escapeHtml(list[3] + list[4]);
+        const pair = line.match(/^(\s*)([A-Za-z0-9_-]+)(\s*:\s*)(.*)$/);
+        if(pair){
+          return escapeHtml(pair[1]) + key(pair[2]) + mark(pair[3]) + escapeHtml(pair[4]);
+        }
+        return escapeHtml(line);
+      }).join('\n');
+    }
+
+    function syncYamlHeight(){
+      yamlEditor.style.height = 'auto';
+      const nextHeight = Math.max(148,yamlEditor.scrollHeight);
+      yamlEditor.style.height = nextHeight + 'px';
+      yamlHighlight.style.height = nextHeight + 'px';
+    }
+
+    function updateYamlFromState(){
+      const raw = serializeFrontmatter();
+      yamlEditor.value = raw;
+      renderYamlHighlight(raw);
+      requestAnimationFrame(syncYamlHeight);
+    }
+
+    function updateFieldsFromState(){
+      syncingFrontmatter = true;
+      fmTitle.value = frontmatterState.title || '';
+      fmTags.value = (frontmatterState.tags || []).join(', ');
+      fmStatus.value = frontmatterState.status || '';
+      fmCreated.value = frontmatterState.created || '';
+      if(titleInput.value !== (frontmatterState.title || '')) titleInput.value = frontmatterState.title || '';
+      syncingFrontmatter = false;
+    }
+
+    function updateStateFromFields(){
+      frontmatterState = {
+        title:fmTitle.value.trim(),
+        tags:fmTags.value.split(',').map(tag => tag.trim()).filter(Boolean),
+        status:fmStatus.value.trim(),
+        created:fmCreated.value.trim()
+      };
+      syncingFrontmatter = true;
+      titleInput.value = frontmatterState.title;
+      syncingFrontmatter = false;
+      updateYamlFromState();
+      renderMarkdown(editor.value);
+      renderToc();
+      markUnsaved();
+    }
+
+    function previewMetadataHtml(){
+      const tags = (frontmatterState.tags || []).filter(Boolean);
+      const groups = [];
+      if(tags.length) groups.push(`<span class="preview-meta-group">${tags.map(tag => escapeHtml(tag)).join('<span class="preview-meta-dot">·</span>')}</span>`);
+      if(frontmatterState.status) groups.push(`<span>${escapeHtml(frontmatterState.status)}</span>`);
+      if(frontmatterState.created) groups.push(`<span>${escapeHtml(frontmatterState.created)}</span>`);
+      return groups.length ? `<div class="preview-meta">${groups.join('')}</div>` : '';
+    }
+
+    function setFrontmatterMode(mode){
+      frontmatterModeButtons.forEach(button => {
+        const active = button.dataset.frontmatterMode === mode;
+        button.classList.toggle('active',active);
+        button.setAttribute('aria-selected',String(active));
+      });
+      frontmatterViews.forEach(view => view.classList.toggle('active',view.dataset.frontmatterView === mode));
+      if(mode === 'raw') requestAnimationFrame(syncYamlHeight);
+    }
+
+    function toggleFrontmatter(){
+      const open = !frontmatter.classList.contains('open');
+      frontmatter.classList.toggle('open',open);
+      frontmatterToggle.setAttribute('aria-expanded',String(open));
+      if(open) requestAnimationFrame(syncYamlHeight);
+    }
+
+    frontmatterToggle.addEventListener('click',toggleFrontmatter);
+    frontmatterModeButtons.forEach(button => button.addEventListener('click',() => setFrontmatterMode(button.dataset.frontmatterMode)));
+    [fmTitle,fmTags,fmStatus,fmCreated].forEach(input => input.addEventListener('input',() => {
+      if(syncingFrontmatter) return;
+      updateStateFromFields();
+    }));
+    yamlEditor.addEventListener('input',() => {
+      renderYamlHighlight(yamlEditor.value);
+      syncYamlHeight();
+      frontmatterState = parseFrontmatterYaml(yamlEditor.value);
+      updateFieldsFromState();
+      renderMarkdown(editor.value);
+      renderToc();
+      markUnsaved();
+    });
+
+
+    function renderEditorHighlight(md){
+      const marker = text => `<span class="md-syntax">${escapeHtml(text)}</span>`;
+
+      function highlightInline(line){
+        let out = '';
+        let i = 0;
+
+        while(i < line.length){
+          // Inline code: only the backtick delimiters are accented.
+          if(line[i] === '`'){
+            let tickCount = 1;
+            while(line[i + tickCount] === '`') tickCount++;
+            const ticks = '`'.repeat(tickCount);
+            const close = line.indexOf(ticks, i + tickCount);
+            if(close !== -1){
+              out += marker(ticks);
+              out += escapeHtml(line.slice(i + tickCount, close));
+              out += marker(ticks);
+              i = close + tickCount;
+              continue;
+            }
+          }
+
+          // Strong / emphasis delimiters.
+          if(line.startsWith('**', i) || line.startsWith('__', i)){
+            out += marker(line.slice(i, i + 2));
+            i += 2;
+            continue;
+          }
+          if(line[i] === '*' || line[i] === '_'){
+            out += marker(line[i]);
+            i += 1;
+            continue;
+          }
+
+          // Markdown links / images: accent punctuation, keep labels and URLs quiet.
+          if(line[i] === '!' && line[i + 1] === '['){
+            out += marker('!');
+            i += 1;
+            continue;
+          }
+          if('[]()'.includes(line[i])){
+            out += marker(line[i]);
+            i += 1;
+            continue;
+          }
+
+          // Table separators are meaningful Markdown punctuation.
+          if(line[i] === '|'){
+            out += marker('|');
+            i += 1;
+            continue;
+          }
+
+          out += escapeHtml(line[i]);
+          i += 1;
+        }
+        return out;
+      }
+
+      const lines = md.replace(/\r/g, '').split('\n');
+      let inFence = false;
+
+      const highlighted = lines.map(line => {
+        // Fenced code blocks: highlight only the opening / closing fence.
+        const fenceMatch = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
+        if(fenceMatch){
+          inFence = !inFence;
+          return escapeHtml(fenceMatch[1]) + marker(fenceMatch[2]) + escapeHtml(fenceMatch[3]);
+        }
+        if(inFence) return escapeHtml(line);
+
+        // Headings.
+        const heading = line.match(/^(\s*)(#{1,6})(\s+)/);
+        if(heading){
+          const prefix = escapeHtml(heading[1]) + marker(heading[2]) + escapeHtml(heading[3]);
+          return prefix + highlightInline(line.slice(heading[0].length));
+        }
+
+        // Blockquotes.
+        const quote = line.match(/^(\s*)(>+)(\s+)/);
+        if(quote){
+          const prefix = escapeHtml(quote[1]) + marker(quote[2]) + escapeHtml(quote[3]);
+          return prefix + highlightInline(line.slice(quote[0].length));
+        }
+
+        // Unordered lists.
+        const unordered = line.match(/^(\s*)([-+*])(\s+)/);
+        if(unordered){
+          const prefix = escapeHtml(unordered[1]) + marker(unordered[2]) + escapeHtml(unordered[3]);
+          return prefix + highlightInline(line.slice(unordered[0].length));
+        }
+
+        // Ordered lists.
+        const ordered = line.match(/^(\s*)(\d+)([.)])(\s+)/);
+        if(ordered){
+          const prefix = escapeHtml(ordered[1] + ordered[2]) + marker(ordered[3]) + escapeHtml(ordered[4]);
+          return prefix + highlightInline(line.slice(ordered[0].length));
+        }
+
+        // Horizontal rules.
+        if(/^\s*((\*\s*){3,}|(-\s*){3,}|(_\s*){3,})\s*$/.test(line)){
+          return marker(line);
+        }
+
+        // Table alignment / separator row.
+        if(/^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line)){
+          return marker(line);
+        }
+
+        return highlightInline(line);
+      }).join('\n');
+
+      editorHighlight.innerHTML = highlighted + (md.endsWith('\n') ? '\n' : '');
+    }
+
+    function renderMarkdown(md){
+      const lines = md.replace(/\r/g,'').split('\n');
+      let html = `<h1>${escapeHtml(titleInput.value || 'Untitled')}</h1>${previewMetadataHtml()}`;
+      let inList = false, inCode = false, code = [];
+
+      function closeList(){ if(inList){ html += '</ul>'; inList = false; } }
+      function isTableSeparator(line){
+        const cells = line.trim().replace(/^\||\|$/g,'').split('|').map(cell => cell.trim());
+        return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
+      }
+      function tableCells(line){
+        return line.trim().replace(/^\||\|$/g,'').split('|').map(cell => cell.trim());
+      }
+
+      for(let i = 0; i < lines.length; i++){
+        const line = lines[i];
+
+        if(line.startsWith('```')){
+          closeList();
+          if(!inCode){ inCode = true; code = []; }
+          else { html += `<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`; inCode = false; code = []; }
+          continue;
+        }
+        if(inCode){ code.push(line); continue; }
+        if(!line.trim()){ closeList(); continue; }
+
+        if(line.includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])){
+          closeList();
+          const headers = tableCells(line);
+          i += 1;
+          const rows = [];
+          while(i + 1 < lines.length && lines[i + 1].trim() && lines[i + 1].includes('|')){
+            rows.push(tableCells(lines[i + 1]));
+            i += 1;
+          }
+
+          html += '<div class="table-wrap"><table><thead><tr>';
+          headers.forEach(cell => { html += `<th>${inline(cell)}</th>`; });
+          html += '</tr></thead><tbody>';
+          rows.forEach(row => {
+            html += '<tr>';
+            headers.forEach((_, index) => { html += `<td>${inline(row[index] || '')}</td>`; });
+            html += '</tr>';
+          });
+          html += '</tbody></table></div>';
+          continue;
+        }
+
+        if(line.startsWith('### ')){ closeList(); html += `<h3>${inline(line.slice(4))}</h3>`; continue; }
+        if(line.startsWith('## ')){ closeList(); html += `<h2>${inline(line.slice(3))}</h2>`; continue; }
+        if(line.startsWith('# ')){ closeList(); html += `<h2>${inline(line.slice(2))}</h2>`; continue; }
+        if(line.startsWith('> ')){ closeList(); html += `<blockquote><p>${inline(line.slice(2))}</p></blockquote>`; continue; }
+        if(/^[-*] /.test(line)){
+          if(!inList){ html += '<ul>'; inList = true; }
+          html += `<li>${inline(line.slice(2))}</li>`; continue;
+        }
+        if(/^---+$/.test(line.trim())){ closeList(); html += '<hr>'; continue; }
+        closeList(); html += `<p>${inline(line)}</p>`;
+      }
+      closeList();
+      if(inCode) html += `<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`;
+      preview.innerHTML = html;
+    }
+
+    function updateMeta(){
+      const value = editor.value;
+      const pos = editor.selectionStart;
+      const before = value.slice(0,pos);
+      const line = before.split('\n').length;
+      const col = pos - before.lastIndexOf('\n');
+      cursorPos.textContent = `Ln ${line}, Col ${col}`;
+      const words = (value.trim().match(/[A-Za-z0-9_]+|[\u3040-\u30ff\u3400-\u9fff]+/g) || []).length;
+      wordCount.textContent = `${words} words`;
+    }
+
+    function autoGrow(){
+      editor.style.height = 'auto';
+      const nextHeight = Math.max(740, editor.scrollHeight);
+      editor.style.height = nextHeight + 'px';
+      editorHighlight.style.height = nextHeight + 'px';
+    }
+
+    let autosaveTimer;
+    function currentUnsavedDot(){
+      return document.querySelector('.tree-item.active .unsaved-dot');
+    }
+    function markUnsaved(){
+      currentUnsavedDot()?.classList.remove('hidden');
+      railUnsavedDot?.classList.add('visible');
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        currentUnsavedDot()?.classList.add('hidden');
+        railUnsavedDot?.classList.remove('visible');
+      }, 900);
+    }
+
+    function refresh(){ renderEditorHighlight(editor.value); renderMarkdown(editor.value); renderToc(); updateMeta(); autoGrow(); }
+    editor.addEventListener('input', () => { refresh(); markUnsaved(); });
+    editor.addEventListener('click', updateMeta);
+    editor.addEventListener('keyup', updateMeta);
+    titleInput.addEventListener('input', () => {
+      if(!syncingFrontmatter){
+        frontmatterState.title = titleInput.value;
+        syncingFrontmatter = true;
+        fmTitle.value = titleInput.value;
+        syncingFrontmatter = false;
+        updateYamlFromState();
+      }
+      renderMarkdown(editor.value);
+      renderToc();
+      markUnsaved();
+    });
+    titleInput.addEventListener('keydown', e => {
+      if(e.key === 'Enter') e.preventDefault();
+    });
+
+    let untitledCount = 0;
+    function createNewNote(){
+      const tree = document.querySelector('.tree');
+      const archiveHead = tree?.querySelector('.archive-head');
+      if(!tree || !archiveHead) return;
+
+      untitledCount += 1;
+      const filename = untitledCount === 1 ? 'Untitled.md' : `Untitled ${untitledCount}.md`;
+      const row = document.createElement('button');
+      row.className = 'tree-item new-note-enter';
+      row.dataset.filename = filename;
+      row.innerHTML = `
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>
+        <span class="file-name">${filename}</span>
+        <span class="unsaved-dot" aria-label="Unsaved changes"></span>`;
+
+      tree.insertBefore(row, archiveHead);
+      attachFileRowInteractions(row);
+      activateFileRow(row);
+      railUnsavedDot?.classList.add('visible');
+
+      requestAnimationFrame(() => requestAnimationFrame(() => row.classList.remove('new-note-enter')));
+      setTimeout(() => row.focus({preventScroll:true}), 170);
+    }
+    newNoteTriggers.forEach(button => button.addEventListener('click', createNewNote));
+
+    modeButtons.forEach(btn => btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      modeButtons.forEach(b => b.classList.toggle('active', b === btn));
+      workspace.classList.remove('mode-split','mode-read');
+      if(mode === 'split') workspace.classList.add('mode-split');
+      if(mode === 'read') workspace.classList.add('mode-read');
+
+      // Split view changes the editor width, which changes wrapped line count.
+      // Resize after the browser has applied the new grid columns so the pane,
+      // not the textarea itself, remains the single vertical scroll container.
+      requestAnimationFrame(() => {
+        autoGrow();
+        requestAnimationFrame(autoGrow);
+      });
+    }));
+
+    function toggleSidebar(){
+      if(document.body.classList.contains('sidebar-collapsed')){
+        document.body.classList.remove('sidebar-collapsed','sidebar-precollapse');
+        return;
+      }
+      document.body.classList.add('sidebar-precollapse');
+      setTimeout(() => {
+        document.body.classList.add('sidebar-collapsed');
+        document.body.classList.remove('sidebar-precollapse');
+      }, 70);
+    }
+    document.getElementById('sidebarToggle').addEventListener('click',toggleSidebar);
+
+    function openSettings(){
+      closePalette();
+      closeToc();
+      settingsBackdrop.classList.add('open');
+      settingsBackdrop.setAttribute('aria-hidden','false');
+      setTimeout(() => settingsDone.focus(), 0);
+    }
+    function closeSettings(){
+      settingsBackdrop.classList.remove('open');
+      settingsBackdrop.setAttribute('aria-hidden','true');
+    }
+    settingsTriggers.forEach(button => button.addEventListener('click', openSettings));
+    settingsDone.addEventListener('click', closeSettings);
+    settingsBackdrop.addEventListener('mousedown', e => { if(e.target === settingsBackdrop) closeSettings(); });
+
+    settingsNavButtons.forEach(button => button.addEventListener('click', () => {
+      const target = button.dataset.settingsPage;
+      settingsNavButtons.forEach(item => item.classList.toggle('active', item === button));
+      settingsPages.forEach(page => page.classList.toggle('active', page.dataset.page === target));
+    }));
+
+    function readThemePreference(){
+      try {
+        const stored = localStorage.getItem('quiet-theme');
+        return stored === 'light' || stored === 'dark' ? stored : 'system';
+      } catch (_) {
+        return 'system';
+      }
+    }
+
+    function syncThemeControl(preference){
+      if(!themeControl) return;
+      themeControl.querySelectorAll('[data-theme-value]').forEach(button => {
+        const active = button.dataset.themeValue === preference;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+    }
+
+    function applyThemePreference(preference, persist = true){
+      if(preference === 'light' || preference === 'dark') {
+        document.documentElement.dataset.theme = preference;
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        preference = 'system';
+      }
+      if(persist){
+        try {
+          if(preference === 'system') localStorage.removeItem('quiet-theme');
+          else localStorage.setItem('quiet-theme', preference);
+        } catch (_) {}
+      }
+      syncThemeControl(preference);
+    }
+
+    applyThemePreference(readThemePreference(), false);
+
+    let settingsFeedbackTimer;
+    function showSettingsFeedback(){
+      settingsFeedback?.classList.add('visible');
+      clearTimeout(settingsFeedbackTimer);
+      settingsFeedbackTimer = setTimeout(() => settingsFeedback?.classList.remove('visible'), 1100);
+    }
+
+    document.querySelectorAll('.switch').forEach(toggle => toggle.addEventListener('click', () => {
+      const on = toggle.classList.toggle('on');
+      toggle.setAttribute('aria-checked', String(on));
+      showSettingsFeedback();
+    }));
+
+    document.querySelectorAll('[data-segmented]').forEach(group => {
+      group.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+        group.querySelectorAll('button').forEach(item => {
+          const active = item === button;
+          item.classList.toggle('active', active);
+          if(item.hasAttribute('aria-pressed')) item.setAttribute('aria-pressed', String(active));
+        });
+        if(group.matches('[data-theme-control]')) {
+          applyThemePreference(button.dataset.themeValue || 'system');
+        }
+        showSettingsFeedback();
+      }));
+    });
+    document.querySelectorAll('.setting-select').forEach(select => select.addEventListener('change', showSettingsFeedback));
+
+    tocButton?.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleToc();
+    });
+    tocPopover?.addEventListener('click', e => e.stopPropagation());
+    document.addEventListener('click', e => {
+      if(tocControl && !tocControl.contains(e.target)) closeToc();
+    });
+
+    function openPalette(){ closeToc(); backdrop.classList.add('open'); backdrop.setAttribute('aria-hidden','false'); setTimeout(()=>paletteInput.focus(),0); }
+    function closePalette(){ backdrop.classList.remove('open'); backdrop.setAttribute('aria-hidden','true'); paletteInput.value=''; }
+    document.getElementById('searchBtn').addEventListener('click',openPalette);
+    backdrop.addEventListener('mousedown', e => { if(e.target === backdrop) closePalette(); });
+    window.addEventListener('keydown', e => {
+      if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); openPalette(); }
+      if(e.key === 'Escape'){ closePalette(); closeSettings(); closeToc(); }
+      if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b'){ e.preventDefault(); toggleSidebar(); }
+    });
+
+    updateFieldsFromState();
+    updateYamlFromState();
+    frontmatterCount.textContent = '· 4 fields';
+    refresh();
+  </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "name": "Quiet Markdown Editor Specification Draft",
+  "version": "0.1",
+  "based_on": "quiet-markdown-editor-v27-frontmatter.html",
+  "document_count": 25,
+  "files": [
+    "AGENTS.md",
+    "README.md",
+    "architecture/architecture.md",
+    "architecture/interfaces.md",
+    "decisions/001-no-tabs.md",
+    "decisions/002-frontmatter-metadata-ui.md",
+    "decisions/003-autosave-dirty-indicator.md",
+    "decisions/004-theme-system.md",
+    "decisions/005-toc-popover.md",
+    "decisions/006-collapsible-sidebar.md",
+    "decisions/007-production-editor-engine.md",
+    "domain/document-model.md",
+    "domain/file-lifecycle.md",
+    "domain/frontmatter.md",
+    "product/glossary.md",
+    "product/open-decisions.md",
+    "product/principles.md",
+    "product/requirements.md",
+    "quality/acceptance-criteria.md",
+    "quality/non-functional-requirements.md",
+    "quality/test-strategy.md",
+    "ui/design-system.md",
+    "ui/desktop-ux.md",
+    "ui/interactions.md",
+    "ui/ui-spec.md"
+  ]
+}
