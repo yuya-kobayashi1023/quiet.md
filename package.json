@@ -1,0 +1,47 @@
+{
+  "name": "quiet-md",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.11.0",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.4",
+    "@codemirror/view": "^6.43.11",
+    "@lezer/highlight": "^1.2.3",
+    "@tauri-apps/api": "^2.11.1",
+    "mdast-util-to-string": "^4.0.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
+  }
+}
