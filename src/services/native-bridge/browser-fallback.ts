@@ -10,7 +10,11 @@
  */
 
 import { NativeError } from "@/domain/document/errors";
-import type { DiskRevision, DocumentSummary } from "@/domain/document/types";
+import type {
+  DiskRevision,
+  DocumentSummary,
+  WorkspaceMetadata,
+} from "@/domain/document/types";
 
 const SAMPLE = `---
 title: Designing quieter software
@@ -66,7 +70,7 @@ const files = new Map<string, FakeFile>([
   ["/notes/2026-archive-sample.md", { content: "# Old note\n", modifiedAt: Date.now() }],
 ]);
 
-let metadata = {
+let metadata: WorkspaceMetadata = {
   version: 1,
   archived: ["2026-archive-sample.md"],
   lastOpened: "designing-quieter-software.md",

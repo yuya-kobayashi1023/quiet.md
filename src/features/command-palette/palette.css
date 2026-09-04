@@ -1,0 +1,93 @@
+/* Command Palette — interactions.md §10 */
+
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: var(--overlay);
+  animation: fade-in var(--duration-flyout) var(--ease);
+}
+
+.palette {
+  width: min(560px, calc(100vw - 40px));
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-modal);
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  animation: panel-in var(--duration-flyout) var(--ease);
+}
+
+.palette-input {
+  height: 46px;
+  flex: none;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  outline: 0;
+  background: transparent;
+  padding: 0 15px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.palette-input::placeholder {
+  color: var(--text-subtle);
+}
+
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.palette-row.is-active {
+  background: var(--selected);
+  color: var(--text-primary);
+}
+
+.palette-label {
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-hint,
+.palette-row kbd {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-subtle);
+}
+
+.palette-empty {
+  margin: 0;
+  padding: 10px;
+  color: var(--text-subtle);
+  font-size: 12px;
+}

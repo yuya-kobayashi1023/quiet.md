@@ -1,0 +1,56 @@
+/* Editor surface — ui-spec.md §7 */
+
+.editor-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.editor-wrap {
+  width: min(var(--editor-column), calc(100% - 64px));
+  margin: 0 auto;
+  padding: 42px 0 40vh;
+}
+
+/*
+ * Document title — U-006 / U-020。
+ * ファイル名の編集欄。固定高で切り取らず折り返す
+ * （プロトタイプで見つかった「2行目が消える」不具合を持ち込まない）。
+ */
+.title-input {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--size-title);
+  font-weight: 400;
+  /* descender が欠けない line box を確保する（ui-spec.md §7） */
+  line-height: 1.28;
+  letter-spacing: -0.028em;
+  padding: 2px 0 10px;
+  margin: 8px 0 22px;
+}
+
+.title-input::placeholder {
+  color: var(--text-subtle);
+}
+
+.title-error {
+  margin: -16px 0 18px;
+  color: var(--error);
+  font-size: 12px;
+}
+
+.editor-host {
+  font-size: var(--size-editor);
+}
+
+.editor-host .cm-editor {
+  height: auto;
+}

@@ -1,0 +1,20 @@
+/* Tooltip — 独自Style。Flyout なので shadow を許可（design-system.md §7）。 */
+.tooltip {
+  position: fixed;
+  z-index: 60;
+  transform: translateY(-50%);
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 5px 9px;
+  border-radius: var(--radius);
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-tooltip);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}

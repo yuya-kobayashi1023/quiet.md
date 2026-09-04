@@ -1,0 +1,150 @@
+/* Global styles. レイアウトは .specs/ui/ui-spec.md §1。 */
+
+@import "./tokens/tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text-prose);
+  font-family: var(--font-ui);
+  font-size: var(--size-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* Focus は Hover より明確に。消さない（design-system.md §12）。 */
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * App shell
+ * ------------------------------------------------------------------ */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: 1fr;
+  height: 100%;
+  transition: grid-template-columns var(--duration-sidebar) var(--ease);
+}
+
+.app[data-sidebar="collapsed"] {
+  grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+}
+
+/* Sidebar は Content Area の上端から下端まで貫通する（ADR-006）。 */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+}
+
+.main {
+  display: grid;
+  grid-template-rows: var(--topbar-height) 1fr var(--statusbar-height);
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Icon button
+ * ------------------------------------------------------------------ */
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  transition:
+    background var(--duration-hover) var(--ease),
+    color var(--duration-hover) var(--ease);
+}
+
+.icon-btn:hover {
+  background: var(--selected);
+  color: var(--text-primary);
+}
+
+.icon-btn[aria-expanded="true"],
+.icon-btn[data-active="true"] {
+  background: var(--selected);
+  color: var(--text-primary);
+}
+
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ------------------------------------------------------------------ *
+ * Scrollbar — 主張させない
+ * ------------------------------------------------------------------ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}

@@ -1,0 +1,199 @@
+/* Preview — ui-spec.md §11 */
+
+.preview-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.preview {
+  width: min(var(--preview-column), calc(100% - 72px));
+  margin: 0 auto;
+  padding: 42px 0 40vh;
+}
+
+.preview[data-typeface="sans"] {
+  --font-prose: var(--font-prose-sans);
+}
+
+.preview-title {
+  margin: 8px 0 18px;
+  font-family: var(--font-ui);
+  font-size: var(--size-title);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.028em;
+  color: var(--text-primary);
+}
+
+/* Front Matter は YAML ではなく意味を圧縮して出す（ui-spec.md §11） */
+.preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 0 0 34px;
+  font-family: var(--font-mono);
+  font-size: var(--size-micro);
+  color: var(--text-muted);
+}
+
+.preview-meta-dot {
+  margin: 0 5px;
+  color: var(--text-subtle);
+}
+
+.preview-body {
+  font-family: var(--font-prose);
+  font-size: var(--size-prose);
+  line-height: 1.62;
+  color: var(--text-prose);
+}
+
+.preview-body h1,
+.preview-body h2,
+.preview-body h3,
+.preview-body h4,
+.preview-body h5,
+.preview-body h6 {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  color: var(--text-primary);
+  letter-spacing: -0.012em;
+}
+
+.preview-body h1 {
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 42px 0 14px;
+}
+.preview-body h2 {
+  font-size: var(--size-h2);
+  line-height: 1.25;
+  margin: 40px 0 13px;
+}
+.preview-body h3 {
+  font-size: 18px;
+  margin: 32px 0 10px;
+}
+.preview-body h4,
+.preview-body h5,
+.preview-body h6 {
+  font-size: 15px;
+  margin: 26px 0 8px;
+  color: var(--text-prose);
+}
+
+.preview-body p {
+  margin: 0 0 18px;
+}
+.preview-body ul,
+.preview-body ol {
+  margin: 0 0 18px;
+  padding-left: 22px;
+}
+.preview-body li {
+  margin: 0 0 6px;
+}
+
+.preview-body a {
+  color: var(--accent-text);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-text) 35%, transparent);
+}
+
+.preview-body a:hover {
+  border-bottom-color: var(--accent-text);
+}
+
+.preview-body blockquote {
+  margin: 22px 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.preview-body code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  color: var(--text-editor);
+  background: color-mix(in srgb, var(--sidebar) 70%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.preview-body pre {
+  margin: 18px 0 22px;
+  padding: 14px 15px;
+  border-radius: var(--radius);
+  background: var(--sidebar);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  overflow-x: auto;
+}
+
+.preview-body pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.preview-body hr {
+  height: 0;
+  margin: 34px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.preview-body img {
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+
+.preview-body img[data-image="blocked"] {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/*
+ * Table。横幅超過時だけ横スクロール。縦の入れ子スクロールは作らない。
+ * Heavy grid を避け、header だけ面差をつける（ui-spec.md §11）。
+ */
+.preview-body table {
+  width: 100%;
+  margin: 20px 0 28px;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.preview-body th,
+.preview-body td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.preview-body th {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--sidebar) 60%, transparent);
+}
+
+.preview-body td {
+  font-size: 15.5px;
+}
+
+.preview-body input[type="checkbox"] {
+  margin-right: 6px;
+  accent-color: var(--accent);
+}
