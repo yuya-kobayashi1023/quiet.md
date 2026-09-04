@@ -148,7 +148,7 @@ UI:
 - Fields viewは最後にvalidだった値を表示
 - Saveを許可するかは判断事項
 
-[USER DECISION REQUIRED]
+[USER DECISION REQUIRED: U-017]
 
 **推奨:** Invalid YAMLでもMarkdownファイル自体は保存可能。ただしMetadata Fields syncを停止し、明示Warning。
 
@@ -194,7 +194,7 @@ Front Matterが存在しない場合:
 
 ユーザーがMetadata追加操作を行った場合に初めて挿入。
 
-[USER DECISION REQUIRED]
+[USER DECISION REQUIRED: U-018]
 
 現在PrototypeではMetadataが常にあるサンプルのため、Productionの「Front Matterなし」UIは未確定。
 

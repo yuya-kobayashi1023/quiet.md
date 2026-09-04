@@ -162,7 +162,7 @@ Archive
 - Focus stateは明確にする
 - Keyboardだけで主要操作可能にする
 - reduced motionを尊重する
-- Tooltipにしか重要情報を置かない
+- 重要情報をTooltipだけに置かない
 - 色だけで重大状態を伝えない
 
 Dirtyの `●` は補助状態であり、保存失敗は色だけにしない。

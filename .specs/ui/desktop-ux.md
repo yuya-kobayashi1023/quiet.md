@@ -98,6 +98,8 @@ OS Native Save Dialog。
 
 `Ctrl+Shift+P` をCommand Paletteに使うIDE文化もあるため、Shortcutは最終確認対象。
 
+View切替のshortcutとOS別の表記ルールは未決定。`U-029` を参照。
+
 ---
 
 ## 6. Context menu
@@ -139,6 +141,8 @@ Tabsは採用しない。
 - OS Snapで比較
 
 各Windowは同じWorkspaceを共有可能。
+
+同一ファイルを複数Windowで開けるか、Workspace stateをどう調停するかは未決定。`U-021` を参照。
 
 ---
 

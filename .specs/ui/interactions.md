@@ -82,7 +82,7 @@ Row appearance:
 - opacity 0 → 1
 - 100–160ms
 
-[USER DECISION REQUIRED]
+[USER DECISION REQUIRED: U-015]
 
 New Noteの初期ファイル名候補:
 

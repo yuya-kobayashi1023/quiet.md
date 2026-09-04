@@ -52,7 +52,7 @@
 - 行折り返し
 - IME入力
 - Undo / Redo
-- Find in document
+- Find in document（UIは `U-025`）
 - Editor font size
 - Tab width
 - Spell check option
@@ -83,6 +83,8 @@
 [DRAFT]
 
 GFMのTask List / StrikethroughもProductionでは有効にすることを推奨。
+
+Image・Link click・Raw HTMLの扱いは未決定。`U-023` を参照。
 
 ---
 

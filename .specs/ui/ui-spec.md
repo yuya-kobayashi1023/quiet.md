@@ -71,6 +71,10 @@ Settings
 - 通常時は背景になじませる
 - Hover時のみ軽く濃くする
 
+### Folder tree
+
+入れ子フォルダの表示・ignore規則・並び順は未決定。`U-024` を参照。
+
 ### Long filename
 
 - 1行
@@ -150,6 +154,8 @@ Editor | Preview
 ```
 
 それぞれ独立スクロール。
+
+2ペインのscrollを同期するかは未決定。`U-027` を参照。
 
 **Nested vertical scrollは禁止。**
 
@@ -275,6 +281,8 @@ design · editor      draft      2026-09-04
 - Col
 - Word count
 
+日本語文書でのWord countの定義は未決定。`U-030` を参照。
+
 右:
 
 - UTF-8
@@ -339,3 +347,17 @@ Headings will appear here as you write.
 保存失敗・YAML parse error・External conflictは、通常状態より強い表示を許可する。
 
 静けさよりデータ保全を優先。
+
+配置と形は未決定。`U-022` を参照。
+
+---
+
+## 16. Find in document
+
+`Ctrl/Cmd+F` のUIは未決定。`U-025` を参照。
+
+---
+
+## 17. Toast
+
+Archive Undo等で使うToastは未定義。`U-026` を参照。

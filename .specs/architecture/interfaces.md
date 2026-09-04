@@ -58,6 +58,8 @@ saveDocument(input: {
 
 Expected revisionが一致しない場合は`CONFLICT`を返す。
 
+mtime + sizeだけで競合を判定するかは未決定。`U-028` を参照。
+
 ---
 
 ## 4. Rename

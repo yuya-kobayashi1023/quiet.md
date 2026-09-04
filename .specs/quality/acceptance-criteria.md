@@ -34,6 +34,8 @@
 - [ ] Status barにSaved文字を出さない
 - [ ] Collapse時に操作可能なIcon railが残る
 - [ ] Collapse時Settingsは最下部
+- [ ] サブフォルダを持つWorkspaceでも全ての`.md`へ到達できる（U-024）
+- [ ] ignore対象（dotfolder / `node_modules` / `.quiet`）が一覧に出ない（U-024）
 
 ---
 
@@ -81,6 +83,9 @@
 - [ ] Table横幅超過時だけ横scroll
 - [ ] Preview上部に`PREVIEW`ラベルがない
 - [ ] Dark themeでも可読
+- [ ] 相対パスの画像が表示される（U-023）
+- [ ] 外部linkがWebView内で遷移しない（U-023）
+- [ ] Raw HTMLの扱いが仕様通り（U-023）
 
 ---
 
@@ -155,6 +160,11 @@
 - [ ] Save failureでDirty contentを保持
 - [ ] Save failureを明示通知
 - [ ] Window close時に保存安全性を確認
+- [ ] 保存時にline endingを変換しない（LF / CRLFを保持）
+- [ ] 保存時にUTF-8 BOMの有無を保持
+- [ ] 保存時に本文を無条件で再整形しない
+- [ ] Autosave delayが仕様値（U-008）
+- [ ] Window blur / Document切替 / App close前に即時save
 
 ---
 
@@ -192,3 +202,40 @@
 - [ ] Screen reader labels
 - [ ] Reduced motion
 - [ ] Major errorを色だけで表現しない
+- [ ] Light / Darkの双方でContrast要求を満たす（U-019）
+- [ ] TooltipがScreen readerから対象行に紐づいている
+
+---
+
+## N. File operations
+
+- [ ] 明示操作からRenameできる
+- [ ] Rename時にOS禁止文字・Windows予約名・同名衝突をInline errorで示す
+- [ ] Renameしても`frontmatter.title`は変わらない
+- [ ] Duplicate
+- [ ] Copy Path
+- [ ] Archiveで対象がArchive区分へ移る（U-005）
+- [ ] ArchiveをUndoできる（U-026）
+- [ ] Restoreできる
+- [ ] MVPの通常UIにDeleteを置かない
+
+---
+
+## O. Recovery / Persistence
+
+- [ ] Crash後に未保存内容を復旧できる（U-014）
+- [ ] 正常save後にrecovery snapshotが残らない
+- [ ] Settings / Theme / 最終選択ファイルが再起動後も保持される
+- [ ] `.quiet/workspace.json` が壊れてもMarkdown本文を失わない
+- [ ] Workspace metadataにversionがある
+
+---
+
+## P. 未設計のため検証不能な項目
+
+次はUI仕様が存在しないため、判断（`product/open-decisions.md`）が済むまでACを確定できない。
+
+- Conflict / Save error / External delete のUI（U-022）
+- Find in document のUI（U-025）
+- Toast（U-026）
+- Empty states / Error states（`ui/ui-spec.md` §14・§15 は[DRAFT]）

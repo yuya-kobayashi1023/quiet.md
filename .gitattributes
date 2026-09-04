@@ -1,0 +1,3 @@
+# 仕様書・ソースはLFで保持する（本製品自体がline endingの無断変換を禁じているため）
+* text=auto eol=lf
+*.html text eol=lf

@@ -1,8 +1,8 @@
 {
   "name": "Quiet Markdown Editor Specification Draft",
   "version": "0.1",
-  "based_on": "quiet-markdown-editor-v27-frontmatter.html",
-  "document_count": 25,
+  "based_on": "ui/ui-mockup.html",
+  "document_count": 26,
   "files": [
     "AGENTS.md",
     "README.md",
@@ -28,6 +28,7 @@
     "ui/design-system.md",
     "ui/desktop-ux.md",
     "ui/interactions.md",
+    "ui/ui-mockup.html",
     "ui/ui-spec.md"
   ]
 }

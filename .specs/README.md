@@ -1,10 +1,10 @@
 # Quiet Markdown Editor — 仕様ドラフト一式
 
 > 文書ステータス: **Draft 0.1**  
-> 基準UI: 2026-09-04 時点の `quiet-markdown-editor-v27-frontmatter.html` 相当  
+> 基準UI: `ui/ui-mockup.html`（2026-09-04 時点の v27 Front Matter プロトタイプ）  
 > 目的: AI実装時に「見た目は合っているが仕様が違う」「便利そうな機能をAIが独自追加する」といったズレを減らす。
 
-このZIPは、現在合意しているUIと、実際にデスクトップアプリとして開発する際に必要になる仕様を、実装に渡せる粒度へ分解したたたき台です。
+このリポジトリの `.specs/` は、現在合意しているUIと、実際にデスクトップアプリとして開発する際に必要になる仕様を、実装に渡せる粒度へ分解したたたき台です。
 
 まだ確定していない事項は、**AIに勝手に決めさせない**ために明示的に未決定として残しています。
 
@@ -40,7 +40,7 @@
 ## 2. 文書構成
 
 ```text
-quiet-markdown-editor-spec-draft/
+.specs/
 │
 ├─ README.md
 ├─ AGENTS.md
@@ -54,7 +54,8 @@ quiet-markdown-editor-spec-draft/
 │  ├─ ui-spec.md
 │  ├─ design-system.md
 │  ├─ interactions.md
-│  └─ desktop-ux.md
+│  ├─ desktop-ux.md
+│  └─ ui-mockup.html
 │
 ├─ domain/
 │  ├─ document-model.md

@@ -16,6 +16,7 @@
 --text-primary: #26251e;
 --text-editor: #34332d;
 --text-prose: #3b3a34;
+--text-secondary: #84847e;
 --text-muted: #7a7974;
 --text-subtle: #a1a19f;
 
@@ -36,6 +37,7 @@
 --text-primary: #ebe8df;
 --text-editor: #d9d5ca;
 --text-prose: #d2cfc5;
+--text-secondary: #aaa79c;
 --text-muted: #918e84;
 --text-subtle: #77756c;
 
@@ -44,6 +46,31 @@
 --success: #67a987;
 --selection: #355f82;
 ```
+
+---
+
+### Prototypeトークン名との対応
+
+`ui/ui-mockup.html` は情緒的な名前を使っている。Productionではsemantic名を正とし、対応は次の通り。
+
+| Semantic (Production) | Prototype | Light | Dark |
+|---|---|---|---|
+| `--canvas` | `--parchment` | #f7f7f4 | #171713 |
+| `--sidebar` | `--bone` | #f2f1ed | #1e1d19 |
+| `--selected` | `--linen` | #e6e5e0 | #292823 |
+| `--border` | `--stone` | #cdcdc9 | #3b3932 |
+| `--text-primary` | `--ink` | #26251e | #ebe8df |
+| `--text-editor` | `--editor-text` | #34332d | #d9d5ca |
+| `--text-prose` | `--prose` | #3b3a34 | #d2cfc5 |
+| `--text-secondary` | `--driftwood` | #84847e | #aaa79c |
+| `--text-muted` | `--ash` | #7a7974 | #918e84 |
+| `--text-subtle` | `--mist` | #a1a19f | #77756c |
+| `--accent` | `--ember` | #f54e00 | #ff6a2a |
+
+`--text-secondary`（Prototypeの `--driftwood`）はSidebarのファイル名とCommand Palette行に使われているが、
+Color rolesに定義がなかったため追加した。
+
+Productionでは情緒的な名前を実装へ持ち込まない。
 
 ---
 

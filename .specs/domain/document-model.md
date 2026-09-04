@@ -23,6 +23,7 @@ type Document = {
   hasBom: boolean;
   lineEnding: "lf" | "crlf";
 
+  // 外部削除時の状態とconflictからの復帰遷移は未定義。U-022を参照。
   saveState: "clean" | "dirty" | "saving" | "save_error" | "conflict";
 
   diskRevision: {
@@ -86,6 +87,8 @@ designing-quieter-software.md
 ```
 
 ただしファイルを開いただけでFront Matterは挿入しない。
+
+本文先頭の `# Heading` との関係（`titleSource: "heading"` の扱いと、Previewの見出しレベル）は未決定。`U-020` を参照。
 
 Title UIを編集した時点で`title`を追加。
 
@@ -227,6 +230,6 @@ MVP:
 
 新規ファイルはOSに関係なくLFを推奨。
 
-[USER DECISION REQUIRED]
+[USER DECISION REQUIRED: U-016]
 
 Windows新規ファイルもCRLFにする方針を希望する場合は変更可能。

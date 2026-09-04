@@ -55,6 +55,8 @@ Preview再parseは入力をBlockしない。
 
 巨大ファイルではPreview / TOCを遅延更新してよい。
 
+大きな**Workspace**（1000ファイル超）の目標値は未定義。`U-024` を参照。
+
 ---
 
 ## 3. Reliability
@@ -111,6 +113,8 @@ Markdown raw HTMLをPreviewで許可するかは別途判断。
 ---
 
 ## 7. Accessibility
+
+現在のLight tokenはWCAG AAを満たしていない。`U-019` を参照。
 
 - WCAG相当のContrastを確認
 - Keyboard navigation

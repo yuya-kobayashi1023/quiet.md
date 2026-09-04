@@ -20,6 +20,22 @@
 | U-012 | App固有Workspace metadata | `.quiet/` 配下のJSONを許可 | High |
 | U-013 | Search All | MVP後半またはP1。Quick OpenはMVP | Medium |
 | U-014 | Local history | MVPではCrash recoveryのみ。履歴UIはLater | Medium |
+| U-015 | New Noteの初期ファイル名 | `Untitled.md` + 即Rename | Low |
+| U-016 | 新規ファイルの改行コード | OSに関係なくLF | Low |
+| U-017 | Invalid YAML時の保存可否 | 保存は許可。Fields syncのみ停止 | Medium |
+| U-018 | Front Matterがない文書のMetadata UI | Summary自体を非表示。More menuから追加 | Medium |
+| U-019 | Light themeのコントラスト | 小さい文字に使うroleだけ暗くする | **High** |
+| U-020 | Title / `frontmatter.title` / 本文H1の関係 | Titleは文書のH1。本文の`#`をH1として扱わない | **High** |
+| U-021 | Multi-window時の同一ファイル・同一Workspace | 同一ファイルは2窓で開かず既存窓をfocus | **High** |
+| U-022 | Conflict / Save error / External deleteのUI | Editor上部のInline banner | **High** |
+| U-023 | Previewのlink / image / raw HTML | 外部linkはOS既定browser、相対imageは表示、raw HTMLはsanitize | **High** |
+| U-024 | Workspaceのフォルダツリーとignore規則 | 入れ子フォルダを表示。dotfolderと`.quiet/`は除外 | **High** |
+| U-025 | Find in documentのUI | Editor右上のInline find bar | Medium |
+| U-026 | Toastの採否と定義 | Archive Undo等のためStatus bar上に1本だけ許可 | Medium |
+| U-027 | Split時のscroll同期 | MVPでは同期しない | Medium |
+| U-028 | 保存競合検知にcontent hashを使うか | mtime + size + hashで判定 | Medium |
+| U-029 | ショートカット表記とView切替shortcut | OS別表記。View切替は`Ctrl/Cmd+1/2/3` | Low |
+| U-030 | 日本語のword count | 文字数と語数を切り替え可能にする | Low |
 
 ---
 
@@ -329,3 +345,462 @@ MVPでは、
 まで。
 
 過去版を閲覧するLocal History UIはLater。
+
+---
+
+# U-015 New Noteの初期ファイル名
+
+[USER DECISION REQUIRED: U-015]
+
+詳細は `ui/interactions.md` §4。
+
+## 推奨案
+
+`Untitled.md` を一時名として作成し、即Rename UIへ入る。衝突時は `Untitled 2.md`。
+
+## 代替案
+
+`YYYY-MM-DD-HHmm.md`。日付運用のノートでは便利だが、Renameを促す力が弱い。
+
+## 決めない場合の影響
+
+`domain/file-lifecycle.md` §2 の新規作成フローが実装できない。
+
+---
+
+# U-016 新規ファイルの改行コード
+
+[USER DECISION REQUIRED: U-016]
+
+詳細は `domain/document-model.md` §12。
+
+## 推奨案
+
+既存ファイルはLF / CRLFを保持する。新規ファイルはOSに関係なくLF。
+
+## 代替案
+
+Windowsでは新規もCRLF。
+
+## 決めない場合の影響
+
+`architecture/interfaces.md` の `saveDocument` が受け取る `lineEnding` の既定値が決まらない。
+
+---
+
+# U-017 Invalid YAML時の保存可否
+
+[USER DECISION REQUIRED: U-017]
+
+詳細は `domain/frontmatter.md` §8。
+
+## 推奨案
+
+Invalid YAMLでもMarkdownファイル自体は保存可能にする。Fields syncだけ停止し、Raw viewに明示Warningを出す。
+
+## 理由
+
+Text editorがユーザー入力を拒否しない方が、途中状態のまま離席してもデータを失わない。
+
+## 代替案
+
+Invalid中はAutosaveを止める。データは守られるが、ユーザーは保存されていないことに気づきにくい。
+
+## 決めない場合の影響
+
+Autosave coordinatorがFront Matterのparse結果に依存するかどうかが決まらない。
+
+---
+
+# U-018 Front Matterがない文書のMetadata UI
+
+[USER DECISION REQUIRED: U-018]
+
+詳細は `domain/frontmatter.md` §11。
+
+## 推奨案
+
+Front Matterがない場合、`Metadata` summary自体を表示しない。More menuの `Add metadata` で初めて挿入する。
+
+## 決めない場合の影響
+
+「開いただけで書き換えない」原則（`product/principles.md` §5）を守れるかどうかが実装者判断になる。
+
+---
+
+# U-019 Light themeのコントラスト
+
+[USER DECISION REQUIRED: U-019]
+
+## 論点
+
+`quality/non-functional-requirements.md` §7 と `quality/acceptance-criteria.md` M はWCAG相当のContrastを要求しているが、
+現在のLight tokenは満たしていない。実測値（WCAG 2.x contrast ratio、背景は `--canvas` #f7f7f4）:
+
+| Token | 実測 | 主な用途 | 判定 (4.5:1) |
+|---|---:|---|---|
+| `--text-subtle` #a1a19f | 2.41 | Status bar、Metadata summary、placeholder（9.8–12px） | 不合格 |
+| `--accent` #f54e00 | 3.28 | Preview内のlink | 不合格 |
+| `--text-secondary` #84847e | 3.33 | Sidebarのファイル名（12px） | 不合格 |
+| `--text-muted` #7a7974 | 4.06 | Section label、setting hint | 不合格 |
+| `--syntax-marker` #a36a43 | 4.16 | Markdown記号 | 不合格 |
+| `--text-editor` #34332d | 11.80 | Markdown本文 | 合格 |
+
+Darkは同じ役割がすべて3.89–12.26で、概ね基準を満たしている。問題はLightに偏っている。
+
+## 推奨案
+
+Lightの小さい文字に使うroleだけ暗くする。色相を維持したまま輝度を落とした候補:
+
+```css
+--text-subtle:    #71716f;  /* 4.56:1 */
+--text-secondary: #72726d;  /* 4.50:1 */
+--text-muted:     #72716c;  /* 4.56:1 */
+--syntax-marker:  #9b6540;  /* 4.52:1 */
+--accent-text:    #cb4100;  /* 4.55:1 — link等の文字用。dot等の非文字は #f54e00 のまま */
+```
+
+ただしこの案では subtle / secondary / muted が #71–#72 帯へ収束し、Lightの3段テキスト階層が事実上1段になる。
+
+## 代替案
+
+A. 4.5:1を満たさないroleは「読めなくても操作に支障がない装飾テキスト」に限定し、
+   Status barやSidebarのファイル名など意味のあるテキストには使わないと決める。
+
+B. 目標をAA Large相当へ緩め、代わりに該当箇所のfont sizeを上げる
+   （`--text-subtle` を 9.8–10.5px で使うのをやめる）。
+
+C. 現状の見た目を優先し、NFR §7 と AC-M からWCAG要求を明示的に下げる。
+
+## 決めない場合の影響
+
+`quality/acceptance-criteria.md` M が実装完了時点で必ず失敗する。
+Tokenを後から暗くすると、Prototypeで確認した「静けさ」の印象が実装後に変わる。
+
+---
+
+# U-020 Title / `frontmatter.title` / 本文H1の関係
+
+[USER DECISION REQUIRED: U-020]
+
+## 論点
+
+タイトルの候補が3つあるのに、優先順位と見出しレベルが定義されていない。
+
+- Editor上部の大きなTitle UI
+- `frontmatter.title`
+- 本文先頭の `# Heading`
+
+`domain/document-model.md` §1 の `titleSource` には `"heading"` があるが、U-006はfrontmatter / filenameしか扱っていない。
+
+現Prototypeは次の実装になっており、これは仕様として合意されていない。
+
+- Previewは常に `<h1>{Title UIの値}</h1>` を描画する
+- 本文の `# X` を `<h2>` へ降格する（`ui/ui-mockup.html` の `renderMarkdown`）
+- TOCも同じ降格を前提にレベルを+1している
+
+## 推奨案
+
+Title UIを「文書のH1」と定義し、本文の `#` をH1として扱わないことを明示的に決める。
+そのうえで、本文に `# X` が既にある文書を開いたときの挙動を決める。
+
+1. `frontmatter.title` があればTitle UIに出す
+2. なければ本文先頭のH1をTitle UIに出し、`titleSource = "heading"` とする
+3. その状態でTitle UIを編集したら、本文のH1行を書き換える（Front Matterは追加しない）
+4. どちらもなければfilename stemをplaceholder表示する（U-006の通り）
+
+## 代替案
+
+Title UIは常に `frontmatter.title` 専用とし、本文H1には触れない。
+この場合、H1を持つ既存文書ではPreviewに見出しが2つ並ぶことを許容する。
+
+## 決めない場合の影響
+
+- Previewの見出しレベルが本文と食い違い、Export HTMLとScreen readerの見出し構造が壊れる
+- TOCの階層が文書の実構造と一致しない
+- 既存Markdown資産を開いたときに、意図しないH1の重複が起きる
+
+---
+
+# U-021 Multi-window時の同一ファイル・同一Workspace
+
+[USER DECISION REQUIRED: U-021]
+
+## 論点
+
+U-011はTabsを採用しない代わりに `Open in New Window` を前提にしており、
+`ui/desktop-ux.md` §7 は「各Windowは同じWorkspaceを共有可能」とだけ書いている。次が未定義。
+
+- 同じファイルを2つのWindowで開けるか
+- 開けるなら、片方のsaveをもう片方はExternal changeとして扱うのか（自分自身との競合）
+- `.quiet/workspace.json` を2つのWindowが同時に書いたときの調停
+- Archive操作が他Windowのサイドバーへ反映されるか
+
+## 推奨案
+
+- 同一ファイルは同時に1Windowだけとし、既に開いていればそのWindowをfocusする
+- `.quiet/workspace.json` の書込みは単一プロセス内で直列化する
+- Workspace stateの変更は他Windowへ通知する
+
+## 代替案
+
+同一ファイルの複数Window表示を許可し、内部的にDocumentを共有する（Buffer共有）。
+実装コストは上がるが、比較用途では自然。
+
+## 決めない場合の影響
+
+Tabsを持たない本アプリで、複数文書を扱う唯一の導線の挙動が決まらない。
+watcherのself-save suppression（`architecture/architecture.md` §10）をWindow単位とProcess単位のどちらにするかも決められない。
+
+---
+
+# U-022 Conflict / Save error / External deleteのUI
+
+[USER DECISION REQUIRED: U-022]
+
+## 論点
+
+`quality/acceptance-criteria.md` K と `domain/file-lifecycle.md` §6・§11・§12 はこれらのUIを必須にしているが、
+`ui/ui-spec.md` §15 は「通常状態より強い表示を許可する」としか書いておらず、置き場所も形も決まっていない。
+本アプリで最もデータ損失に近い経路が、唯一UIデザインされていない。
+
+あわせて `domain/document-model.md` §1 の `saveState` には、
+外部削除された状態（`missing`）と、conflictからの復帰遷移が存在しない。
+
+## 推奨案
+
+Editor surfaceの最上部（Metadata summaryの上）に、Inline bannerを1本だけ許可する。
+
+```text
+⚠ このファイルはエディタの外で変更されました
+   差分を見る    自分の変更を残す    ディスクから再読込
+```
+
+- Modalにしない（入力を止めない）
+- Toastにしない（消えてはいけない）
+- `saveState` に `missing` を追加し、conflict → clean / dirty の復帰遷移を明記する
+
+## 代替案
+
+Modalで強制的に選ばせる。確実だが、`product/principles.md` §8（Reversible over confirm-everything）と衝突する。
+
+## 決めない場合の影響
+
+AC-Kが検証不能。実装者ごとにModal / Toast / Status barへ散らばる。
+
+---
+
+# U-023 Previewのlink / image / raw HTML
+
+[USER DECISION REQUIRED: U-023]
+
+## 論点
+
+`product/requirements.md` §3.3 のPreview対応要素に画像がない。
+また、link clickとraw HTMLの扱いが決まっていない。
+`quality/non-functional-requirements.md` §6 は「Unsafe HTML preview」「`file://` link handling」を挙げるだけで仕様がない。
+
+Tauri実装では次が直接効いてくる。
+
+- WebView内で外部linkを開くとアプリ画面自体が遷移して壊れる
+- 相対パス画像は `convertFileSrc` 相当の変換とCSP設定が必要
+- 相対パスの `.md` linkをアプリ内で開くかどうかでNavigation設計が変わる
+
+## 推奨案
+
+- 外部link（http / https）: OS既定browserで開く。WebView内では遷移させない
+- 相対 `.md` link: アプリ内でそのノートを開く
+- 相対画像: Workspace内に限り表示する
+- raw HTML: MVPではsanitizeして描画する（scriptと `on*` 属性を除去）
+- `file://` と外部画像URL: MVPでは読み込まない
+
+## 決めない場合の影響
+
+Markdownエディタとして画像が表示されないまま実装が進む。
+リンククリックでアプリが壊れる不具合が、実装後に見つかる。
+
+---
+
+# U-024 Workspaceのフォルダツリーとignore規則
+
+[USER DECISION REQUIRED: U-024]
+
+## 論点
+
+U-001は `docs/design.md` のような入れ子フォルダを持つWorkspaceを推奨しているが、
+`ui/ui-spec.md` §2 のSidebarは `Notes` / `Archive` のフラット2区分しか定義していない。
+Prototypeの `Archive` 配下には `2026` というフォルダ行があり、U-005（論理Archive）とも食い違っている。
+
+未定義:
+
+- 入れ子フォルダをツリー表示するか、フラット表示するか
+- フォルダの展開状態を保持するか
+- ignore規則（`.git/`、`node_modules/`、dotfolder、`.quiet/` 自体）
+- 並び順（名前順 / 更新順）
+- 大きなWorkspace（1000ファイル超）での性能。
+  `quality/non-functional-requirements.md` は大きなファイルしか扱っていない
+
+## 推奨案
+
+- 入れ子フォルダをツリー表示する。フォルダ行はDisclosureのみで、常設ボタンを増やさない
+- dotfolderと `.quiet/` は既定で非表示。`node_modules/` はignoreする
+- 既定の並びは名前順
+- 5000ファイル程度までUIが固まらないことをNFRへ追加する
+- `Archive` はU-005の論理Archiveなので、フォルダではなくファイル行だけを並べる
+  （Prototypeの `2026` 行は誤り）
+
+## 決めない場合の影響
+
+既存のノートフォルダやリポジトリを開いた瞬間に、Sidebarが破綻するか、サブフォルダのファイルが見えない。
+
+---
+
+# U-025 Find in documentのUI
+
+[USER DECISION REQUIRED: U-025]
+
+## 論点
+
+`Ctrl/Cmd+F` は `product/requirements.md` §4 のP0だが、
+UI仕様・インタラクション仕様がなく、ACも `C. Editor` の「Find」1行だけ。
+常設UIを増やさない原則と最も衝突しやすい機能である。
+
+## 推奨案
+
+Editor paneの右上に、開いている間だけ存在するInline find barを出す。
+
+```text
+[ query            ]  3/12   ↑ ↓   Aa  .*   ✕
+```
+
+- Escで閉じる
+- ReplaceはMVP外
+- Command Paletteとは別物として扱う（`Ctrl/Cmd+K` はコマンド、`Ctrl/Cmd+F` は現在文書）
+
+## 決めない場合の影響
+
+CodeMirror 6の標準search panelがそのまま出て、Design systemから浮いたUIになる。
+
+---
+
+# U-026 Toastの採否と定義
+
+[USER DECISION REQUIRED: U-026]
+
+## 論点
+
+`ui/interactions.md` §12（Archive Undo）と §14（Updated from disk）はToastを前提にしているが、
+`ui/ui-spec.md` にも `ui/design-system.md` にもToastコンポーネントの定義がない。
+位置・表示時間・同時表示数・reduced motion時の扱いが未定義。
+
+## 推奨案
+
+Toastを1種類だけ定義して許可する。
+
+- 位置: Status barのすぐ上、左寄せ
+- 同時表示: 1件のみ（新しいものが置き換える）
+- 表示時間: Actionを持つ場合6秒、持たない場合3秒
+- Actionは最大1つ（`Undo` など）
+- データ損失に関わる通知はToastにしない（U-022のInline banner）
+
+## 代替案
+
+Toastを持たず、Archive UndoはCommand Paletteの `Undo archive` に寄せる。
+UIは増えないが、Undoの存在に気づけない。
+
+## 決めない場合の影響
+
+`product/principles.md` §8（Reversible over confirm-everything）を支える唯一の導線が実装されない。
+
+---
+
+# U-027 Split時のscroll同期
+
+[USER DECISION REQUIRED: U-027]
+
+## 論点
+
+`ui/ui-spec.md` §6 は「それぞれ独立スクロール」と書いているが、
+これが「同期しない」という決定なのか、単にスクロールコンテナの数の話なのかが読み取れない。
+Split viewの体験を最も左右する項目である。
+
+## 推奨案
+
+MVPでは同期しない。行対応の推定が外れたときに勝手にスクロールする方が邪魔になるため。
+TOCからの移動だけが両ペインを動かす（`ui/interactions.md` §7 の通り）。
+
+## 代替案
+
+Editor → Preview片方向の同期をSettingsで任意ONにする。
+
+## 決めない場合の影響
+
+実装者が善意で同期を入れる可能性が高く、後から外すと使用感が変わる。
+
+---
+
+# U-028 保存競合検知にcontent hashを使うか
+
+[USER DECISION REQUIRED: U-028]
+
+## 論点
+
+`architecture/interfaces.md` §3 の `saveDocument` は `expectedRevision = { modifiedAt, size }` で競合を判定する。
+しかしこの2つだけでは次を取りこぼす。
+
+- 同じバイト数の外部編集（1文字置換など）
+- ファイルシステムのmtime粒度（環境によっては1〜2秒）内に起きた変更
+- クラウド同期フォルダ（OneDrive等）がmtimeを書き換えるケース
+
+`domain/document-model.md` §10 は content hash を optional と書いているだけ。
+
+## 推奨案
+
+`expectedRevision` に content hash を加え、hashが一致する限り競合としない。
+Windows firstかつOneDrive配下の利用を想定するなら、必須に近い。
+
+## 決めない場合の影響
+
+「Dirtyな内容で外部変更を黙って上書きしない」（`domain/file-lifecycle.md` §11）が、条件次第で破れる。
+
+---
+
+# U-029 ショートカット表記とView切替shortcut
+
+[USER DECISION REQUIRED: U-029]
+
+## 論点
+
+- U-009はWindows firstだが、PrototypeのSettingsとCommand Paletteは `⌘ K` `⌘ B` などmacOS表記のまま
+- `product/requirements.md` §4 のP0一覧に `Ctrl+N` と `Ctrl+W` がなく、`ui/desktop-ux.md` §5 の表とずれている
+- Write / Split / Read の切替shortcutがどこにも定義されていない
+  （Prototypeのpaletteには `⌘⇧P` と書かれている）
+
+## 推奨案
+
+- shortcut表記はプラットフォームから生成する（Windowsでは `Ctrl+K`）。UIへハードコードしない
+- `ui/desktop-ux.md` §5 の表を唯一の正とし、requirementsからは参照だけにする
+- View切替は `Ctrl/Cmd+1` / `2` / `3`
+
+## 決めない場合の影響
+
+Windows版に `⌘` が表示される。ショートカット表が2か所でずれたまま実装される。
+
+---
+
+# U-030 日本語のword count
+
+[USER DECISION REQUIRED: U-030]
+
+## 論点
+
+`ui/ui-spec.md` §12 はStatus barに Word count を出すと決めているが、日本語では語数がほぼ意味を持たない。
+Prototypeは連続するCJKを1語として数えるため、日本語文書では実質的に無意味な数字になる。
+
+## 推奨案
+
+既定を文字数にし、クリックで語数へ切り替える（Status barの既存の場所で完結させる）。
+
+## 決めない場合の影響
+
+日本語ノートで常に誤った数字が出続ける。
