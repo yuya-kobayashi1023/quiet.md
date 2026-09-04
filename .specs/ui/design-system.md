@@ -7,6 +7,19 @@
 
 ### Light
 
+[DECIDED: U-019] 小さい文字に使うroleはWCAG AA (4.5:1) を満たす値へ調整済み。
+
+判定は `--canvas` (#f7f7f4) と `--sidebar` (#f2f1ed) の**両方**に対して行う。
+Sidebarの方が背景が暗いため、canvasだけで検証すると不足する。
+
+| Role | Sidebar上 | Canvas上 |
+|---|---:|---:|
+| `--text-subtle` | 4.52 | 4.76 |
+| `--text-muted` | 5.24 | 5.52 |
+| `--text-secondary` | 6.03 | 6.35 |
+| `--accent-text` | 4.52 | 4.76 |
+| `--syntax-marker` | 4.52 | 4.76 |
+
 ```css
 --canvas: #f7f7f4;
 --sidebar: #f2f1ed;
@@ -16,12 +29,13 @@
 --text-primary: #26251e;
 --text-editor: #34332d;
 --text-prose: #3b3a34;
---text-secondary: #84847e;
---text-muted: #7a7974;
---text-subtle: #a1a19f;
+--text-secondary: #5b5b57;
+--text-muted: #656460;
+--text-subtle: #6e6e6d;
 
 --accent: #f54e00;
---syntax-marker: #a36a43;
+--accent-text: #c63f00;
+--syntax-marker: #96623e;
 --success: #34785c;
 --selection: #8bc4f8;
 ```
@@ -62,10 +76,11 @@
 | `--text-primary` | `--ink` | #26251e | #ebe8df |
 | `--text-editor` | `--editor-text` | #34332d | #d9d5ca |
 | `--text-prose` | `--prose` | #3b3a34 | #d2cfc5 |
-| `--text-secondary` | `--driftwood` | #84847e | #aaa79c |
-| `--text-muted` | `--ash` | #7a7974 | #918e84 |
-| `--text-subtle` | `--mist` | #a1a19f | #77756c |
+| `--text-secondary` | `--driftwood` | #5b5b57 | #aaa79c |
+| `--text-muted` | `--ash` | #656460 | #918e84 |
+| `--text-subtle` | `--mist` | #6e6e6d | #77756c |
 | `--accent` | `--ember` | #f54e00 | #ff6a2a |
+| `--accent-text` | （なし） | #c63f00 | #ff6a2a |
 
 `--text-secondary`（Prototypeの `--driftwood`）はSidebarのファイル名とCommand Palette行に使われているが、
 Color rolesに定義がなかったため追加した。
@@ -84,6 +99,12 @@ Accentは以下に限定する。
 - Dirty dot
 - Markdown syntax punctuation
 - 短いemphasis
+
+[DECIDED: U-019]
+
+文字に使う場合は `--accent-text` を使う。
+`--accent` はdirty dotのような非文字要素に限る。
+Lightで `--accent` (#f54e00) はcanvasに対して3.28:1しかなく、本文サイズの文字では読みにくい。
 
 禁止:
 
@@ -175,7 +196,7 @@ Draft scale:
 
 | Role | Size |
 |---|---:|
-| Micro status | 9.8–10.5px |
+| Micro status | 10.5px（これ未満にしない） |
 | Sidebar file | 12px |
 | UI | 11.5–13px |
 | Editor source | 14px |
@@ -284,7 +305,9 @@ Sidebar utility / file row:
 
 ## 12. Focus
 
-[DRAFT]
+[DECIDED: U-019]
+
+Focus ringはcanvasに対して3:1以上のコントラストを確保する。
 
 Keyboard focusはHoverより明確にする。
 

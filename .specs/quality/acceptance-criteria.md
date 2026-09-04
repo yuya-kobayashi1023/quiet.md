@@ -50,6 +50,7 @@
 - [ ] Markdown syntax punctuationが控えめにhighlight
 - [ ] 本文が多色になりすぎない
 - [ ] Titleの`g`,`y`,`p`,`q`等descenderが欠けない
+- [ ] 長いTitleが固定高で切り取られない（折り返す）
 - [ ] Line wrap ON/OFF
 - [ ] Tab width setting
 - [ ] Large documentで入力が実用速度
@@ -83,6 +84,7 @@
 - [ ] Table横幅超過時だけ横scroll
 - [ ] Preview上部に`PREVIEW`ラベルがない
 - [ ] Dark themeでも可読
+- [ ] 本文の`#`がPreviewでもH1のまま（降格しない）
 - [ ] 相対パスの画像が表示される（U-023）
 - [ ] 外部linkがWebView内で遷移しない（U-023）
 - [ ] Raw HTMLの扱いが仕様通り（U-023）
@@ -113,7 +115,8 @@
 - [ ] tags
 - [ ] status
 - [ ] created
-- [ ] Large titleと`title`の同期ルールが仕様通り
+- [ ] `title` キーがあってもTitle UIの表示が変わらない
+- [ ] Titleを編集してもFront Matterが増えない
 - [ ] Unknown YAML keyを失わない
 - [ ] YAML commentsを可能な限り保持
 - [ ] Invalid YAML入力を勝手に破棄しない
@@ -164,6 +167,9 @@
 - [ ] 保存時にUTF-8 BOMの有無を保持
 - [ ] 保存時に本文を無条件で再整形しない
 - [ ] Autosave delayが仕様値（U-008）
+- [ ] Autosaveの前後でカーソル位置が変わらない（U-008）
+- [ ] Autosaveの前後で選択範囲とスクロール位置が変わらない（U-008）
+- [ ] 自分のsaveがExternal changeとして扱われない（U-028）
 - [ ] Window blur / Document切替 / App close前に即時save
 
 ---
@@ -211,7 +217,9 @@
 
 - [ ] 明示操作からRenameできる
 - [ ] Rename時にOS禁止文字・Windows予約名・同名衝突をInline errorで示す
+- [ ] Title UIの編集でファイルがRenameされる
 - [ ] Renameしても`frontmatter.title`は変わらない
+- [ ] Renameの失敗時に元のファイル名へ戻る
 - [ ] Duplicate
 - [ ] Copy Path
 - [ ] Archiveで対象がArchive区分へ移る（U-005）
@@ -231,11 +239,12 @@
 
 ---
 
-## P. 未設計のため検証不能な項目
+## P. UI詳細の確定待ち
 
-次はUI仕様が存在しないため、判断（`product/open-decisions.md`）が済むまでACを確定できない。
+判断は済んでいる（`product/open-decisions.md` は30/30回答済み）。
+次は画面の細部を描いた時点でACへ落とす。
 
-- Conflict / Save error / External delete のUI（U-022）
-- Find in document のUI（U-025）
-- Toast（U-026）
-- Empty states / Error states（`ui/ui-spec.md` §14・§15 は[DRAFT]）
+- Conflict / Save error / External delete banner の文言とボタン配置（U-022で配置は確定）
+- Inline find bar の各コントロール（U-025で位置は確定）
+- Toast の文言（U-026で位置・時間は確定）
+- Empty states（`ui/ui-spec.md` §14 は[DRAFT]のまま）

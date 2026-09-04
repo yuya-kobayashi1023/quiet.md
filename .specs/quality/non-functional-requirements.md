@@ -55,7 +55,9 @@ Preview再parseは入力をBlockしない。
 
 巨大ファイルではPreview / TOCを遅延更新してよい。
 
-大きな**Workspace**（1000ファイル超）の目標値は未定義。`U-024` を参照。
+[DECIDED: U-024] 5000ファイル程度のWorkspaceでUIが固まらないこと。
+
+ファイル一覧の構築とignore判定はUI threadを長時間Blockしない。
 
 ---
 
@@ -127,7 +129,7 @@ Markdown raw HTMLをPreviewで許可するかは別途判断。
 
 ## 8. Cross-platform
 
-[USER DECISION REQUIRED: U-009]
+[DECIDED: U-009] Windows first（exe配布）。macOS next。
 
 Windows first推奨。
 

@@ -1,6 +1,6 @@
 # ADR-007 — Production Editor Engine
 
-Status: **Proposed / User Decision Required**
+Status: **Accepted**（2026-09-05 / U-003 決定済み）
 
 Related: U-003
 
@@ -21,7 +21,7 @@ UI確認には適しているが、Production editorでは次の問題が大き�
 - Cursor geometry
 - Resize
 
-## Proposed decision
+## Decision
 
 **CodeMirror 6を採用する。**
 

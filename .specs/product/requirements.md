@@ -41,7 +41,10 @@
 - Save error
 - 外部ファイル変更検知
 
-`Archive` の実体は未決定。`U-005` を参照。
+[DECIDED: U-005] `Archive` は論理Archive。実ファイルは移動しない。
+
+Archiveしてもファイル名は解放されないため、同一フォルダに同名ファイルは作れない。
+これはOSとObsidianと同じ制約として受け入れる。
 
 ---
 
@@ -58,7 +61,7 @@
 - Spell check option
 - Keyboard selection / clipboard
 
-[USER DECISION REQUIRED: U-003]
+[DECIDED: U-003] CodeMirror 6。
 
 **推奨案:** ProductionではCodeMirror 6を利用する。  
 理由は `decisions/007-production-editor-engine.md` を参照。
@@ -84,7 +87,13 @@
 
 GFMのTask List / StrikethroughもProductionでは有効にすることを推奨。
 
-Image・Link click・Raw HTMLの扱いは未決定。`U-023` を参照。
+[DECIDED: U-023] Preview の外部リソース方針。
+
+- Image: 相対パスはWorkspace内に限り表示する
+- 外部link（http / https）: OS既定browserで開く。WebView内では遷移させない
+- 相対 `.md` link: アプリ内でそのノートを開く
+- Raw HTML: sanitizeして描画する（script と `on*` 属性を除去）
+- `file://` と外部画像URL: 読み込まない
 
 ---
 
@@ -231,15 +240,15 @@ DarkはLightの反転ではなく独立トークン。
 
 ## 6. User Decision
 
-### [USER DECISION REQUIRED: U-001] Workspaceの基本モデル
+### [DECIDED: U-001] フォルダWorkspace中心。単体 `.md` のOpenも可能。 Workspaceの基本モデル
 
 **推奨:** フォルダベースWorkspaceを主軸にしつつ、任意`.md`単体Openもサポート。
 
-### [USER DECISION REQUIRED: U-009] 初期対応OS
+### [DECIDED: U-009] Windows first（exe配布）。macOS next。 初期対応OS
 
 **推奨:** Windows first。macOSを第2ターゲットとして、初期設計から差異だけ吸収できるようにする。
 
-### [USER DECISION REQUIRED: U-013] MVPにSearch Allを含めるか
+### [DECIDED: U-013] Quick OpenとFindはMVP。Search AllはP1。 MVPにSearch Allを含めるか
 
 **推奨:** Quick OpenはMVP、本文横断検索はP1でもよい。
 

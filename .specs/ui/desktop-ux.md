@@ -19,7 +19,7 @@ Webモックでは見えないが、Productionでは次をUI仕様の一部と�
 
 ## 2. Title bar
 
-[USER DECISION REQUIRED: U-007]
+[DECIDED: U-007] Phase 1はOS Native Title Bar。
 
 ### 推奨
 
@@ -98,7 +98,17 @@ OS Native Save Dialog。
 
 `Ctrl+Shift+P` をCommand Paletteに使うIDE文化もあるため、Shortcutは最終確認対象。
 
-View切替のshortcutとOS別の表記ルールは未決定。`U-029` を参照。
+[DECIDED: U-029] shortcutの表記は実行時にプラットフォームから生成する。UIへハードコードしない。
+
+View切替を追加する。
+
+| Action | Windows/Linux | macOS |
+|---|---|---|
+| Write | Ctrl+1 | Cmd+1 |
+| Split | Ctrl+2 | Cmd+2 |
+| Read | Ctrl+3 | Cmd+3 |
+
+この表を唯一の正とし、`product/requirements.md` からは参照だけにする。
 
 ---
 
@@ -130,7 +140,7 @@ Editor:
 
 ## 7. Multi-window
 
-[USER DECISION REQUIRED: U-011]
+[DECIDED: U-011] Tabsなし。複数文書はNew Window。同一ファイルは1Windowのみ（U-021）。
 
 Tabsは採用しない。
 
@@ -142,7 +152,12 @@ Tabsは採用しない。
 
 各Windowは同じWorkspaceを共有可能。
 
-同一ファイルを複数Windowで開けるか、Workspace stateをどう調停するかは未決定。`U-021` を参照。
+[DECIDED: U-021] 同一ファイルは同時に1Windowのみ。
+
+- 既に開いていれば、そのWindowをfocusする
+- `.quiet/workspace.json` の書込みは単一プロセス内で直列化する
+- Workspace stateの変更は他Windowへ通知する
+- watcherのself-save suppressionはProcess単位で行う
 
 ---
 

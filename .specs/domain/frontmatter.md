@@ -148,7 +148,7 @@ UI:
 - Fields viewは最後にvalidだった値を表示
 - Saveを許可するかは判断事項
 
-[USER DECISION REQUIRED: U-017]
+[DECIDED: U-017] Invalid YAMLでも保存可。Fields syncのみ停止する。
 
 **推奨:** Invalid YAMLでもMarkdownファイル自体は保存可能。ただしMetadata Fields syncを停止し、明示Warning。
 
@@ -158,17 +158,17 @@ UI:
 
 ## 9. Title sync
 
-[USER DECISION REQUIRED: U-006]
+[DECIDED: U-006] Title UIはファイル名から拡張子を除いた文字列。`frontmatter.title` とは連動しない。
 
-推奨:
+Title UIとFront Matterの間に同期はない。
 
 ```text
-Large title UI
-⇄
-frontmatter.title
+Large title UI  ⇄  filename
+frontmatter.title  →  Metadata Fields の1項目にすぎない
 ```
 
-filenameとは同期しない。
+`title` キーを持つ既存文書を開いても、Title UIの表示は変わらない。
+`title` の値は保存時にそのまま保持する（`domain/frontmatter.md` §6 のlossless要件）。
 
 ---
 
@@ -194,7 +194,7 @@ Front Matterが存在しない場合:
 
 ユーザーがMetadata追加操作を行った場合に初めて挿入。
 
-[USER DECISION REQUIRED: U-018]
+[DECIDED: U-018] Front Matterがなければ `Metadata` summaryを表示しない。More menuから挿入する。
 
 現在PrototypeではMetadataが常にあるサンプルのため、Productionの「Front Matterなし」UIは未確定。
 

@@ -4,7 +4,7 @@
 
 ## 1. Proposed stack
 
-[USER DECISION REQUIRED: U-002]
+[DECIDED: U-002] Tauri 2 + React + TypeScript + Rust。
 
 ```text
 Tauri 2
@@ -100,7 +100,7 @@ src-tauri/src/
 
 ## 5. Editor
 
-[USER DECISION REQUIRED: U-003]
+[DECIDED: U-003] CodeMirror 6。
 
 CodeMirror 6推奨。
 
@@ -120,7 +120,7 @@ Preview parseとは分離。
 
 ## 6. Markdown parse
 
-[USER DECISION REQUIRED: U-004]
+[DECIDED: U-004] unified / remark系。
 
 remark/unified推奨。
 
@@ -239,7 +239,7 @@ Workspace外への書込みは、
 
 ## 13. App metadata
 
-[USER DECISION REQUIRED: U-012]
+[DECIDED: U-012] `.quiet/workspace.json` を許可する。
 
 `.quiet/workspace.json` を使う場合、Document file writeとは別transaction。
 

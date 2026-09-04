@@ -58,7 +58,19 @@ saveDocument(input: {
 
 Expected revisionが一致しない場合は`CONFLICT`を返す。
 
-mtime + sizeだけで競合を判定するかは未決定。`U-028` を参照。
+[DECIDED: U-028] 競合判定は mtime + size + content hash で行う。
+
+```ts
+expectedRevision?: {
+  modifiedAt: number;
+  size: number;
+  contentHash: string;
+}
+```
+
+hashは最後に読み書きした内容のものをメモリに保持し、
+ディスク側はwatcherイベント時にだけ再計算する。
+保存のたびにファイル全体を読み直さない（Box Drive等のオンデマンド同期対策）。
 
 ---
 
@@ -194,6 +206,6 @@ Workspace規模次第で、
 
 を選ぶ。
 
-[USER DECISION REQUIRED: U-013]
+[DECIDED: U-013] Quick OpenとFindはMVP。Search AllはP1。
 
 MVPではSearch Allを後回しにする推奨。

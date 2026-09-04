@@ -82,7 +82,7 @@ Row appearance:
 - opacity 0 → 1
 - 100–160ms
 
-[USER DECISION REQUIRED: U-015]
+[DECIDED: U-015] `Untitled.md` を作成して即Rename。衝突時は `Untitled 2.md`。
 
 New Noteの初期ファイル名候補:
 
@@ -237,7 +237,7 @@ Tooltipに操作を置かない。
 
 ## 12. Archive
 
-[USER DECISION REQUIRED: U-005]
+[DECIDED: U-005] 論理Archive。実ファイルは移動しない。Archiveしても同名ファイルは作れない点は制約として受け入れる。
 
 推奨挙動:
 

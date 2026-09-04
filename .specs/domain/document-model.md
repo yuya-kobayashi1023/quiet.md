@@ -16,19 +16,20 @@ type Document = {
 
   frontmatter: FrontmatterState | null;
 
+  // displayTitle は filename から導出する。保持しない。
   displayTitle: string;
-  titleSource: "frontmatter" | "filename" | "heading";
 
   encoding: "utf-8";
   hasBom: boolean;
   lineEnding: "lf" | "crlf";
 
   // 外部削除時の状態とconflictからの復帰遷移は未定義。U-022を参照。
-  saveState: "clean" | "dirty" | "saving" | "save_error" | "conflict";
+  saveState: "clean" | "dirty" | "saving" | "save_error" | "conflict" | "missing";
 
   diskRevision: {
     modifiedAt: number;
     size: number;
+    contentHash: string;
   };
 
   parseDiagnostics: Diagnostic[];
@@ -53,44 +54,49 @@ Windows pathの大小文字差等を考慮し、単純なString比較だけで�
 
 ## 3. Filename
 
-filenameはOS上の実ファイル名。
+filenameはOS上の実ファイル名であり、**同時に文書のTitleでもある**。
 
-Titleとは別。
+[DECIDED: U-006 / U-020]
 
-[ADOPTED寄り]
+```text
+displayTitle = filename から拡張子を除いた文字列
+```
 
-Title変更でfilenameを自動Renameしない。
+Title UIの編集はファイルのRenameとして扱う（`file-lifecycle.md` §7 のRename flowを通す）。
+
+これは `product/principles.md` §5「タイトル変更でファイル名を勝手に変えない」の例外ではない。
+Title UIがファイル名そのものの編集欄であるため、ユーザーは明示的にファイル名を編集している。
+
+他のUI（本文、Metadata、Preview）からfilenameが変わることはない。
 
 ---
 
 ## 4. Title
 
-[USER DECISION REQUIRED: U-006]
+[DECIDED: U-006] Title UIはファイル名から拡張子を除いた文字列。`frontmatter.title` とは連動しない。
 
-推奨:
-
-### Front Matter `title`あり
-
-```text
-displayTitle = frontmatter.title
-```
-
-### Front Matterなし
-
-filename stemをPlaceholder的に表示。
-
-例:
+Titleの正本はfilenameのみ。分岐はない。
 
 ```text
 designing-quieter-software.md
-→ Designing quieter software
+→ Title UI: "designing-quieter-software"
 ```
 
-ただしファイルを開いただけでFront Matterは挿入しない。
+ファイル名を整形しない（ハイフンをスペースに置換する等の加工をしない）。
+表示されている文字列がそのままファイル名になる。
 
-本文先頭の `# Heading` との関係（`titleSource: "heading"` の扱いと、Previewの見出しレベル）は未決定。`U-020` を参照。
+### `frontmatter.title` がある場合
 
-Title UIを編集した時点で`title`を追加。
+Title UIには使わない。Metadata Fieldsの1項目として表示・編集・保存するだけ。
+
+ファイルを開いただけでFront Matterを挿入しない、という原則は維持される。
+Titleを編集してもFront Matterは増えない。
+
+### 本文先頭の `# Heading` がある場合
+
+何もしない。本文はTitleに影響しない。
+
+`titleSource` は不要になったため、Documentモデルから削除する。
 
 ---
 
@@ -151,7 +157,7 @@ type Workspace = {
 
 ## 8. Workspace metadata
 
-[USER DECISION REQUIRED: U-012]
+[DECIDED: U-012] `.quiet/workspace.json` を許可する。
 
 推奨:
 
@@ -192,13 +198,17 @@ UI上はActive fileのdotで表現。
 
 ## 10. Disk revision
 
-File watcherの誤検知や競合判定に、
+[DECIDED: U-028] File watcherの誤検知や競合判定に、
 
 - mtime
 - size
-- optional content hash
+- content hash（必須）
 
 を使う。
+
+hashは最後に読み書きした内容のものをメモリに保持する。
+同期フォルダ（OneDrive / Box等）はメタデータだけを書き換えることがあるため、
+mtimeとsizeだけでは誤検知する。
 
 自分自身のsaveによるwatch eventをExternal changeとして扱わないようにする。
 
@@ -230,6 +240,6 @@ MVP:
 
 新規ファイルはOSに関係なくLFを推奨。
 
-[USER DECISION REQUIRED: U-016]
+[DECIDED: U-016] 既存ファイルはLF / CRLFを保持。新規はLF。
 
 Windows新規ファイルもCRLFにする方針を希望する場合は変更可能。

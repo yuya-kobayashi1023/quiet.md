@@ -1,47 +1,56 @@
 # Open Decisions
 
 > ユーザー判断が必要な事項を一か所に集約する。
+>
+> **ステータス: 30 / 30 回答済み（2026-09-05）**
+> 各項目の `## 決定` が正。`## 推奨案` 以下は決定に至るまでの検討記録として残している。
 
 ## Decision table
 
-| ID | 論点 | 推奨案 | 重要度 |
-|---|---|---|---|
-| U-001 | Workspaceモデル | フォルダWorkspace中心 + 単体`.md`もOpen可 | High |
-| U-002 | Desktop stack | Tauri 2 + React + TypeScript + Rust | High |
-| U-003 | Production editor engine | CodeMirror 6 | High |
-| U-004 | Markdown parser | unified / remark系 | Medium |
-| U-005 | Archiveの意味 | App metadataによる論理Archive。ファイルは移動しない | High |
-| U-006 | Titleの正本 | Front Matter `title` がある場合はそれ。filenameとは非同期 | High |
-| U-007 | Window title bar | Phase 1はNative decoration、将来Customを検討 | Medium |
-| U-008 | Autosave delay | 最終入力から700ms | Medium |
-| U-009 | 初期対応OS | Windows first、macOS next | High |
-| U-010 | External change | File watcherを既定ON | High |
-| U-011 | 複数文書 | Tabsなし。New Windowで対応 | Medium |
-| U-012 | App固有Workspace metadata | `.quiet/` 配下のJSONを許可 | High |
-| U-013 | Search All | MVP後半またはP1。Quick OpenはMVP | Medium |
-| U-014 | Local history | MVPではCrash recoveryのみ。履歴UIはLater | Medium |
-| U-015 | New Noteの初期ファイル名 | `Untitled.md` + 即Rename | Low |
-| U-016 | 新規ファイルの改行コード | OSに関係なくLF | Low |
-| U-017 | Invalid YAML時の保存可否 | 保存は許可。Fields syncのみ停止 | Medium |
-| U-018 | Front Matterがない文書のMetadata UI | Summary自体を非表示。More menuから追加 | Medium |
-| U-019 | Light themeのコントラスト | 小さい文字に使うroleだけ暗くする | **High** |
-| U-020 | Title / `frontmatter.title` / 本文H1の関係 | Titleは文書のH1。本文の`#`をH1として扱わない | **High** |
-| U-021 | Multi-window時の同一ファイル・同一Workspace | 同一ファイルは2窓で開かず既存窓をfocus | **High** |
-| U-022 | Conflict / Save error / External deleteのUI | Editor上部のInline banner | **High** |
-| U-023 | Previewのlink / image / raw HTML | 外部linkはOS既定browser、相対imageは表示、raw HTMLはsanitize | **High** |
-| U-024 | Workspaceのフォルダツリーとignore規則 | 入れ子フォルダを表示。dotfolderと`.quiet/`は除外 | **High** |
-| U-025 | Find in documentのUI | Editor右上のInline find bar | Medium |
-| U-026 | Toastの採否と定義 | Archive Undo等のためStatus bar上に1本だけ許可 | Medium |
-| U-027 | Split時のscroll同期 | MVPでは同期しない | Medium |
-| U-028 | 保存競合検知にcontent hashを使うか | mtime + size + hashで判定 | Medium |
-| U-029 | ショートカット表記とView切替shortcut | OS別表記。View切替は`Ctrl/Cmd+1/2/3` | Low |
-| U-030 | 日本語のword count | 文字数と語数を切り替え可能にする | Low |
+決定済み。実装はこの表と各節の `## 決定` に従うこと。
+
+| ID | 論点 | 決定 |
+|---|---|---|
+| U-001 | Workspaceモデル | フォルダWorkspace中心 + 単体`.md`もOpen可 |
+| U-002 | Desktop stack | Tauri 2 + React + TypeScript + Rust |
+| U-003 | Production editor engine | CodeMirror 6 |
+| U-004 | Markdown parser | unified / remark系 |
+| U-005 | Archiveの意味 | 論理Archive。ファイルは移動しない（名前は解放されない） |
+| U-006 | Titleの正本 | **Title = ファイル名の拡張子抜き**。`frontmatter.title` とは非連動 |
+| U-007 | Window title bar | Phase 1はNative decoration |
+| U-008 | Autosave delay | 700ms idle debounce。**カーソル位置を保持すること** |
+| U-009 | 初期対応OS | Windows first（exe）、macOS next |
+| U-010 | External change | File watcher既定ON |
+| U-011 | 複数文書 | Tabsなし。New Windowで対応 |
+| U-012 | App固有Workspace metadata | `.quiet/workspace.json` を許可 |
+| U-013 | Search All | Quick Open / FindはMVP、Search AllはP1 |
+| U-014 | Local history | Atomic write + Crash recoveryまで |
+| U-015 | New Noteの初期ファイル名 | `Untitled.md` + 即Rename |
+| U-016 | 新規ファイルの改行コード | 既存は保持、新規はLF |
+| U-017 | Invalid YAML時の保存可否 | 保存は許可。Fields syncのみ停止 |
+| U-018 | Front Matterがない文書のMetadata UI | Front Matterなしならsummary非表示 |
+| U-019 | Light themeのコントラスト | Lightの小さい文字のroleだけ暗くする |
+| U-020 | Title / `frontmatter.title` / 本文H1の関係 | 本文の `#` はH1のまま。Titleは画面のchrome |
+| U-021 | Multi-window時の同一ファイル・同一Workspace | 同一ファイルは1Windowのみ。既存をfocus |
+| U-022 | Conflict / Save error / External deleteのUI | Editor上部のInline banner |
+| U-023 | Previewのlink / image / raw HTML | 推奨のlink / image / raw HTMLポリシーを採用 |
+| U-024 | Workspaceのフォルダツリーとignore規則 | 推奨のtree / ignore / sortルールを採用 |
+| U-025 | Find in documentのUI | Editor右上のInline find bar |
+| U-026 | Toastの採否と定義 | Status bar上にToast 1種類 |
+| U-027 | Split時のscroll同期 | MVPでは同期しない |
+| U-028 | 保存競合検知にcontent hashを使うか | mtime + size + content hash |
+| U-029 | ショートカット表記とView切替shortcut | OS別表記 + `Ctrl/Cmd+1/2/3` |
+| U-030 | 日本語のword count | 既定は文字数。クリックで語数 |
 
 ---
 
 # U-001 Workspaceモデル
 
-[USER DECISION REQUIRED: U-001]
+[DECIDED: U-001]
+
+## 決定
+
+フォルダWorkspace中心。単体 `.md` のOpenも可能。
 
 ## 推奨案
 
@@ -77,7 +86,11 @@ Bは推奨しない。
 
 # U-002 Desktop stack
 
-[USER DECISION REQUIRED: U-002]
+[DECIDED: U-002]
+
+## 決定
+
+Tauri 2 + React + TypeScript + Rust。
 
 ## 推奨案
 
@@ -105,7 +118,11 @@ Tauri 2
 
 # U-003 Production editor engine
 
-[USER DECISION REQUIRED: U-003]
+[DECIDED: U-003]
+
+## 決定
+
+CodeMirror 6。
 
 ## 推奨案
 
@@ -130,7 +147,11 @@ Prototypeの`textarea + highlight overlay`はProductionへそのまま持ち込�
 
 # U-004 Markdown parser
 
-[USER DECISION REQUIRED: U-004]
+[DECIDED: U-004]
+
+## 決定
+
+unified / remark系。
 
 ## 推奨案
 
@@ -153,7 +174,16 @@ TOC、Preview、将来の文書解析を同じASTへ寄せやすい。
 
 # U-005 Archive semantics
 
-[USER DECISION REQUIRED: U-005]
+[DECIDED: U-005]
+
+## 決定
+
+論理Archive。実ファイルは移動しない。
+
+Archiveしてもファイル名は解放されない（同一フォルダに同名は作れない）。
+これはOSとObsidianと同じ制約として受け入れる。
+UUID等の機械的ファイル名は採用しない（U-006の「Title = ファイル名」と両立しないため）。
+新規作成時の名前衝突はU-015の連番規則で回避する。
 
 ## 推奨案
 
@@ -190,7 +220,15 @@ Workspace-level metadataに、
 
 # U-006 Title canonical source
 
-[USER DECISION REQUIRED: U-006]
+[DECIDED: U-006]
+
+## 決定
+
+推奨案を採用しない。**Title UIは常にファイル名から拡張子を除いた文字列**とする（Obsidian方式）。
+
+- `frontmatter.title` はTitle UIの表示に使わない
+- Title UIの編集はファイルのRenameとして扱う（U-020参照）
+- 既存文書に `title` キーがあってもMetadata Fieldsに表示・保存するだけで、Titleの正本にはしない
 
 ## 推奨案
 
@@ -208,7 +246,11 @@ Workspace-level metadataに、
 
 # U-007 Window title bar
 
-[USER DECISION REQUIRED: U-007]
+[DECIDED: U-007]
+
+## 決定
+
+Phase 1はOS Native Title Bar。将来的にCustom title barへ移行する。
 
 ## 推奨案
 
@@ -236,7 +278,14 @@ UIの一体感は高い。
 
 # U-008 Autosave delay
 
-[USER DECISION REQUIRED: U-008]
+[DECIDED: U-008]
+
+## 決定
+
+700ms idle debounce + Window blur / Document切替 / `Ctrl+S` / App close前の即時save。
+
+**Autosaveの前後でカーソル位置・選択範囲・スクロール位置を変えないこと。**
+保存処理からEditorのstateへ書き戻さない。watcherの自己イベントはU-028のcontent hashで抑制する。
 
 ## 推奨案
 
@@ -255,7 +304,11 @@ UIの一体感は高い。
 
 # U-009 Initial OS
 
-[USER DECISION REQUIRED: U-009]
+[DECIDED: U-009]
+
+## 決定
+
+Windows first（exe配布）。macOS next。
 
 ## 推奨案
 
@@ -267,7 +320,11 @@ macOS固有処理をinterfaceで分離しておく。
 
 # U-010 External file changes
 
-[USER DECISION REQUIRED: U-010]
+[DECIDED: U-010]
+
+## 決定
+
+File watcherは既定ON。Cleanは自動Reload、DirtyはConflict。
 
 ## 推奨案
 
@@ -280,7 +337,11 @@ File watcherは既定ON。
 
 # U-011 Multi-document behavior
 
-[USER DECISION REQUIRED: U-011]
+[DECIDED: U-011]
+
+## 決定
+
+Tabsなし。複数文書はNew Window。
 
 ## 推奨案
 
@@ -294,7 +355,11 @@ Tabsは使わない。
 
 # U-012 App metadata
 
-[USER DECISION REQUIRED: U-012]
+[DECIDED: U-012]
+
+## 決定
+
+Workspace内 `.quiet/workspace.json` を許可する。
 
 ## 推奨案
 
@@ -321,7 +386,11 @@ Workspace内に、
 
 # U-013 Search All
 
-[USER DECISION REQUIRED: U-013]
+[DECIDED: U-013]
+
+## 決定
+
+Quick OpenとCurrent Document FindはMVP。Search AllはP1。
 
 ## 推奨案
 
@@ -333,7 +402,11 @@ Workspace内に、
 
 # U-014 Local history
 
-[USER DECISION REQUIRED: U-014]
+[DECIDED: U-014]
+
+## 決定
+
+MVPはAtomic write + Crash recoveryまで。履歴UIはLater。
 
 ## 推奨案
 
@@ -350,7 +423,11 @@ MVPでは、
 
 # U-015 New Noteの初期ファイル名
 
-[USER DECISION REQUIRED: U-015]
+[DECIDED: U-015]
+
+## 決定
+
+`Untitled.md` を作成して即Rename。衝突時は `Untitled 2.md`。
 
 詳細は `ui/interactions.md` §4。
 
@@ -370,7 +447,11 @@ MVPでは、
 
 # U-016 新規ファイルの改行コード
 
-[USER DECISION REQUIRED: U-016]
+[DECIDED: U-016]
+
+## 決定
+
+既存ファイルはLF / CRLFを保持。新規はOSに関係なくLF。
 
 詳細は `domain/document-model.md` §12。
 
@@ -390,7 +471,11 @@ Windowsでは新規もCRLF。
 
 # U-017 Invalid YAML時の保存可否
 
-[USER DECISION REQUIRED: U-017]
+[DECIDED: U-017]
+
+## 決定
+
+Invalid YAMLでも保存可。Fields syncのみ停止し、Raw viewに明示Warningを出す。
 
 詳細は `domain/frontmatter.md` §8。
 
@@ -414,7 +499,11 @@ Autosave coordinatorがFront Matterのparse結果に依存するかどうかが�
 
 # U-018 Front Matterがない文書のMetadata UI
 
-[USER DECISION REQUIRED: U-018]
+[DECIDED: U-018]
+
+## 決定
+
+Front Matterがなければ `Metadata` summaryを表示しない。More menuの `Add metadata` で挿入する。
 
 詳細は `domain/frontmatter.md` §11。
 
@@ -430,7 +519,24 @@ Front Matterがない場合、`Metadata` summary自体を表示しない。More 
 
 # U-019 Light themeのコントラスト
 
-[USER DECISION REQUIRED: U-019]
+[DECIDED: U-019]
+
+## 決定
+
+Lightの小さい文字に使うroleだけ暗くする。Darkは変更しない。
+
+最終値は次の通り。`--canvas` と `--sidebar` の両方で 4.5:1 以上を満たし、3段階の階層も維持している。
+
+```css
+--text-subtle:    #6e6e6d;  /* sidebar 4.52 / canvas 4.76 */
+--text-muted:     #656460;  /* sidebar 5.24 / canvas 5.52 */
+--text-secondary: #5b5b57;  /* sidebar 6.03 / canvas 6.35 */
+--syntax-marker:  #96623e;  /* sidebar 4.52 / canvas 4.76 */
+--accent-text:    #c63f00;  /* 文字用。dot等の非文字は --accent #f54e00 のまま */
+```
+
+当初の候補値は `--canvas` だけで検証していたため、
+背景がより暗いSidebar上（ファイル名など）で不足していた。上記は両方で検証した値。
 
 ## 論点
 
@@ -481,7 +587,17 @@ Tokenを後から暗くすると、Prototypeで確認した「静けさ」の印
 
 # U-020 Title / `frontmatter.title` / 本文H1の関係
 
-[USER DECISION REQUIRED: U-020]
+[DECIDED: U-020]
+
+## 決定
+
+**Title UIはファイル名から拡張子を除いた文字列**。`frontmatter.title` とは連動しない。
+
+- 本文の `#` は **H1のまま**。Previewでも書き出しHTMLでも降格しない
+- 大きなタイトルは画面のchromeであり、文書の見出しではない。書き出しHTMLの見出し構造には含めない
+- Title UIの編集はファイルのRenameとして扱う
+- Breadcrumbは現状維持（末尾がタイトルと重複してよい）
+- Prototypeの「`#` を `h2` へ降格」実装は廃止する
 
 ## 論点
 
@@ -524,7 +640,11 @@ Title UIは常に `frontmatter.title` 専用とし、本文H1には触れない�
 
 # U-021 Multi-window時の同一ファイル・同一Workspace
 
-[USER DECISION REQUIRED: U-021]
+[DECIDED: U-021]
+
+## 決定
+
+同一ファイルは同時に1Windowのみ。既に開いていればそのWindowをfocusする。
 
 ## 論点
 
@@ -556,7 +676,12 @@ watcherのself-save suppression（`architecture/architecture.md` §10）をWindo
 
 # U-022 Conflict / Save error / External deleteのUI
 
-[USER DECISION REQUIRED: U-022]
+[DECIDED: U-022]
+
+## 決定
+
+Editor上部のInline bannerで表示する。ModalにもToastにもしない。
+`saveState` に `missing` を追加し、conflictからの復帰遷移を定義する。
 
 ## 論点
 
@@ -592,7 +717,11 @@ AC-Kが検証不能。実装者ごとにModal / Toast / Status barへ散らば�
 
 # U-023 Previewのlink / image / raw HTML
 
-[USER DECISION REQUIRED: U-023]
+[DECIDED: U-023]
+
+## 決定
+
+推奨ポリシーを一式採用する。外部linkはOS既定browser、相対 `.md` linkはアプリ内、相対画像はWorkspace内に限り表示、raw HTMLはsanitize、`file://` と外部画像URLは読み込まない。
 
 ## 論点
 
@@ -623,7 +752,11 @@ Markdownエディタとして画像が表示されないまま実装が進む。
 
 # U-024 Workspaceのフォルダツリーとignore規則
 
-[USER DECISION REQUIRED: U-024]
+[DECIDED: U-024]
+
+## 決定
+
+推奨のfolder tree / ignore / sortルールを採用する。
 
 ## 論点
 
@@ -657,7 +790,11 @@ Prototypeの `Archive` 配下には `2026` というフォルダ行があり、U
 
 # U-025 Find in documentのUI
 
-[USER DECISION REQUIRED: U-025]
+[DECIDED: U-025]
+
+## 決定
+
+Editor右上に一時表示するInline find bar。ReplaceはMVP外だが、後続で追加する前提で設計する。
 
 ## 論点
 
@@ -685,7 +822,11 @@ CodeMirror 6の標準search panelがそのまま出て、Design systemから浮�
 
 # U-026 Toastの採否と定義
 
-[USER DECISION REQUIRED: U-026]
+[DECIDED: U-026]
+
+## 決定
+
+Status bar上にToastを1種類だけ許可する。
 
 ## 論点
 
@@ -716,7 +857,11 @@ UIは増えないが、Undoの存在に気づけない。
 
 # U-027 Split時のscroll同期
 
-[USER DECISION REQUIRED: U-027]
+[DECIDED: U-027]
+
+## 決定
+
+MVPではSplit scrollを同期しない。将来、行対応の精度を上げたうえで同期Splitを導入したい。
 
 ## 論点
 
@@ -741,7 +886,14 @@ Editor → Preview片方向の同期をSettingsで任意ONにする。
 
 # U-028 保存競合検知にcontent hashを使うか
 
-[USER DECISION REQUIRED: U-028]
+[DECIDED: U-028]
+
+## 決定
+
+mtime + size + content hashで競合判定する。
+
+hashは最後に読み書きした内容のものをメモリに保持し、ディスク側はwatcherイベント時にだけ再計算する
+（Box Drive等のオンデマンド同期で、保存のたびに全体ダウンロードが走るのを避けるため）。
 
 ## 論点
 
@@ -767,7 +919,11 @@ Windows firstかつOneDrive配下の利用を想定するなら、必須に近�
 
 # U-029 ショートカット表記とView切替shortcut
 
-[USER DECISION REQUIRED: U-029]
+[DECIDED: U-029]
+
+## 決定
+
+OS別のshortcut表記を実行時に生成する。View切替は `Ctrl/Cmd+1` / `2` / `3`。
 
 ## 論点
 
@@ -790,7 +946,11 @@ Windows版に `⌘` が表示される。ショートカット表が2か所で�
 
 # U-030 日本語のword count
 
-[USER DECISION REQUIRED: U-030]
+[DECIDED: U-030]
+
+## 決定
+
+既定は文字数。クリックで語数へ切り替える。
 
 ## 論点
 

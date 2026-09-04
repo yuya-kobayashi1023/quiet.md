@@ -31,6 +31,13 @@
 
 判断対象だけを一覧で確認したい場合は、最初に [`product/open-decisions.md`](product/open-decisions.md) を見てください。
 
+**2026-09-05時点で、U-001〜U-030 は全て回答済みです。**
+
+### `[DECIDED: U-xxx]`
+
+ユーザー判断が済んだものです。直後の `## 決定` が実装の正になります。
+`## 推奨案` 以下は、決定に至るまでの検討記録として残しています。
+
 ### `[DRAFT]`
 
 ユーザー判断を必ずしも要求しないものの、実装前に内容を確認しておきたい提案です。
@@ -78,7 +85,8 @@
    ├─ 004-theme-system.md
    ├─ 005-toc-popover.md
    ├─ 006-collapsible-sidebar.md
-   └─ 007-production-editor-engine.md
+   ├─ 007-production-editor-engine.md
+   └─ 008-title-is-filename.md
 ```
 
 ---
@@ -117,6 +125,8 @@
 - 目次は常時表示せず、アイコンから静かなPopoverとして開く
 - Markdown記号だけを控えめにシンタックスハイライト
 - PreviewはGFM相当のテーブルを表示
+- Titleはファイル名から拡張子を除いた文字列。Title編集はRename
+- 本文の `#` はPreviewでもH1のまま
 - YAML Front Matterは `Metadata · N fields` として折りたたみ
 - Metadataは `Fields / Raw` を切り替え可能
 - PreviewではYAML記法ではなく意味を圧縮して表示

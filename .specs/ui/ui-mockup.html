@@ -23,14 +23,15 @@
       --bone:#f2f1ed;
       --linen:#e6e5e0;
       --stone:#cdcdc9;
-      --mist:#a1a19f;
-      --driftwood:#84847e;
-      --ash:#7a7974;
+      --mist:#6e6e6d;
+      --driftwood:#5b5b57;
+      --ash:#656460;
       --ink:#26251e;
       --ember:#f54e00;
+      --ember-text:#c63f00;
       --selection:#8bc4f8;
       --editor-text:#34332d;
-      --syntax-marker:#a36a43;
+      --syntax-marker:#96623e;
       --prose:#3b3a34;
       --success:#34785c;
       --settings-overlay:rgba(38,37,30,.12);
@@ -62,6 +63,7 @@
       --ash:#918e84;
       --ink:#ebe8df;
       --ember:#ff6a2a;
+      --ember-text:#ff6a2a;
       --selection:#355f82;
       --editor-text:#d9d5ca;
       --syntax-marker:#d19368;
@@ -87,6 +89,7 @@
         --ash:#918e84;
         --ink:#ebe8df;
         --ember:#ff6a2a;
+      --ember-text:#ff6a2a;
         --selection:#355f82;
         --editor-text:#d9d5ca;
         --syntax-marker:#d19368;
@@ -701,7 +704,7 @@
     .preview pre code{background:transparent;padding:0;color:var(--editor-text);line-height:1.65}
     .preview blockquote{margin:20px 0;padding:1px 0 1px 16px;border-left:1px solid var(--stone);color:var(--driftwood)}
     .preview blockquote p{color:var(--driftwood);font-style:italic}
-    .preview a{color:var(--ember);text-decoration:none}
+    .preview a{color:var(--ember-text);text-decoration:none}
     .preview a:hover{text-decoration:underline}
     .preview hr{border:0;border-top:1px solid var(--stone);margin:34px 0}
     .preview .table-wrap{width:100%;overflow-x:auto;margin:20px 0 28px}
@@ -1810,6 +1813,9 @@ A useful rule: if an action is not needed while writing the current sentence, it
       editorHighlight.innerHTML = highlighted + (md.endsWith('\n') ? '\n' : '');
     }
 
+    // NOTE: このPreview実装はU-020の決定より前のもので、本文の `#` を h2 へ降格し、
+    // Title UIの値を h1 として描画している。Productionでは本文の `#` を H1 のまま出す。
+    // ここをそのままProductionへ写さないこと（AGENTS.md 3章）。
     function renderMarkdown(md){
       const lines = md.replace(/\r/g,'').split('\n');
       let html = `<h1>${escapeHtml(titleInput.value || 'Untitled')}</h1>${previewMetadataHtml()}`;

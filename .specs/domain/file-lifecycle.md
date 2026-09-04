@@ -54,15 +54,25 @@ Editor / Title / Metadataの編集は同じDocument dirty stateへ統合。
 
 ## 4. Autosave
 
-[USER DECISION REQUIRED: U-008]
+[DECIDED: U-008] 700ms idle debounce + 即時save条件。Autosave前後でカーソル位置・選択・スクロールを保持する。
 
-推奨trigger:
+確定trigger:
 
 - 最終入力から700ms
 - Document switch前
 - Window blur
 - `Ctrl/Cmd+S`
 - App close前
+
+### Autosaveが編集状態を壊さないこと
+
+**Autosaveの前後で、カーソル位置・選択範囲・スクロール位置を変えない。**
+
+- 保存はmemoryの内容をディスクへ書く一方通行にする。保存処理からEditorのstateへ書き戻さない
+- 自分のsaveによるwatch eventはcontent hashで抑制する（U-028）
+- やむを得ずreloadする場合も、Editorのdocumentを差し替えるのではなく
+  transactionで差分を適用し、selectionを明示的に引き継ぐ
+- Editorコンポーネントを再mountさせない
 
 ---
 
@@ -131,7 +141,7 @@ Titleは変えない。
 
 ## 8. Archive
 
-[USER DECISION REQUIRED: U-005]
+[DECIDED: U-005] 論理Archive。実ファイルは移動しない。Archiveしても同名ファイルは作れない点は制約として受け入れる。
 
 推奨:
 
@@ -143,7 +153,11 @@ archive metadata = true
 
 SidebarのNotesからArchiveへ移る。
 
-Undo可能。
+Undo可能（Toastから。U-026）。
+
+Archiveしてもファイル名は解放されない。
+Archive済みの `note.md` がある状態で、同じフォルダに新しい `note.md` は作れない。
+New Note時の衝突はU-015の連番規則で回避する。
 
 ---
 
@@ -172,7 +186,7 @@ MVPでは通常UIにDeleteを出さない案を推奨。
 
 ## 11. External modification
 
-[USER DECISION REQUIRED: U-010]
+[DECIDED: U-010] File watcherは既定ON。Cleanは自動Reload、DirtyはConflict。
 
 ### Clean
 

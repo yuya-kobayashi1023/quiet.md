@@ -73,7 +73,13 @@ Settings
 
 ### Folder tree
 
-入れ子フォルダの表示・ignore規則・並び順は未決定。`U-024` を参照。
+[DECIDED: U-024]
+
+- 入れ子フォルダはツリー表示する。フォルダ行はDisclosureのみで、常設ボタンを増やさない
+- フォルダの展開状態は `.quiet/workspace.json` に保持する
+- dotfolderと `.quiet/` は既定で非表示。`node_modules/` はignore
+- 並び順は名前順
+- `Archive` は論理Archiveなので、フォルダではなくファイル行だけを並べる
 
 ### Long filename
 
@@ -155,7 +161,9 @@ Editor | Preview
 
 それぞれ独立スクロール。
 
-2ペインのscrollを同期するかは未決定。`U-027` を参照。
+[DECIDED: U-027] MVPではscrollを同期しない。
+
+TOCからの移動だけが両ペインを動かす。将来、行対応の精度を上げたうえで同期Splitを検討する。
 
 **Nested vertical scrollは禁止。**
 
@@ -180,6 +188,16 @@ View selectorの背景・文字色は120–150ms程度で遷移してよい。
 `MARKDOWN · AUTOSAVE` のような常設ラベルは表示しない。
 
 Document titleはdescenderが欠けないLine boxを確保する。
+
+### Document title
+
+[DECIDED: U-006 / U-020]
+
+- 表示するのはファイル名から拡張子を除いた文字列
+- 編集するとファイルがRenameされる。確定はblurまたはEnter
+- 不正なファイル名・同名衝突はinline errorで示し、Renameしない（`file-lifecycle.md` §7）
+- 長いタイトルは折り返す。固定高で切り取らない
+- **これは文書の見出しではない。**Preview / 書き出しHTMLのH1にしない
 
 ---
 
@@ -242,7 +260,7 @@ created   2026-09-04
 
 常設ペインではなくTop bar iconからPopover。
 
-- H1 / H2 / H3等を階層表示
+- H1 / H2 / H3等を階層表示（本文の見出しレベルのまま。Title UIはTOCに含めない）
 - Active headingは薄い背景 + 1px程度の線
 - 長い見出しはトランケート
 - Clickで該当位置へ移動
@@ -254,7 +272,13 @@ created   2026-09-04
 
 Preview上部に`PREVIEW`ラベルは置かない。
 
-文書タイトルから開始。
+文書タイトル（＝ファイル名）から開始する。ただしこれは画面のchromeであり、文書の見出しではない。
+
+[DECIDED: U-020]
+
+- 本文の `#` は **H1のまま**描画する。降格しない
+- Previewの先頭に置くタイトルは、書き出しHTMLの見出し構造に含めない
+- TOCの階層は本文の見出しレベルをそのまま反映する
 
 Front MatterはRaw YAMLではなく、
 
@@ -281,7 +305,7 @@ design · editor      draft      2026-09-04
 - Col
 - Word count
 
-日本語文書でのWord countの定義は未決定。`U-030` を参照。
+[DECIDED: U-030] 既定は文字数。クリックで語数へ切り替える。切替状態は保持する。
 
 右:
 
@@ -348,16 +372,39 @@ Headings will appear here as you write.
 
 静けさよりデータ保全を優先。
 
-配置と形は未決定。`U-022` を参照。
+[DECIDED: U-022] Editor surfaceの最上部（Metadata summaryの上）にInline bannerを1本だけ出す。
+
+```text
+⚠ このファイルはエディタの外で変更されました
+   差分を見る    自分の変更を残す    ディスクから再読込
+```
+
+- Modalにしない（入力を止めない）
+- Toastにしない（消えてはいけない）
+- Save error / External delete も同じ場所を使う
 
 ---
 
 ## 16. Find in document
 
-`Ctrl/Cmd+F` のUIは未決定。`U-025` を参照。
+[DECIDED: U-025] Editor paneの右上に、開いている間だけ存在するInline find barを出す。
+
+```text
+[ query            ]  3/12   ↑ ↓   Aa  .*   ✕
+```
+
+- Escで閉じる
+- ReplaceはMVP外。ただし後続で追加する前提でレイアウトを確保しておく
+- Command Paletteとは別物（`Ctrl/Cmd+K` はコマンド、`Ctrl/Cmd+F` は現在文書）
 
 ---
 
 ## 17. Toast
 
-Archive Undo等で使うToastは未定義。`U-026` を参照。
+[DECIDED: U-026] Toastは1種類だけ許可する。
+
+- 位置: Status barのすぐ上、左寄せ
+- 同時表示: 1件のみ（新しいものが置き換える）
+- 表示時間: Actionを持つ場合6秒、持たない場合3秒
+- Actionは最大1つ（`Undo` など）
+- データ損失に関わる通知はToastにしない（§15のInline banner）

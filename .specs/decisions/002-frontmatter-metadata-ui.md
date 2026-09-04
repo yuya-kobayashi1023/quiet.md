@@ -35,6 +35,9 @@ PreviewではRaw YAMLを表示せず、意味を圧縮したmetadataだけ表示
 - status
 - created
 
+`title` はMetadata Fieldsの1項目にすぎない。
+画面上部のTitle UIはファイル名を表示しており、`title` とは連動しない（U-006 / U-020）。
+
 ## Consequences
 
 - YAML初心者でも編集可能
