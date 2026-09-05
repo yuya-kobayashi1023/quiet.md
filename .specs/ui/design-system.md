@@ -38,6 +38,7 @@ Sidebarの方が背景が暗いため、canvasだけで検証すると不足す�
 --syntax-marker: #96623e;
 --success: #34785c;
 --selection: #8bc4f8;
+--selection-text: #16150f;
 ```
 
 ### Dark
@@ -58,7 +59,8 @@ Sidebarの方が背景が暗いため、canvasだけで検証すると不足す�
 --accent: #ff6a2a;
 --syntax-marker: #d19368;
 --success: #67a987;
---selection: #355f82;
+--selection: #25578a;
+--selection-text: #ebe8df;
 ```
 
 ---

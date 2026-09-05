@@ -25,6 +25,8 @@
   --success: #34785c;
   --error: #b44332;
   --selection: #8bc4f8;
+  /* 選択範囲の前景。背景だけ差し替えると文字が沈むので、必ず対で持つ。 */
+  --selection-text: #16150f;
 
   --overlay: rgba(38, 37, 30, 0.12);
   --shadow-tooltip: 0 8px 24px rgba(0, 0, 0, 0.14);
@@ -89,7 +91,14 @@
   --syntax-marker: #d19368;
   --success: #67a987;
   --error: #e07a68;
-  --selection: #355f82;
+  /*
+   * Dark は Light の反転ではない（ADR-004）。
+   * Light と同じ明度帯の青を置くと Dark の明るい本文色と近づき、
+   * 選択範囲で文字が背景に沈む。Dark 側は暗く濃い青にして前景も明示する。
+   * #ebe8df / #25578a = 6.1:1、#d2cfc5（prose）でも 4.9:1。
+   */
+  --selection: #25578a;
+  --selection-text: #ebe8df;
 
   --overlay: rgba(5, 5, 4, 0.58);
   --shadow-tooltip: 0 8px 24px rgba(0, 0, 0, 0.42);

@@ -49,6 +49,14 @@ export function App() {
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
+  /**
+   * タイトルを Enter で確定したあと、本文へカーソルを移すための合図。
+   *
+   * Rename が成功すると `session.path` が変わり Editor が作り直されるので、
+   * blur の直後に focus しても新しい view には効かない。
+   * token と path の両方を依存に入れて、view が入れ替わった後にもう一度 focus する。
+   */
+  const [bodyFocusToken, setBodyFocusToken] = useState(0);
   const [contextMenu, setContextMenu] = useState<{
     document: DocumentSummary;
     position: { x: number; y: number };
@@ -229,6 +237,13 @@ export function App() {
       setTitleError(error instanceof NativeError ? error.message : "名前を変更できません");
     }
   }, [session, titleDraft]);
+
+  // Rename の成否にかかわらず本文へ移る。失敗時はタイトルが元へ戻り
+  // inline error が残るので、直したくなればタイトル欄をクリックすればよい。
+  useEffect(() => {
+    if (bodyFocusToken === 0) return;
+    editorView.current?.focus();
+  }, [bodyFocusToken, session?.path]);
 
   const onContextAction = useCallback(
     async (action: string, doc: DocumentSummary) => {
@@ -508,6 +523,7 @@ export function App() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
+                          setBodyFocusToken((n) => n + 1);
                           e.currentTarget.blur();
                         }
                         if (e.key === "Escape") {

@@ -25,6 +25,7 @@ body {
 
 ::selection {
   background: var(--selection);
+  color: var(--selection-text);
 }
 
 button {
