@@ -5,64 +5,19 @@
  * - Markdown の記号だけを控えめに色付ける（ui-spec.md §8）
  * - IME 入力で文字を落とさない（AC-C）
  * - **外から text を流し込み直さない。**カーソル・選択・スクロールが飛ぶ（U-008）
+ * - 箇条書きの Enter / Tab / Shift+Tab は階層編集として扱う（list-keymap）
  * - 設定変更は Compartment で差し替える。EditorState を作り直さない
  * - Editor 内部に二重スクロールを作らない（ui-spec.md §6）
+ *
+ * 拡張の構成は `extensions.ts`。テストと同じものを使う。
  */
 
 import { useEffect, useRef } from "react";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
-import { drawSelection, EditorView, highlightSpecialChars, keymap } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import {
-  bracketMatching,
-  HighlightStyle,
-  indentUnit,
-  syntaxHighlighting,
-} from "@codemirror/language";
-import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { tags } from "@lezer/highlight";
-import { searchKeymap } from "@codemirror/search";
+import { EditorView } from "@codemirror/view";
+import { indentUnit } from "@codemirror/language";
+import { baseTheme, coreExtensions } from "./extensions";
 import "./editor.css";
-
-/**
- * Markdown の「意味を持つ記号」だけを色付ける。
- * 本文自体を多色にしない（ui-spec.md §8）。
- */
-const quietHighlight = HighlightStyle.define([
-  { tag: tags.processingInstruction, color: "var(--syntax-marker)" },
-  { tag: tags.meta, color: "var(--syntax-marker)" },
-  { tag: tags.contentSeparator, color: "var(--syntax-marker)" },
-  { tag: tags.url, color: "var(--text-muted)" },
-  { tag: tags.link, color: "var(--accent-text)" },
-  { tag: tags.heading, color: "var(--text-primary)", fontWeight: "500" },
-  { tag: tags.emphasis, fontStyle: "italic" },
-  { tag: tags.strong, fontWeight: "600" },
-  { tag: tags.strikethrough, textDecoration: "line-through" },
-  { tag: tags.quote, color: "var(--text-prose)" },
-]);
-
-const baseTheme = EditorView.theme({
-  "&": { backgroundColor: "transparent", color: "var(--text-editor)" },
-  "&.cm-focused": { outline: "none" },
-  ".cm-scroller": {
-    // スクロールは pane が持つ。Editor 内部に 2 本目を作らない。
-    overflow: "visible",
-    fontFamily: "var(--font-mono)",
-    lineHeight: "1.84",
-  },
-  ".cm-content": { padding: 0, caretColor: "var(--text-primary)" },
-  ".cm-line": { padding: 0 },
-  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--text-primary)" },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-    backgroundColor: "var(--selection)",
-  },
-  ".cm-searchMatch": {
-    backgroundColor: "color-mix(in srgb, var(--accent) 22%, transparent)",
-  },
-  ".cm-searchMatch.cm-searchMatch-selected": {
-    backgroundColor: "color-mix(in srgb, var(--accent) 42%, transparent)",
-  },
-});
 
 interface EditorProps {
   /** 初期値。以降このコンポーネントは外から text を受け取らない。 */
@@ -110,13 +65,7 @@ export function Editor({
     const settings = initial.current;
 
     const extensions: Extension[] = [
-      history(),
-      drawSelection(),
-      highlightSpecialChars(),
-      bracketMatching(),
-      markdown({ base: markdownLanguage, codeLanguages: [] }),
-      syntaxHighlighting(quietHighlight),
-      keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+      ...coreExtensions(),
       baseTheme,
       wrapCompartment.current.of(settings.lineWrap ? EditorView.lineWrapping : []),
       tabCompartment.current.of([

@@ -31,6 +31,9 @@
 | AUTO-019 | Window の初期サイズを 1200×820 に | Low |
 | AUTO-020 | Windows インストーラを NSIS / ユーザー単位に | Medium |
 | AUTO-021 | Rename 失敗時は元の名前へ戻し、inline error を出す | Low |
+| AUTO-022 | 箇条書きで番号付きリストの番号を進め、task list は未チェックで継ぐ | Low |
+| AUTO-023 | リストの depth をインデント幅ではなく実際の構造から数える | Medium |
+| AUTO-024 | 範囲選択中と IME 変換中はリスト編集に介入しない | Medium |
 
 **まだ実装していないもの**は末尾の「未実装リスト」を参照。
 
@@ -213,6 +216,46 @@ Title を編集して確定 → 失敗（同名衝突・禁止文字・権限）
 入力を残すか戻すかが未定だった。戻す方を選んだのは、
 画面のタイトルとディスク上のファイル名が食い違う状態を作らないため（U-006 の前提）。
 
+## AUTO-022 箇条書きの付随挙動
+
+仕様として指示されたのは Enter / Tab / Shift+Tab の 5 遷移だけ。
+「一般的な Markdown エディタと同様」に含まれると判断して、次も実装した。
+
+- 番号付きリスト（`1.` `3)`）は Enter で番号を 1 つ進める
+- task list（`- [x] `）は Enter で **未チェック**の項目を作る
+- marker の種類（`-` `*` `+`）を引き継ぐ
+
+番号の振り直し（途中に挿入したときに後続を再採番する）は**していない**。
+既存の行を書き換える範囲が広く、Undo の粒度も荒くなるため。
+
+## AUTO-023 depth の数え方
+
+「インデント幅 ÷ 2」のような固定計算にせず、
+**直前の連続したリスト行を遡って、自分より浅いインデントが何種類あるか**で depth を数える。
+
+2 スペースでも 4 スペースでも、タブでも同じように動く。
+Obsidian や VS Code で書かれた既存のノートを開いたときに崩れないため。
+
+副作用として、親のない `  - item`（いきなり 2 スペースで始まるリスト）は depth 0 と判定される。
+このとき空項目で Enter を押すと、outdent ではなくリスト終了になる。
+
+## AUTO-024 介入しない条件
+
+次の 2 つでは Enter / Tab を横取りせず、CodeMirror の既定動作へ譲る。
+
+- **IME 変換中**（`view.composing`）。Enter は変換確定に使われるため
+- **範囲選択中**。複数行のインデントは既定の `indentMore` に任せる
+
+## 実装中に見つけた不具合（修正済み）
+
+`@codemirror/lang-markdown` は Enter に独自のリスト継続処理を持っている。
+そちらが先に走ると、空のネストされた項目で Enter を押したときに
+**空行が残り、階層も浅くならなかった**（仕様が禁じている状態そのもの）。
+
+キーマップの優先順位を `Prec.highest` にし、`markdown()` より前へ置いて解決した。
+順序を戻すと再発するため、`src/features/editor/list-keymap.test.ts` で
+実際の EditorView を作って優先順位ごと固定している。
+
 ---
 
 ## 未実装リスト
@@ -235,7 +278,7 @@ MVP に含まれるが、まだ手を付けていないもの。
 ## 検証状況
 
 - `cargo test`: 15 passed（改行コード・BOM 保持、atomic save、Windows のファイル名検証、ignore 規則）
-- `npm run check`（typecheck + vitest）: 54 passed（Front Matter の lossless、Markdown、save state machine、フォルダツリー）
-- ブラウザでの目視: Light / Dark、Write / Split、Metadata、Find bar、Command Palette
+- `npm run check`（typecheck + vitest）: 97 passed（Front Matter の lossless、Markdown、save state machine、フォルダツリー、箇条書きの階層編集）
+- ブラウザでの目視: Light / Dark、Write / Split、Metadata、Find bar、Command Palette、箇条書きの 5 遷移
 - **デスクトップアプリとしての起動は未確認。**`npm run tauri:dev` はまだ実行していない
 - IME での日本語入力は未確認（test-strategy.md §5 は手動確認必須としている）
