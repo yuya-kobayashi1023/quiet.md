@@ -1,11 +1,13 @@
 /* Sidebar — ui-spec.md §2 / §3 */
 
+/* Top bar と揃えた高さの帯。Custom title bar のドラッグ領域を兼ねる（ADR-010）。 */
 .sidebar-top {
   display: flex;
   align-items: center;
   height: var(--topbar-height);
   padding: 0 10px;
   flex: none;
+  user-select: none;
 }
 
 .sidebar--collapsed .sidebar-top {

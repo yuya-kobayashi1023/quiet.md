@@ -13,6 +13,9 @@ import { NativeError } from "@/domain/document/errors";
 import type {
   DiskRevision,
   DocumentSummary,
+  SearchFileResult,
+  SearchMatch,
+  SearchQuery,
   WorkspaceMetadata,
 } from "@/domain/document/types";
 
@@ -161,6 +164,61 @@ export async function browserFallback<T>(
           : metadata.archived.filter((p) => p !== relativePath),
       };
       return metadata as T;
+    }
+
+    /*
+     * Rust 側（filesystem/search.rs）の縮小版。
+     * ブラウザで UI を確認するためだけのもので、上限も preview の切り出しも持たない。
+     * 挙動の正は Rust 側であり、ここを仕様の根拠にしない。
+     */
+    case "search_workspace": {
+      const query = arg("query") as SearchQuery;
+      const needle = query.query.trim();
+      if (!needle) {
+        return { files: [], totalMatches: 0, truncated: false, scannedFiles: 0 } as T;
+      }
+      const compare = (s: string) => (query.caseSensitive ? s : s.toLowerCase());
+      const target = compare(needle);
+      const results: SearchFileResult[] = [];
+      let totalMatches = 0;
+      let scannedFiles = 0;
+
+      for (const path of [...files.keys()].sort()) {
+        const summary = summaryOf(path);
+        const isArchived = metadata.archived.includes(summary.relativePath);
+        if (isArchived && !query.includeArchived) continue;
+        scannedFiles += 1;
+
+        const matches: SearchMatch[] = [];
+        files.get(path)!.content.split("\n").forEach((line, index) => {
+          const haystack = compare(line);
+          let at = haystack.indexOf(target);
+          while (at !== -1) {
+            matches.push({
+              line: index + 1,
+              column: at + 1,
+              length: needle.length,
+              preview: line.trim(),
+              previewColumn: at - (line.length - line.trimStart().length),
+              previewTruncatedStart: false,
+              previewTruncatedEnd: false,
+            });
+            at = haystack.indexOf(target, at + needle.length);
+          }
+        });
+
+        if (matches.length === 0) continue;
+        totalMatches += matches.length;
+        results.push({
+          document: summary,
+          matches,
+          matchCount: matches.length,
+          archived: isArchived,
+        });
+      }
+
+      results.sort((a, b) => b.matchCount - a.matchCount);
+      return { files: results, totalMatches, truncated: false, scannedFiles } as T;
     }
 
     case "read_document": {

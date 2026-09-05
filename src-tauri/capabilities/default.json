@@ -1,12 +1,16 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Quiet に必要な最小権限。Filesystem は独自 command 経由のみ。",
+  "description": "Quiet に必要な最小権限。Filesystem は独自 command 経由のみ。window の drag / minimize / toggle-maximize / close は Custom title bar 用（ADR-010）。",
   "windows": ["main", "doc-*"],
   "permissions": [
     "core:default",
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
     "core:webview:allow-create-webview-window",
     "dialog:allow-open",
     "dialog:allow-save",

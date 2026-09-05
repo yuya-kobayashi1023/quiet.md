@@ -184,7 +184,8 @@ export function Sidebar(props: SidebarProps) {
   if (collapsed) {
     return (
       <aside className="sidebar sidebar--collapsed" data-compact={compact}>
-        <div className="sidebar-top">
+        {/* Top bar と同じ高さの帯。ここも title bar として掴める（ADR-010）。 */}
+        <div className="sidebar-top" data-tauri-drag-region="deep">
           <button
             type="button"
             className="icon-btn"
@@ -224,7 +225,7 @@ export function Sidebar(props: SidebarProps) {
 
   return (
     <aside className="sidebar" data-compact={compact}>
-      <div className="sidebar-top">
+      <div className="sidebar-top" data-tauri-drag-region="deep">
         <button
           type="button"
           className="icon-btn"

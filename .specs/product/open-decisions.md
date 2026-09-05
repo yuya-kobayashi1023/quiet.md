@@ -17,13 +17,13 @@
 | U-004 | Markdown parser | unified / remark系 |
 | U-005 | Archiveの意味 | 論理Archive。ファイルは移動しない（名前は解放されない） |
 | U-006 | Titleの正本 | **Title = ファイル名の拡張子抜き**。`frontmatter.title` とは非連動 |
-| U-007 | Window title bar | Phase 1はNative decoration |
+| U-007 | Window title bar | ~~Phase 1はNative decoration~~ → Custom title bar（ADR-010） |
 | U-008 | Autosave delay | 700ms idle debounce。**カーソル位置を保持すること** |
 | U-009 | 初期対応OS | Windows first（exe）、macOS next |
 | U-010 | External change | File watcher既定ON |
 | U-011 | 複数文書 | Tabsなし。New Windowで対応 |
 | U-012 | App固有Workspace metadata | `.quiet/workspace.json` を許可 |
-| U-013 | Search All | Quick Open / FindはMVP、Search AllはP1 |
+| U-013 | Search All | ~~Search AllはP1~~ → `Ctrl+Shift+F` で実装済み（ADR-011） |
 | U-014 | Local history | Atomic write + Crash recoveryまで |
 | U-015 | New Noteの初期ファイル名 | `Untitled.md` + 即Rename |
 | U-016 | 新規ファイルの改行コード | 既存は保持、新規はLF |
@@ -246,11 +246,14 @@ Workspace-level metadataに、
 
 # U-007 Window title bar
 
-[DECIDED: U-007]
+[DECIDED: U-007] → **[SUPERSEDED by ADR-010]（2026-09-05）**
 
 ## 決定
 
-Phase 1はOS Native Title Bar。将来的にCustom title barへ移行する。
+~~Phase 1はOS Native Title Bar。将来的にCustom title barへ移行する。~~
+
+**Custom title barへ移行済み。** 専用行は足さず、既存のTop barがtitle barを兼ねる。
+下の「理由」に挙げた懸念は、Tauri 2側で解決していることを確認した（ADR-010 参照）。
 
 ## 推奨案
 
@@ -386,11 +389,14 @@ Workspace内に、
 
 # U-013 Search All
 
-[DECIDED: U-013]
+[DECIDED: U-013] → **[SUPERSEDED by ADR-011]（2026-09-05）**
 
 ## 決定
 
-Quick OpenとCurrent Document FindはMVP。Search AllはP1。
+~~Quick OpenとCurrent Document FindはMVP。Search AllはP1。~~
+
+**Search Allも実装済み**（`Ctrl+Shift+F`）。Archiveは既定で検索対象に含める。
+3つの検索の役割分担はADR-011を参照。
 
 ## 推奨案
 

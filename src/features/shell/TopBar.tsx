@@ -9,6 +9,7 @@
 
 import type { ViewMode } from "@/services/settings-service";
 import { ContentsIcon, MoreIcon, SearchIcon } from "@/ui/components/icons";
+import { WindowControls } from "./WindowControls";
 import "./shell.css";
 
 interface TopBarProps {
@@ -39,7 +40,12 @@ export function TopBar({
   children,
 }: TopBarProps) {
   return (
-    <header className="topbar">
+    /*
+     * Top bar 自体が title bar を兼ねる（ADR-010）。
+     * `deep` にすると子孫のどこを掴んでもドラッグになる。button / input は
+     * Tauri 側のハンドラが自動で除外するので、個別の指定は要らない。
+     */
+    <header className="topbar" data-tauri-drag-region="deep">
       <nav className="breadcrumb" aria-label="現在位置">
         {breadcrumb.map((segment, index) => (
           <span key={`${segment}-${index}`}>
@@ -67,41 +73,47 @@ export function TopBar({
         ))}
       </div>
 
-      <div className="top-actions">
-        <div className="toc-control">
+      {/* Window controls を含めて 1 つの列にする。中央の View switch を
+          Top bar の中心に保つため、grid の列数は 3 のまま変えない。 */}
+      <div className="topbar-right">
+        <div className="top-actions">
+          <div className="toc-control">
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="目次"
+              aria-expanded={tocOpen}
+              title="目次"
+              onClick={onToggleToc}
+            >
+              <ContentsIcon />
+            </button>
+            {children}
+          </div>
           <button
             type="button"
             className="icon-btn"
-            aria-label="目次"
-            aria-expanded={tocOpen}
-            title="目次"
-            onClick={onToggleToc}
+            aria-label="コマンドパレット"
+            title="コマンドパレット (Ctrl+K)"
+            onClick={onOpenPalette}
           >
-            <ContentsIcon />
+            <SearchIcon />
           </button>
-          {children}
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="その他"
+            title="その他"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              onMore({ x: rect.right - 200, y: rect.bottom + 4 });
+            }}
+          >
+            <MoreIcon />
+          </button>
         </div>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="コマンドパレット"
-          title="コマンドパレット (Ctrl+K)"
-          onClick={onOpenPalette}
-        >
-          <SearchIcon />
-        </button>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label="その他"
-          title="その他"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            onMore({ x: rect.right - 200, y: rect.bottom + 4 });
-          }}
-        >
-          <MoreIcon />
-        </button>
+
+        <WindowControls />
       </div>
     </header>
   );

@@ -4,6 +4,7 @@ use crate::commands::AppState;
 use crate::errors::{NativeError, Result};
 use crate::filesystem::paths;
 use crate::filesystem::scan::{self, WorkspaceSnapshot};
+use crate::filesystem::search;
 use crate::settings::{self, WorkspaceMetadata};
 use crate::watcher;
 use serde::Serialize;
@@ -91,6 +92,22 @@ pub fn save_workspace_metadata(
         path: "<no workspace>".to_string(),
     })?;
     settings::save_workspace_metadata(&root, &metadata)
+}
+
+/// Workspace 全体の全文検索（U-013 / ADR-011）。
+///
+/// Archive の扱いは Frontend が決める。Rust は metadata から Archive 一覧を読み、
+/// `include_archived` に従って絞るだけ。
+#[tauri::command]
+pub fn search_workspace(
+    state: State<'_, AppState>,
+    query: search::SearchQuery,
+) -> Result<search::SearchResults> {
+    let root = state.root().ok_or_else(|| NativeError::NotFound {
+        path: "<no workspace>".to_string(),
+    })?;
+    let metadata = settings::load_workspace_metadata(&root);
+    search::search_workspace(&root, &metadata.archived, &query)
 }
 
 /// 論理 Archive（U-005）。ファイルは移動しない。

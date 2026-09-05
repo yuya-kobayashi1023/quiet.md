@@ -6,6 +6,7 @@
 pub mod atomic;
 pub mod paths;
 pub mod scan;
+pub mod search;
 
 use crate::errors::{NativeError, Result};
 use serde::{Deserialize, Serialize};

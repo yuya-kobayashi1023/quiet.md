@@ -35,6 +35,8 @@ export interface AppSettings {
   viewMode: ViewMode;
   /** U-030: 既定は文字数。 */
   countMode: "characters" | "words";
+  /** ADR-011: Search All で Archive も探すか。既定は探す。 */
+  searchIncludeArchived: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -55,6 +57,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   sidebarCollapsed: false,
   viewMode: "write",
   countMode: "characters",
+  searchIncludeArchived: true,
 };
 
 export class SettingsService {

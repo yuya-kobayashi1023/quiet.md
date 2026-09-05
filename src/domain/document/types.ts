@@ -55,6 +55,47 @@ export interface WorkspaceMetadata {
   expandedFolders: string[];
 }
 
+/* ------------------------------------------------------------------ *
+ * Workspace 全文検索（U-013 / ADR-011）
+ * ------------------------------------------------------------------ */
+
+export interface SearchQuery {
+  query: string;
+  /** 既定は true。Archive も探す。 */
+  includeArchived: boolean;
+  caseSensitive: boolean;
+}
+
+export interface SearchMatch {
+  /** ファイル先頭からの行番号（1 始まり）。Front Matter も 1 行として数える。 */
+  line: number;
+  /** 行頭からの位置（1 始まり、UTF-16 code unit）。JS の文字列位置と一致する。 */
+  column: number;
+  length: number;
+  /** 表示用に切り出した行。 */
+  preview: string;
+  /** preview 内での一致開始位置。 */
+  previewColumn: number;
+  previewTruncatedStart: boolean;
+  previewTruncatedEnd: boolean;
+}
+
+export interface SearchFileResult {
+  document: DocumentSummary;
+  matches: SearchMatch[];
+  /** 総ヒット数。上限で切られている場合 `matches.length` より大きい。 */
+  matchCount: number;
+  archived: boolean;
+}
+
+export interface SearchResults {
+  files: SearchFileResult[];
+  totalMatches: number;
+  /** 上限で打ち切ったか。 */
+  truncated: boolean;
+  scannedFiles: number;
+}
+
 export interface RenameResult {
   path: string;
   relativePath: string;

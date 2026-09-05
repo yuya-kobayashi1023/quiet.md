@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { EditorView } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
+import { EditorSelection } from "@codemirror/state";
 import { Sidebar, FileContextMenu } from "@/features/sidebar/Sidebar";
 import { StatusBar, TopBar } from "@/features/shell/TopBar";
 import { Editor } from "@/features/editor/Editor";
@@ -15,6 +16,7 @@ import { TocPopover } from "@/features/toc/TocPopover";
 import { SettingsModal } from "@/features/settings/SettingsModal";
 import { CommandPalette, type Command } from "@/features/command-palette/CommandPalette";
 import { FindBar } from "@/features/search/FindBar";
+import { SearchAllPanel, type SearchHit } from "@/features/search/SearchAllPanel";
 import { ProblemBanner, Toast, type ToastState } from "@/ui/components/Banner";
 import {
   addFrontmatter,
@@ -44,6 +46,9 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
+  const [searchAllOpen, setSearchAllOpen] = useState(false);
+  /** Search All から飛んできた行き先。文書を開いた後に消費する。 */
+  const [pendingHit, setPendingHit] = useState<SearchHit | null>(null);
   const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
@@ -245,6 +250,51 @@ export function App() {
     editorView.current?.focus();
   }, [bodyFocusToken, session?.path]);
 
+  /* ---------------------------------------------------------------- *
+   * Search All からの移動（ADR-011）
+   * ---------------------------------------------------------------- */
+
+  const openHit = useCallback(
+    async (hit: SearchHit) => {
+      const doc = workspace.snapshot?.documents.find((d) => d.path === hit.path);
+      if (!doc) return;
+      // Read では Editor が隠れている。行へ飛ぶ以上、書ける面を出す。
+      if (settingsService.get().viewMode === "read") setView("split");
+      await openDocument(doc);
+      setPendingHit(hit);
+    },
+    [openDocument, workspace.snapshot],
+  );
+
+  // 文書が開かれ、その文書の Editor が立ち上がってから選択を移す。
+  // Editor は documentKey（= path）が変わったときだけ作り直されるので、
+  // path も依存に入れて、作り直しの後に走らせる。
+  useEffect(() => {
+    if (!pendingHit || !session || session.path !== pendingHit.path) return;
+    const view = editorView.current;
+    if (!view) return;
+
+    // 検索結果の行番号はファイル先頭からの通し番号。
+    // Editor が持つのは本文だけなので、Front Matter の行数を引く（ADR-002）。
+    const prefix = session.text.slice(0, detectFrontmatter(session.text).bodyOffset);
+    const frontmatterLines = prefix === "" ? 0 : prefix.split("\n").length - 1;
+    const target = Math.min(
+      Math.max(1, pendingHit.line - frontmatterLines),
+      view.state.doc.lines,
+    );
+
+    const line = view.state.doc.line(target);
+    const from = Math.min(line.from + pendingHit.column - 1, line.to);
+    const to = Math.min(from + pendingHit.length, line.to);
+
+    view.dispatch({
+      selection: EditorSelection.single(from, to),
+      effects: EditorView.scrollIntoView(from, { y: "center" }),
+    });
+    view.focus();
+    setPendingHit(null);
+  }, [pendingHit, session]);
+
   const onContextAction = useCallback(
     async (action: string, doc: DocumentSummary) => {
       try {
@@ -356,6 +406,12 @@ export function App() {
       { id: "read", label: "Read", shortcut: "Ctrl+3", run: () => setView("read") },
       { id: "settings", label: "設定", shortcut: "Ctrl+,", run: () => setSettingsOpen(true) },
       { id: "find", label: "この文書内を検索", shortcut: "Ctrl+F", run: () => setFindOpen(true) },
+      {
+        id: "search-all",
+        label: "ワークスペース内を検索",
+        shortcut: "Ctrl+Shift+F",
+        run: () => setSearchAllOpen(true),
+      },
       { id: "toc", label: "目次", run: () => setTocOpen(true) },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -381,7 +437,9 @@ export function App() {
         setPaletteOpen(true);
       } else if (key === "f") {
         e.preventDefault();
-        setFindOpen(true);
+        // Shift 付きは Workspace 全体（ADR-011）、無しは現在の文書（U-025）。
+        if (e.shiftKey) setSearchAllOpen(true);
+        else setFindOpen(true);
       } else if (key === "n") {
         e.preventDefault();
         void newNote();
@@ -660,6 +718,16 @@ export function App() {
             type="button"
             role="menuitem"
             onClick={() => {
+              setSearchAllOpen(true);
+              setMoreMenu(null);
+            }}
+          >
+            ワークスペース内を検索
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
               void openWorkspace();
               setMoreMenu(null);
             }}
@@ -677,6 +745,18 @@ export function App() {
             設定
           </button>
         </div>
+      ) : null}
+
+      {searchAllOpen ? (
+        <SearchAllPanel
+          hasWorkspace={workspace.snapshot != null}
+          includeArchived={settings.searchIncludeArchived}
+          onIncludeArchivedChange={(value) =>
+            settingsService.update({ searchIncludeArchived: value })
+          }
+          onOpenHit={(hit) => void openHit(hit)}
+          onClose={() => setSearchAllOpen(false)}
+        />
       ) : null}
 
       {settingsOpen ? <SettingsModal onClose={() => setSettingsOpen(false)} /> : null}

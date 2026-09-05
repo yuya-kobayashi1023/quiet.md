@@ -115,3 +115,29 @@ export const ArrowDownIcon = ({ className }: IconProps) => (
     <path d="M8 3.5v9M4.5 9 8 12.5 11.5 9" />
   </svg>
 );
+
+/*
+ * Window controls（ADR-010）。
+ * Windows の Segoe Fluent Icons に合わせ、線幅 1 / 10px 相当で描く。
+ * 他のアイコンより細いのは意図的。ここは chrome であり、内容ではない。
+ */
+
+export const MinimizeIcon = ({ className }: IconProps) => (
+  <svg {...box} className={className}>
+    <path d="M3.5 8h9" />
+  </svg>
+);
+
+export const MaximizeIcon = ({ className }: IconProps) => (
+  <svg {...box} className={className}>
+    <rect x="3.5" y="3.5" width="9" height="9" rx="0.5" />
+  </svg>
+);
+
+/** 最大化中に出す。前面の小さな窓と、その奥にずれた窓。 */
+export const RestoreIcon = ({ className }: IconProps) => (
+  <svg {...box} className={className}>
+    <rect x="3.5" y="5.5" width="7" height="7" rx="0.5" />
+    <path d="M5.5 3.5h7v7" />
+  </svg>
+);

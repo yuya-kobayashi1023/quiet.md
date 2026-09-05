@@ -15,6 +15,8 @@ import type {
   LineEnding,
   RecoverySnapshot,
   RenameResult,
+  SearchQuery,
+  SearchResults,
   WorkspaceMetadata,
   WorkspaceSnapshot,
 } from "@/domain/document/types";
@@ -92,6 +94,10 @@ export const saveWorkspaceMetadata = (metadata: WorkspaceMetadata) =>
 export const setArchived = (relativePath: string, archived: boolean) =>
   invoke<WorkspaceMetadata>("set_archived", { relativePath, archived });
 
+/** Workspace 全体の全文検索（U-013 / ADR-011）。 */
+export const searchWorkspace = (query: SearchQuery) =>
+  invoke<SearchResults>("search_workspace", { query });
+
 /* ------------------------------------------------------------------ *
  * Document
  * ------------------------------------------------------------------ */
@@ -158,6 +164,50 @@ export const openExternal = (url: string) =>
 
 export const openInNewWindow = (path: string) =>
   invoke<void>("open_in_new_window", { path });
+
+/* ------------------------------------------------------------------ *
+ * Window（ADR-010 / Custom title bar）
+ *
+ * Drag / double click による最大化は Tauri が注入する `data-tauri-drag-region`
+ * のハンドラが担う。ここが持つのはボタンから叩く操作だけ。
+ * ------------------------------------------------------------------ */
+
+async function currentWindow() {
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  return getCurrentWindow();
+}
+
+export async function minimizeWindow(): Promise<void> {
+  if (!isNative()) return;
+  await (await currentWindow()).minimize();
+}
+
+export async function toggleMaximizeWindow(): Promise<void> {
+  if (!isNative()) return;
+  await (await currentWindow()).toggleMaximize();
+}
+
+export async function closeWindow(): Promise<void> {
+  if (!isNative()) return;
+  await (await currentWindow()).close();
+}
+
+/**
+ * 最大化状態を購読する。呼んだ直後に現在値を 1 回渡す。
+ *
+ * 最大化はボタン以外（Aero Snap、ダブルクリック、Win+↑）でも変わるので、
+ * ボタン側で状態を持たずにここから受け取る。
+ */
+export async function onWindowMaximizeChange(
+  handler: (maximized: boolean) => void,
+): Promise<() => void> {
+  if (!isNative()) return () => {};
+  const win = await currentWindow();
+  handler(await win.isMaximized());
+  return await win.onResized(async () => {
+    handler(await win.isMaximized());
+  });
+}
 
 /* ------------------------------------------------------------------ *
  * Native dialogs

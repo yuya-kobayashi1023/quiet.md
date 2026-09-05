@@ -86,6 +86,9 @@ pub async fn open_in_new_window(app: tauri::AppHandle, path: String) -> Result<(
     .title("Quiet")
     .inner_size(1200.0, 820.0)
     .min_inner_size(760.0, 520.0)
+    // Custom title bar（ADR-010）。main window と同じ見た目にする。
+    .decorations(false)
+    .shadow(true)
     .build()
     .map_err(|e| NativeError::IoError {
         message: e.to_string(),
