@@ -44,7 +44,9 @@ export function Preview({
   onOpenDocument,
 }: PreviewProps) {
   const { html } = useMemo(
-    () => renderMarkdown(body, { baseDir, resolveAsset }),
+    // sourceLines は Split の scroll 同期が使う行の対応表（ADR-012）。
+    // 画面表示のためだけの印であり、書き出し HTML には付けない。
+    () => renderMarkdown(body, { baseDir, resolveAsset, sourceLines: true }),
     [body, baseDir],
   );
 

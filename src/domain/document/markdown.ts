@@ -37,6 +37,13 @@ export interface RenderOptions {
   baseDir?: string;
   /** 相対パスを表示可能な URL へ変換する。Tauri では convertFileSrc。 */
   resolveAsset?: (absolutePath: string) => string;
+  /**
+   * トップレベルの要素へ `data-source-line` を振る（ADR-012）。
+   *
+   * Split の scroll 同期がこれを行の対応表として使う。
+   * 画面表示のためだけの印なので、書き出し HTML では付けない。既定は false。
+   */
+  sourceLines?: boolean;
 }
 
 export interface RenderResult {
@@ -136,6 +143,25 @@ function decorateLinksAndImages(options: RenderOptions) {
   };
 }
 
+/**
+ * トップレベルの要素へ、対応する本文の行番号を振る（ADR-012）。
+ *
+ * 入れ子まで振らないのは、scroll 同期に必要なのが「画面の縦位置と行の対応」だけで、
+ * 段落の内側の行まで分かっても精度が上がらないため。属性も少なくて済む。
+ */
+export const SOURCE_LINE_ATTR = "data-source-line";
+
+function addSourceLines() {
+  return (tree: HastRoot) => {
+    for (const node of tree.children) {
+      if (node.type !== "element") continue;
+      const line = node.position?.start.line;
+      if (line == null) continue;
+      node.properties = { ...node.properties, dataSourceLine: String(line) };
+    }
+  };
+}
+
 /** 見出しへ id を振る。TOC からの移動に使う。 */
 function addHeadingIds() {
   return (tree: HastRoot) => {
@@ -163,7 +189,13 @@ const schema = {
   ...defaultSchema,
   attributes: {
     ...defaultSchema.attributes,
-    "*": [...(defaultSchema.attributes?.["*"] ?? []), "id", "className"],
+    "*": [
+      ...(defaultSchema.attributes?.["*"] ?? []),
+      "id",
+      "className",
+      // ADR-012。値は数字だけ（addSourceLines が付ける）。
+      "dataSourceLine",
+    ],
     a: [...(defaultSchema.attributes?.a ?? []), "dataLink"],
     img: [...(defaultSchema.attributes?.img ?? []), "dataImage"],
     input: [...(defaultSchema.attributes?.input ?? []), "checked", "disabled", "type"],
@@ -184,12 +216,16 @@ const schema = {
 export const HEADING_ID_PREFIX = "user-content-";
 
 export function renderMarkdown(body: string, options: RenderOptions = {}): RenderResult {
-  const file = unified()
+  const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(addHeadingIds)
-    .use(decorateLinksAndImages, options)
+    .use(decorateLinksAndImages, options);
+
+  if (options.sourceLines) processor.use(addSourceLines);
+
+  const file = processor
     .use(rehypeSanitize, schema)
     // Sanitize の**後**に走らせる。highlight が読むのは sanitize 済みの text だけになり、
     // 生成される span も自前のものだけになる。

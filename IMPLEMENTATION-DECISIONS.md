@@ -34,6 +34,7 @@
 | AUTO-022 | 箇条書きで番号付きリストの番号を進め、task list は未チェックで継ぐ | Low |
 | AUTO-023 | リストの depth をインデント幅ではなく実際の構造から数える | Medium |
 | AUTO-024 | 範囲選択中と IME 変換中はリスト編集に介入しない | Medium |
+| AUTO-025〜031 | 2026-09-05 の改修分。末尾の「追加分」を参照 | — |
 
 **まだ実装していないもの**は末尾の「未実装リスト」を参照。
 
@@ -272,7 +273,7 @@ MVP に含まれるが、まだ手を付けていないもの。
 | File association | requirements §4 P1 | 未実装 |
 | TOC の active heading 追従 | ui-spec.md §10 | 一覧と移動は動く。スクロール追従は未実装 |
 | Settings の Default location | requirements §3.7 | UI 未実装 |
-| Search All | U-013（P1） | 仕様通り後回し |
+| Search All | ~~U-013（P1）~~ ADR-011 | **実装済み**（`Ctrl+Shift+F`） |
 | macOS 対応 | U-009 | 仕様通り後回し。Rust 側は分岐済み |
 
 ## 検証状況
@@ -282,3 +283,90 @@ MVP に含まれるが、まだ手を付けていないもの。
 - ブラウザでの目視: Light / Dark、Write / Split、Metadata、Find bar、Command Palette、箇条書きの 5 遷移
 - **デスクトップアプリとしての起動は未確認。**`npm run tauri:dev` はまだ実行していない
 - IME での日本語入力は未確認（test-strategy.md §5 は手動確認必須としている）
+
+---
+
+## 追加分（2026-09-05・6項目の改修）
+
+このセッションで入れた判断。仕様側の変更は ADR-009〜012 に書いたので、ここには
+**仕様に書かれていなかった細かい判断**だけを残す。
+
+| ID | 判断 | 重要度 |
+|---|---|---|
+| AUTO-025 | コードの色は5役に固定し、割り当てのない token は本文色のまま残す | Medium |
+| AUTO-026 | `rehype-highlight` の `common`（約37言語）をそのまま同梱する | Medium |
+| AUTO-027 | Window controls の Close だけ hover 色を変える | Low |
+| AUTO-028 | Search All の下限を2文字、debounce を220msに | Low |
+| AUTO-029 | Search All の結果からReadモードで飛ぶとSplitへ切り替える | Medium |
+| AUTO-030 | 同期スクロールの基準を画面上端ではなく72px下に | Low |
+| AUTO-031 | `searchKeymap` を丸ごと入れるのをやめた（既存不具合の修正） | Medium |
+
+## AUTO-025 コードの色は5役
+
+highlight.js は40以上の scope を、CodeMirror の lezer はさらに多くの tag を出す。
+全部に色を割り当てるとIDEの見た目になり、`ui-spec.md` §8 の
+「本文自体を多色にしすぎない」と衝突する。
+
+keyword / string / number / comment / entity の5役だけを塗り、
+それ以外は本文色のまま残す。**これは抜けではなく既定**。
+Editor（`extensions.ts`）と Preview（`preview.css`）で同じ役割分けを使う。
+
+## AUTO-026 highlight.js の同梱範囲
+
+`rehype-highlight` の既定（`common`、約37言語）をそのまま使う。
+Editor 側（`@codemirror/language-data`）は dynamic import なので起動時のバンドルに
+載らないが、Preview 側は同期的に載る。ビルド後の main chunk は 933 kB（gzip 305 kB）。
+
+ローカルから読むデスクトップアプリなので、この増分は受け入れる。
+気になるなら `languages` オプションで絞れる。
+
+## AUTO-027 Close ボタンだけ hover 色を変える
+
+最小化・最大化は押し間違えても戻せるが、Close は戻せない。
+Windows の慣習に合わせ、Close の hover を `#c42b1c` にする。
+これは design token に入れていない。**OS の慣習であってアプリの配色ではない**ため。
+
+## AUTO-028 Search All の下限と debounce
+
+1文字での検索は Workspace 全体を舐めるだけで役に立たないので、2文字以上とした。
+debounce は220ms。日本語入力の変換確定より短く、連続打鍵よりは長い。
+
+どちらも計測して決めた値ではない。実測したら変える。
+
+## AUTO-029 Read モードで検索結果を開いたとき
+
+Read では Editor が `display: none` なので、行へ飛んでもユーザーには何も
+起きていないように見える。Split へ切り替える。
+
+View mode を勝手に変えるのは本来避けたいが、「何も起きない」よりはよいと判断した。
+Write モードのときは変えない（Editor が見えているため）。
+
+## AUTO-030 同期スクロールの基準位置
+
+画面上端の行ではなく、72px 下の行を基準に合わせる。
+上端ちょうどの行は視界に入りにくく、「今読んでいる行」と一致しないため。
+
+## AUTO-031 `searchKeymap` を外した — **既存不具合の修正**
+
+`searchKeymap` には `Mod-f` → `openSearchPanel` が含まれており、
+`Ctrl+F` でも `Ctrl+Shift+F` でも CodeMirror 標準の search panel が開いていた。
+`FindBar.tsx` の冒頭コメントは「標準 panel は使わない」と書いているのに、
+実際には Find bar と標準 panel が同時に出ていた。
+
+panel を開かない `Mod-d` / `Mod-Shift-l` だけを残した。
+
+## 検証状況（2026-09-05 更新）
+
+- `cargo test`: 25 passed（うち search が10件）
+- `npm run check`（typecheck + vitest）: 122 passed
+- ブラウザでの目視（`npm run dev`）で確認したもの:
+  - タイトル Enter → Rename 後に本文へ focus が移る（`activeElement` が `cm-content`）
+  - Dark / Light の選択色。Editor / Preview の両方
+  - コードブロックのハイライト。Editor / Preview、ts / python / rust
+  - Search All の検索・キーボード移動・行への移動（Front Matter の行数を引いた位置）
+  - 同期スクロール（コードブロックと表をまたいで対応が保たれること）
+  - Settings の「スクロールを同期」トグル
+- **Custom title bar は Tauri でしか出ない部分（drag / window controls / undecorated
+  window のリサイズと Aero Snap）を目視していない。** ブラウザでは `isNative()` が
+  false になり Window controls を描かないため。`npm run tauri:dev` での確認が必要
+- IME での日本語入力は引き続き未確認

@@ -24,6 +24,8 @@ export interface AppSettings {
   lineWrap: boolean;
   spellCheck: boolean;
   tabWidth: 2 | 4;
+  /** ADR-012: Split で Editor と Preview のスクロールを合わせるか。 */
+  syncScroll: boolean;
 
   /* Appearance */
   theme: ThemePreference;
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   lineWrap: true,
   spellCheck: false,
   tabWidth: 2,
+  syncScroll: true,
 
   theme: "system",
   previewTypeface: "serif",

@@ -136,6 +136,42 @@ describe("renderMarkdown — links と images", () => {
   });
 });
 
+describe("renderMarkdown — source lines（ADR-012）", () => {
+  const body = "# Title\n\npara one\n\n```js\nconst a = 1;\n```\n\npara two\n";
+
+  it("既定では付けない（書き出し HTML に混ぜない）", () => {
+    const { html } = renderMarkdown(body);
+    expect(html).not.toContain("data-source-line");
+  });
+
+  it("トップレベルの要素へ本文の行番号を振る", () => {
+    const { html } = renderMarkdown(body, { sourceLines: true });
+    expect(html).toContain('<h1 id="user-content-title" data-source-line="1">');
+    expect(html).toContain('<p data-source-line="3">');
+    expect(html).toContain('<pre data-source-line="5">');
+    expect(html).toContain('<p data-source-line="9">');
+  });
+
+  it("入れ子の要素には振らない", () => {
+    const { html } = renderMarkdown("- a\n- b\n", { sourceLines: true });
+    expect(html).toContain('<ul data-source-line="1">');
+    expect(html).not.toContain("<li data-source-line");
+  });
+
+  it("行番号は昇順に並ぶ", () => {
+    const { html } = renderMarkdown(body, { sourceLines: true });
+    const lines = [...html.matchAll(/data-source-line="(\d+)"/g)].map((m) => Number(m[1]));
+    expect(lines.length).toBeGreaterThan(1);
+    expect([...lines].sort((a, b) => a - b)).toEqual(lines);
+  });
+
+  it("sanitize を通っても残る", () => {
+    const { html } = renderMarkdown("para\n", { sourceLines: true });
+    // schema の attributes["*"] に dataSourceLine を足していないと、ここで消える。
+    expect(html).toContain('data-source-line="1"');
+  });
+});
+
 describe("extractHeadings", () => {
   it("レベルとオフセットを返す", () => {
     const body = "# A\n\ntext\n\n### C\n";

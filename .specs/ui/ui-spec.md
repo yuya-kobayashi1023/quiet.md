@@ -159,11 +159,15 @@ Editorのみ。
 Editor | Preview
 ```
 
-それぞれ独立スクロール。
+スクロールコンテナはペインごとに1本。
 
-[DECIDED: U-027] MVPではscrollを同期しない。
+[DECIDED: ADR-012] scrollは同期する（設定 `syncScroll`、既定ON）。
 
-TOCからの移動だけが両ペインを動かす。将来、行対応の精度を上げたうえで同期Splitを検討する。
+割合合わせではなく、Preview側の `data-source-line` とEditorの行ジオメトリで
+作った行の対応表を線形補間する。掴んだ側が駆動側になる。
+設定でOFFにすると、それぞれ独立スクロールになる。
+
+TOCからの移動は同期の有無にかかわらず両ペインを動かす。
 
 **Nested vertical scrollは禁止。**
 

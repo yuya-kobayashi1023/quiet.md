@@ -37,7 +37,7 @@
 | U-024 | Workspaceのフォルダツリーとignore規則 | 推奨のtree / ignore / sortルールを採用 |
 | U-025 | Find in documentのUI | Editor右上のInline find bar |
 | U-026 | Toastの採否と定義 | Status bar上にToast 1種類 |
-| U-027 | Split時のscroll同期 | MVPでは同期しない |
+| U-027 | Split時のscroll同期 | ~~MVPでは同期しない~~ → 行の対応表で同期（ADR-012） |
 | U-028 | 保存競合検知にcontent hashを使うか | mtime + size + content hash |
 | U-029 | ショートカット表記とView切替shortcut | OS別表記 + `Ctrl/Cmd+1/2/3` |
 | U-030 | 日本語のword count | 既定は文字数。クリックで語数 |
@@ -863,11 +863,15 @@ UIは増えないが、Undoの存在に気づけない。
 
 # U-027 Split時のscroll同期
 
-[DECIDED: U-027]
+[DECIDED: U-027] → **[SUPERSEDED by ADR-012]（2026-09-05）**
 
 ## 決定
 
-MVPではSplit scrollを同期しない。将来、行対応の精度を上げたうえで同期Splitを導入したい。
+~~MVPではSplit scrollを同期しない。将来、行対応の精度を上げたうえで同期Splitを導入したい。~~
+
+**同期する**（設定 `syncScroll`、既定ON）。
+下の懸念は「行対応が推定である」ことを前提にしていたが、Previewを自前のASTパイプラインで
+組んでいるため、行対応は推定ではなく描画時に確定できる。詳細はADR-012。
 
 ## 論点
 

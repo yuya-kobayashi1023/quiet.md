@@ -220,6 +220,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   <option value={4}>4 spaces</option>
                 </select>
               </Row>
+              <Row
+                label="スクロールを同期"
+                hint="Split のとき、Editor と Preview のスクロールを行の対応で合わせます。"
+              >
+                <Switch
+                  checked={settings.syncScroll}
+                  label="スクロールを同期"
+                  onChange={(v) => update({ syncScroll: v })}
+                />
+              </Row>
             </>
           ) : null}
 

@@ -9,6 +9,7 @@ import { EditorView } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 import { Sidebar, FileContextMenu } from "@/features/sidebar/Sidebar";
 import { StatusBar, TopBar } from "@/features/shell/TopBar";
+import { useSyncScroll } from "@/features/shell/use-sync-scroll";
 import { Editor } from "@/features/editor/Editor";
 import { Preview } from "@/features/preview/Preview";
 import { Metadata } from "@/features/frontmatter/Metadata";
@@ -249,6 +250,20 @@ export function App() {
     if (bodyFocusToken === 0) return;
     editorView.current?.focus();
   }, [bodyFocusToken, session?.path]);
+
+  /* ---------------------------------------------------------------- *
+   * Split の scroll 同期（ADR-012）
+   * ---------------------------------------------------------------- */
+
+  useSyncScroll({
+    editorPane,
+    previewPane,
+    editorView,
+    // 片方しか見えていないときに同期しても意味がない。
+    enabled: settings.syncScroll && settings.viewMode === "split" && session != null,
+    // 文書が変わると Editor が作り直される。対応表も作り直す。
+    revision: session?.path ?? null,
+  });
 
   /* ---------------------------------------------------------------- *
    * Search All からの移動（ADR-011）

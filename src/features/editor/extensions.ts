@@ -13,7 +13,7 @@ import { bracketMatching, HighlightStyle, syntaxHighlighting } from "@codemirror
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages as codeLanguages } from "@codemirror/language-data";
 import { tags } from "@lezer/highlight";
-import { searchKeymap } from "@codemirror/search";
+import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
 import { listKeymap } from "./list-keymap";
 
 /**
@@ -88,8 +88,18 @@ export const baseTheme = EditorView.theme({
   ".cm-content": { padding: 0, caretColor: "var(--text-primary)" },
   ".cm-line": { padding: 0 },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--text-primary)" },
+  /*
+   * 選択範囲。
+   *
+   * `!important` が要る。CodeMirror の base theme は
+   * `&light.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground`
+   * （class 5 個）で `#d7d4f0` を当てており、ここの規則（class 2 個）では負ける。
+   * さらに base theme は EditorView.darkTheme を立てない限り常に `&light` 側なので、
+   * Dark でも淡い紫が塗られ、Dark の明るい本文色と同化する。
+   * 詳細度で並べるより `!important` の方が、あとから読んで意図が分かる。
+   */
   "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-    backgroundColor: "var(--selection)",
+    backgroundColor: "var(--selection) !important",
   },
   ".cm-searchMatch": {
     backgroundColor: "color-mix(in srgb, var(--accent) 22%, transparent)",
@@ -118,6 +128,21 @@ export function coreExtensions(): Extension[] {
     // 起動時のバンドルには載らない（ADR-009）。
     markdown({ base: markdownLanguage, codeLanguages }),
     syntaxHighlighting(quietHighlight),
-    keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+    /*
+     * `searchKeymap` は丸ごとは入れない。`Mod-f` に `openSearchPanel` が入っており、
+     * CodeMirror 標準の search panel が開いてしまう。
+     * 検索は Find bar（U-025）と Search All（ADR-011）が担当で、標準 panel は使わない
+     * （Design system から浮くため）。`Mod-f` は Shift 付きにも当たるので、
+     * `Ctrl+Shift+F` でも同じ panel が出ていた。
+     *
+     * panel を開かない選択系のコマンドだけを残す。
+     */
+    keymap.of([
+      ...defaultKeymap,
+      ...historyKeymap,
+      { key: "Mod-d", run: selectNextOccurrence, preventDefault: true },
+      { key: "Mod-Shift-l", run: selectSelectionMatches },
+      indentWithTab,
+    ]),
   ];
 }
