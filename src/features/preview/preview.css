@@ -138,6 +138,66 @@
   line-height: 1.65;
 }
 
+/*
+ * Code token colors（ADR-009）。
+ *
+ * highlight.js は 40 以上の class を出すが、Editor 側の 5 役に畳んで割り当てる。
+ * ここに無い class は本文色のまま残る。それが既定であり、抜けではない。
+ * Editor（extensions.ts）と役の対応を必ず揃えること。
+ */
+.preview-body .hljs-keyword,
+.preview-body .hljs-selector-tag,
+.preview-body .hljs-literal,
+.preview-body .hljs-built_in,
+.preview-body .hljs-type,
+.preview-body .hljs-tag {
+  color: var(--code-keyword);
+}
+
+.preview-body .hljs-string,
+.preview-body .hljs-regexp,
+.preview-body .hljs-char.escape_,
+.preview-body .hljs-template-variable,
+.preview-body .hljs-addition {
+  color: var(--code-string);
+}
+
+.preview-body .hljs-number,
+.preview-body .hljs-symbol,
+.preview-body .hljs-bullet,
+.preview-body .hljs-meta,
+.preview-body .hljs-deletion {
+  color: var(--code-number);
+}
+
+.preview-body .hljs-comment,
+.preview-body .hljs-quote,
+.preview-body .hljs-doctag {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+.preview-body .hljs-title,
+.preview-body .hljs-name,
+.preview-body .hljs-section,
+.preview-body .hljs-attr,
+.preview-body .hljs-attribute,
+.preview-body .hljs-property,
+.preview-body .hljs-variable,
+.preview-body .hljs-selector-class,
+.preview-body .hljs-selector-id {
+  color: var(--code-entity);
+}
+
+/* highlight.js の emphasis / strong は色ではなく字面で表す。 */
+.preview-body .hljs-emphasis {
+  font-style: italic;
+}
+
+.preview-body .hljs-strong {
+  font-weight: 600;
+}
+
 .preview-body hr {
   height: 0;
   margin: 34px 0;

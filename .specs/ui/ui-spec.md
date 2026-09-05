@@ -224,6 +224,16 @@ Markdown本文の意味を持つ記号だけを控えめに色付けする。
 
 Production editor engine側のTokenizationを使う。
 
+### Fenced code blockの中身
+
+[DECIDED: ADR-009]
+
+Fenceに言語が書かれているときだけ、中身をハイライトする。
+
+- 色の役は5つ。`--code-keyword` / `--code-string` / `--code-number` / `--code-comment` / `--code-entity`
+- Editorとpreviewで同じ役割分けを使う
+- 言語指定のないFenceは推定しない。本文色のまま出す
+
 ---
 
 ## 9. Metadata / YAML Front Matter

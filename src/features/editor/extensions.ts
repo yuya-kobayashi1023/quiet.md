@@ -11,6 +11,7 @@ import { drawSelection, EditorView, highlightSpecialChars, keymap } from "@codem
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { bracketMatching, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { languages as codeLanguages } from "@codemirror/language-data";
 import { tags } from "@lezer/highlight";
 import { searchKeymap } from "@codemirror/search";
 import { listKeymap } from "./list-keymap";
@@ -30,6 +31,49 @@ export const quietHighlight = HighlightStyle.define([
   { tag: tags.strong, fontWeight: "600" },
   { tag: tags.strikethrough, textDecoration: "line-through" },
   { tag: tags.quote, color: "var(--text-prose)" },
+
+  /*
+   * Fenced code block の中だけで効く役（ADR-009）。
+   * Markdown 本文はこれらの tag を出さないので、上の規則とは衝突しない。
+   * Preview 側（preview.css の .hljs-*）と役の対応を必ず揃えること。
+   */
+  {
+    tag: [
+      tags.keyword,
+      tags.controlKeyword,
+      tags.definitionKeyword,
+      tags.moduleKeyword,
+      tags.operatorKeyword,
+      tags.self,
+      tags.atom,
+      tags.bool,
+      tags.null,
+    ],
+    color: "var(--code-keyword)",
+  },
+  {
+    tag: [tags.string, tags.special(tags.string), tags.regexp, tags.escape],
+    color: "var(--code-string)",
+  },
+  { tag: [tags.number, tags.integer, tags.float], color: "var(--code-number)" },
+  {
+    tag: [tags.comment, tags.lineComment, tags.blockComment, tags.docComment],
+    color: "var(--code-comment)",
+    fontStyle: "italic",
+  },
+  {
+    tag: [
+      tags.function(tags.variableName),
+      tags.function(tags.propertyName),
+      tags.typeName,
+      tags.className,
+      tags.propertyName,
+      tags.attributeName,
+      tags.tagName,
+      tags.namespace,
+    ],
+    color: "var(--code-entity)",
+  },
 ]);
 
 export const baseTheme = EditorView.theme({
@@ -70,7 +114,9 @@ export function coreExtensions(): Extension[] {
     drawSelection(),
     highlightSpecialChars(),
     bracketMatching(),
-    markdown({ base: markdownLanguage, codeLanguages: [] }),
+    // codeLanguages は lazy import。fence に言語が書かれた時だけ読み込まれるので、
+    // 起動時のバンドルには載らない（ADR-009）。
+    markdown({ base: markdownLanguage, codeLanguages }),
     syntaxHighlighting(quietHighlight),
     keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
   ];

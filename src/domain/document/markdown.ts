@@ -6,6 +6,7 @@
  * - CommonMark + GFM（table / task list / strikethrough）
  * - 本文の `#` は H1 のまま。降格しない（U-020）
  * - raw HTML は sanitize（U-023）
+ * - Fenced code block は言語が明示されているときだけ highlight する（ADR-009）
  * - 外部リンクは WebView 内で遷移させない。クリックは UI 側で捌けるよう印を付ける
  * - 相対画像は asset URL へ変換する
  */
@@ -15,6 +16,7 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeHighlight from "rehype-highlight";
 import rehypeStringify from "rehype-stringify";
 import { visit } from "unist-util-visit";
 import { toString as mdastToString } from "mdast-util-to-string";
@@ -189,6 +191,14 @@ export function renderMarkdown(body: string, options: RenderOptions = {}): Rende
     .use(addHeadingIds)
     .use(decorateLinksAndImages, options)
     .use(rehypeSanitize, schema)
+    // Sanitize の**後**に走らせる。highlight が読むのは sanitize 済みの text だけになり、
+    // 生成される span も自前のものだけになる。
+    .use(rehypeHighlight, {
+      // 言語指定のない fence は推定しない。外すと散文や擬似コードにも色が付く。
+      detect: false,
+      // 未登録の言語は素のまま出す（例外にしない）。
+      plainText: ["text", "plain", "txt"],
+    })
     .use(rehypeStringify)
     .processSync(body);
 

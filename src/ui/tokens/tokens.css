@@ -22,6 +22,18 @@
   --accent: #f54e00;
   --accent-text: #c63f00;
   --syntax-marker: #96623e;
+
+  /*
+   * Code token roles（ADR-009）。
+   * 本文の Markdown 記号（--syntax-marker）とは別系統で、コード内だけに使う。
+   * 役割は 5 つに抑える。IDE 的な多色にしない（ui-spec.md §8）。
+   * Light はいずれも canvas に対して 4.8:1 以上。
+   */
+  --code-keyword: #8a3a6b;
+  --code-string: #3d6b45;
+  --code-number: #9a5b18;
+  --code-comment: #6f6d64;
+  --code-entity: #2f5d8c;
   --success: #34785c;
   --error: #b44332;
   --selection: #8bc4f8;
@@ -89,6 +101,12 @@
   --accent: #ff6a2a;
   --accent-text: #ff6a2a;
   --syntax-marker: #d19368;
+
+  --code-keyword: #d38ab8;
+  --code-string: #8fbf8a;
+  --code-number: #e0a468;
+  --code-comment: #847f74;
+  --code-entity: #82b0dc;
   --success: #67a987;
   --error: #e07a68;
   /*

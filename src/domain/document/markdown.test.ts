@@ -38,7 +38,51 @@ describe("renderMarkdown — GFM", () => {
   it("コードフェンスを描画する", () => {
     const { html } = renderMarkdown("```js\nconst a = 1;\n```\n");
     expect(html).toContain("<pre>");
+    // highlight で span に割れるため、素の文字列としては残らない。
+    expect(html).toContain("const");
+    expect(html).toContain("a = ");
+  });
+});
+
+describe("renderMarkdown — code highlight（ADR-009）", () => {
+  it("言語指定のある fence を highlight する", () => {
+    const { html } = renderMarkdown("```js\nconst a = 1;\n```\n");
+    expect(html).toContain('class="hljs language-js"');
+    expect(html).toContain('<span class="hljs-keyword">const</span>');
+    expect(html).toContain('<span class="hljs-number">1</span>');
+  });
+
+  it("言語指定のない fence は色を付けない", () => {
+    const { html } = renderMarkdown("```\nconst a = 1;\n```\n");
+    expect(html).not.toContain("hljs");
     expect(html).toContain("const a = 1;");
+  });
+
+  it("text 指定の fence は色を付けない", () => {
+    const { html } = renderMarkdown("```text\nconst a = 1;\n```\n");
+    expect(html).not.toContain("hljs-");
+    expect(html).toContain("const a = 1;");
+  });
+
+  it("未登録の言語でも例外にせず素のまま出す", () => {
+    const { html } = renderMarkdown("```zzz-not-a-language\nhello\n```\n");
+    expect(html).toContain("hello");
+    expect(html).not.toContain("hljs-");
+  });
+
+  it("inline code は highlight の対象にしない", () => {
+    const { html } = renderMarkdown("`const a = 1;`\n");
+    expect(html).toContain("<code>const a = 1;</code>");
+  });
+
+  it("highlight の後でも script は復活しない（U-023）", () => {
+    const { html } = renderMarkdown(
+      "```html\n<script>alert(1)</script>\n```\n",
+    );
+    // fence の中身は escape されたまま span に包まれるだけ。実行される形にはならない。
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("</script>");
+    expect(html).toContain("&#x3C;");
   });
 });
 
