@@ -43,6 +43,31 @@ Top bar は既に 52px あり、中身は Breadcrumb / View switch / アイコ�
 | Window controls の OS 差異 | 初期対応は Windows（U-009）。macOS 対応時に配置を左へ移す |
 | Accessibility | 各ボタンに `aria-label`。最大化ボタンのラベルは状態で変える |
 
+## Top bar 内の 3 つの層（2026-09-06 追記）
+
+1 行に 3 つの層が同居している。
+
+| 層 | 中身 |
+|---|---|
+| 文書 | Breadcrumb、View switch（Write / Split / Read）、目次、その他 |
+| アプリ | コマンドパレット |
+| 窓 | 最小化 / 最大化・元に戻す / 閉じる |
+
+当初は 3 層が同じ大きさ・同じ色で 12px 間隔に並んでおり、アイコン 6 個が
+1 つの群に見えていた。「その他」と「閉じる」が隣り合うため、
+押し間違えの代償という点でも近すぎた。
+
+**行を増やさずに、窓の 3 つだけを面として分ける。**
+
+- 背景を Sidebar と同じトーン（`--sidebar`）にし、左に 1px の境界を引く
+- Top bar の `border-bottom` をこの帯の幅だけ切る（帯を 1px はみ出させて隠す）
+- アイコンを 15px → 13px、色を `--text-muted` → `--text-subtle` へ一段落とす
+- アプリのアイコン群との間隔を 12px → 20px
+
+「ここから先は窓の枠」という読み方になり、専用行（ADR-006 と両立しない）を作らずに
+層の違いが見える。Windows Explorer や VS Code が 1 行に混在させても成立しているのは、
+同じように面と余白で分けているため。
+
 ## Consequences
 
 - Window の最大化状態を Frontend が知る必要がある。Aero Snap や `Win+↑` でも変わるので、

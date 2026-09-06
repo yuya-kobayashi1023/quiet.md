@@ -87,8 +87,13 @@
   justify-content: flex-end;
   align-items: center;
   gap: 2px;
-  /* Window controls が無い環境（ブラウザ確認時）でも右端が詰まらないように。 */
-  padding-right: 12px;
+  /*
+   * Window controls との間隔。ここが詰まっていると、アプリのアイコンと
+   * 窓のボタンが 1 つの群に見える。「その他」と「閉じる」が隣り合うため、
+   * 押し間違えの代償という意味でも空ける（ADR-010）。
+   * Window controls が無い環境（ブラウザ確認時）でも右端が詰まらない。
+   */
+  padding-right: 20px;
 }
 
 .toc-control {
@@ -100,13 +105,26 @@
  *
  * Windows の標準寸法（46×フル高）に合わせる。ここだけ radius を持たせず
  * 角まで塗るのは、画面端へ投げたポインタで確実に当てられるようにするため。
+ *
+ * Top bar には 3 つの層が同居している（現在位置と表示モード＝文書、
+ * アイコン＝アプリの操作、最小化 / 最大化 / 閉じる＝窓）。
+ * 行を増やさずに層を読ませるため、窓の 3 つだけを面として分ける。
+ * 背景を Sidebar と同じトーンに置き、左に境界を引き、下辺の線をここだけ切る。
+ * 「ここから先は窓の枠」という読み方になる。
  * ------------------------------------------------------------------ */
 
 .window-controls {
   display: flex;
   align-items: stretch;
-  height: var(--topbar-height);
   flex: none;
+  background: var(--sidebar);
+  border-left: 1px solid var(--border);
+  /*
+   * Top bar の border-bottom をこの帯の幅だけ隠す。子は親の border より
+   * 後に描かれるので、1px はみ出させれば線が切れる。
+   */
+  height: calc(var(--topbar-height) + 1px);
+  margin-bottom: -1px;
 }
 
 .window-btn {
@@ -114,7 +132,8 @@
   align-items: center;
   justify-content: center;
   width: 46px;
-  color: var(--text-muted);
+  /* アプリのアイコン（--text-muted）より一段弱くして、層の違いを色でも出す。 */
+  color: var(--text-subtle);
   transition:
     background var(--duration-hover) var(--ease),
     color var(--duration-hover) var(--ease);
@@ -138,8 +157,9 @@
 }
 
 .window-btn svg {
-  width: 15px;
-  height: 15px;
+  /* アプリのアイコンは 15px。窓のボタンは一回り小さくする。 */
+  width: 13px;
+  height: 13px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1;
