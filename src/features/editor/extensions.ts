@@ -15,6 +15,7 @@ import { languages as codeLanguages } from "@codemirror/language-data";
 import { tags } from "@lezer/highlight";
 import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
 import { listKeymap } from "./list-keymap";
+import { fenceInput } from "./fence-input";
 
 /**
  * Markdown の「意味を持つ記号」だけを色付ける。
@@ -120,6 +121,8 @@ export const baseTheme = EditorView.theme({
 export function coreExtensions(): Extension[] {
   return [
     Prec.highest(listKeymap),
+    // ``` の閉じ補完。入力ハンドラなので keymap の順序とは干渉しない。
+    fenceInput,
     history(),
     drawSelection(),
     highlightSpecialChars(),

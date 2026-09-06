@@ -384,6 +384,7 @@ panel を開かない `Mod-d` / `Mod-Shift-l` だけを残した。
 | AUTO-034 | Workspace を指定して起動したときは「前回のノート」を開かない | Medium |
 | AUTO-035 | `useTruncationTooltip` に `always` オプションを足した | Low |
 | AUTO-036 | ブラウザのフォールバックに Workspace 外のサンプルと初期 Recent を入れた | Low |
+| AUTO-037 | ``` を打つと閉じの ``` を補完する。介入条件は下記 | Medium |
 
 ## AUTO-032 `Ctrl+O` を「ファイルを開く」に割り当てた
 
@@ -430,3 +431,30 @@ Workspace 外のファイル（`/downloads/meeting-notes.md`、`/repo/README.md`
   - 関連付けからのダブルクリック起動（インストーラでの拡張子登録を含む）
   - 二重起動時の argv 受け渡しと Window の選び方（single instance）
   - macOS の `RunEvent::Opened`
+
+## AUTO-037 ``` の閉じ補完
+
+3 つ目のバッククォートを打った時点で、次の行に閉じの ``` を置く。
+カーソルは**開きの ``` の直後**に残す。言語名（`ts` / `python`）を続けて書き、
+Enter で本文へ入る書き順をそのまま通すため。カーソルを block の中へ落とすと言語名が書けない。
+
+閉じと開きの間に空行は入れない。開きの行で Enter を打った時点で本文の行ができるので、
+先に入れておくと空行が 1 行余る。
+
+介入しない条件（いずれかに当てはまれば通常の入力）:
+
+- 行に文字が先にある（インラインコードの `` を壊さないため）
+- カーソルの後ろに文字がある
+- 既に開いている fenced block の中（そこでの ``` は閉じる操作）
+- 4 つ目以降のバッククォート
+- 範囲選択を置き換える入力
+- IME 変換中
+
+リスト項目の中では字下げを引き継ぐ。判断は `domain/document/code-fence` に置き、
+CodeMirror への接続（`inputHandler`）と分けた。`list-editing` と同じ分け方。
+
+## 検証状況（2026-09-06・``` 補完）
+
+- `npm run check`: 149 passed（`code-fence` 12件、CodeMirror 上の挙動 5件を追加）
+- ブラウザでの目視（`npm run dev`）: エディタへ実際に ``` を打ち、閉じが入りカーソルが
+  開きの直後に残ること、続けて `ts` → 改行 → コードと書けること、ハイライトが効くこと
