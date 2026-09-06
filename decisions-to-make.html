@@ -135,9 +135,9 @@
   <p class="risk"><b>決めないと:</b> 今のモックは本文の <code>#</code> を勝手に2段目の見出しへ格下げしています。この動きのまま実装すると、HTML書き出しの見出し構造が本文とずれ、読み上げソフトの見出し順も崩れ、目次の階層も文書の実際の構造と一致しなくなります。</p>
   <p class="sources-label">情報ソース</p>
   <ul class="sources">
-    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-020 の論点・推奨案・代替案</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/product/open-decisions.md:482">VS Code</a></li>
-    <li><a class="path" href=".specs/domain/document-model.md">document-model.md</a><span class="where">§4 Title / <code>titleSource</code> の定義</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/domain/document-model.md:66">VS Code</a></li>
-    <li><a class="path" href=".specs/ui/ui-mockup.html">ui-mockup.html</a><span class="where">1863行目 — <code>#</code> を <code>h2</code> へ格下げしている実装</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/ui/ui-mockup.html:1863">VS Code</a></li>
+    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-020 の論点・推奨案・代替案</span><a class="in-editor" href=".specs/product/open-decisions.md">L482</a></li>
+    <li><a class="path" href=".specs/domain/document-model.md">document-model.md</a><span class="where">§4 Title / <code>titleSource</code> の定義</span><a class="in-editor" href=".specs/domain/document-model.md">L66</a></li>
+    <li><a class="path" href=".specs/ui/ui-mockup.html">ui-mockup.html</a><span class="where">1863行目 — <code>#</code> を <code>h2</code> へ格下げしている実装</span><a class="in-editor" href=".specs/ui/ui-mockup.html">L1863</a></li>
   </ul>
 </section>
 
@@ -151,10 +151,10 @@
   <p class="risk"><b>決めないと:</b> このアプリでいちばんデータを失いやすい経路が、唯一デザインされていない状態のまま実装されます。完了条件（受け入れ基準 K）も判定できません。あわせて、外部から削除された状態が内部の状態一覧に存在しない点も直す必要があります。</p>
   <p class="sources-label">情報ソース</p>
   <ul class="sources">
-    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-022 の推奨案（画面上部の帯で出す案）</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/product/open-decisions.md:557">VS Code</a></li>
-    <li><a class="path" href=".specs/ui/ui-spec.md">ui-spec.md</a><span class="where">§15 Error states — 現状ここが3行しかない</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/ui/ui-spec.md:345">VS Code</a></li>
-    <li><a class="path" href=".specs/domain/file-lifecycle.md">file-lifecycle.md</a><span class="where">§11 外部変更 / §12 外部削除の挙動</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/domain/file-lifecycle.md:173">VS Code</a></li>
-    <li><a class="path" href=".specs/quality/acceptance-criteria.md">acceptance-criteria.md</a><span class="where">K. External change — UIなしでは判定不能</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/quality/acceptance-criteria.md:171">VS Code</a></li>
+    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-022 の推奨案（画面上部の帯で出す案）</span><a class="in-editor" href=".specs/product/open-decisions.md">L557</a></li>
+    <li><a class="path" href=".specs/ui/ui-spec.md">ui-spec.md</a><span class="where">§15 Error states — 現状ここが3行しかない</span><a class="in-editor" href=".specs/ui/ui-spec.md">L345</a></li>
+    <li><a class="path" href=".specs/domain/file-lifecycle.md">file-lifecycle.md</a><span class="where">§11 外部変更 / §12 外部削除の挙動</span><a class="in-editor" href=".specs/domain/file-lifecycle.md">L173</a></li>
+    <li><a class="path" href=".specs/quality/acceptance-criteria.md">acceptance-criteria.md</a><span class="where">K. External change — UIなしでは判定不能</span><a class="in-editor" href=".specs/quality/acceptance-criteria.md">L171</a></li>
   </ul>
 </section>
 
@@ -168,9 +168,9 @@
   <p class="risk"><b>決めないと:</b> Tauri では外部リンクをそのまま踏むとアプリの画面自体が別ページへ移動して壊れます。相対パスの画像も、専用の変換設定を入れない限り表示されません。どちらも実装がひと通り終わった後に発覚する種類の不具合です。</p>
   <p class="sources-label">情報ソース</p>
   <ul class="sources">
-    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-023 の推奨案（外部リンクはOS既定ブラウザ、他）</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/product/open-decisions.md:593">VS Code</a></li>
-    <li><a class="path" href=".specs/product/requirements.md">requirements.md</a><span class="where">§3.3 Preview — 対応要素の一覧（画像がない）</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/product/requirements.md:68">VS Code</a></li>
-    <li><a class="path" href=".specs/quality/non-functional-requirements.md">non-functional-requirements.md</a><span class="where">§6 Security — 危険なHTMLと <code>file://</code> の注意書きだけがある</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/quality/non-functional-requirements.md:99">VS Code</a></li>
+    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-023 の推奨案（外部リンクはOS既定ブラウザ、他）</span><a class="in-editor" href=".specs/product/open-decisions.md">L593</a></li>
+    <li><a class="path" href=".specs/product/requirements.md">requirements.md</a><span class="where">§3.3 Preview — 対応要素の一覧（画像がない）</span><a class="in-editor" href=".specs/product/requirements.md">L68</a></li>
+    <li><a class="path" href=".specs/quality/non-functional-requirements.md">non-functional-requirements.md</a><span class="where">§6 Security — 危険なHTMLと <code>file://</code> の注意書きだけがある</span><a class="in-editor" href=".specs/quality/non-functional-requirements.md">L99</a></li>
   </ul>
 </section>
 
@@ -184,9 +184,9 @@
   <p class="risk"><b>決めないと:</b> サブフォルダを持つ既存のノートフォルダやリポジトリを開いた瞬間に、ファイルが見えないかサイドバーが破綻します。なお今のモックは Archive の中に <code>2026</code> というフォルダ行があり、「Archive はファイルを移動しない」という方針と食い違っています。</p>
   <p class="sources-label">情報ソース</p>
   <ul class="sources">
-    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-024 の推奨案（ツリー表示・除外規則・並び順）</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/product/open-decisions.md:624">VS Code</a></li>
-    <li><a class="path" href=".specs/ui/ui-spec.md">ui-spec.md</a><span class="where">§2 Sidebar — 現状の2区分の定義</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/ui/ui-spec.md:37">VS Code</a></li>
-    <li><a class="path" href=".specs/ui/ui-mockup.html">ui-mockup.html</a><span class="where">1031行目 — Archive 内のフォルダ行「2026」</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/ui/ui-mockup.html:1031">VS Code</a></li>
+    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-024 の推奨案（ツリー表示・除外規則・並び順）</span><a class="in-editor" href=".specs/product/open-decisions.md">L624</a></li>
+    <li><a class="path" href=".specs/ui/ui-spec.md">ui-spec.md</a><span class="where">§2 Sidebar — 現状の2区分の定義</span><a class="in-editor" href=".specs/ui/ui-spec.md">L37</a></li>
+    <li><a class="path" href=".specs/ui/ui-mockup.html">ui-mockup.html</a><span class="where">1031行目 — Archive 内のフォルダ行「2026」</span><a class="in-editor" href=".specs/ui/ui-mockup.html">L1031</a></li>
   </ul>
 </section>
 
@@ -200,15 +200,15 @@
   <p class="risk"><b>決めないと:</b> 受け入れ基準 M が実装完了時点で必ず不合格になります。ただし基準を満たすまで濃くすると、薄い文字の3段階（かすか / 控えめ / 普通）がほぼ1段階に潰れ、<strong>プロトタイプで確認した「静けさ」の印象が変わります</strong>。色を直すか、基準の方を下げるかの判断です。</p>
   <p class="sources-label">情報ソース</p>
   <ul class="sources">
-    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-019 実測値の表・候補色・3つの代替案</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/product/open-decisions.md:431">VS Code</a></li>
-    <li><a class="path" href=".specs/ui/design-system.md">design-system.md</a><span class="where">§1 Color roles — 現在の色の定義</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/ui/design-system.md:6">VS Code</a></li>
-    <li><a class="path" href=".specs/quality/non-functional-requirements.md">non-functional-requirements.md</a><span class="where">§7 Accessibility — 基準を要求している箇所</span><a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/quality/non-functional-requirements.md:115">VS Code</a></li>
+    <li><a class="path" href=".specs/product/open-decisions.md">open-decisions.md</a><span class="where">U-019 実測値の表・候補色・3つの代替案</span><a class="in-editor" href=".specs/product/open-decisions.md">L431</a></li>
+    <li><a class="path" href=".specs/ui/design-system.md">design-system.md</a><span class="where">§1 Color roles — 現在の色の定義</span><a class="in-editor" href=".specs/ui/design-system.md">L6</a></li>
+    <li><a class="path" href=".specs/quality/non-functional-requirements.md">non-functional-requirements.md</a><span class="where">§7 Accessibility — 基準を要求している箇所</span><a class="in-editor" href=".specs/quality/non-functional-requirements.md">L115</a></li>
   </ul>
 </section>
 
 <footer>
   <p>未決定事項は全部で30件あります。残り25件と、それぞれの推奨案・代替案・決めない場合の影響は次のファイルにあります。</p>
-  <p><a class="path" href=".specs/product/open-decisions.md">.specs/product/open-decisions.md</a> &nbsp;<a class="in-editor" href="vscode://file/C:/Users/yuya/Documents/src/quiet.md/.specs/product/open-decisions.md:1">VS Code で開く</a></p>
+  <p><a class="path" href=".specs/product/open-decisions.md">.specs/product/open-decisions.md</a> &nbsp;<a class="in-editor" href=".specs/product/open-decisions.md">L1</a></p>
 </footer>
 
 </div>
