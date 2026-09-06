@@ -268,9 +268,9 @@ MVP に含まれるが、まだ手を付けていないもの。
 | Drag & Drop で `.md` を開く | desktop-ux.md §3 | 未実装 |
 | ウィンドウを閉じるときの保存確認 | file-lifecycle.md §13 | 未実装（Autosave のみ） |
 | Crash recovery の復元 UI | U-014 | snapshot の書き込みだけ実装。起動時に提示していない |
-| 単体 `.md` ファイルを開く導線 | U-001 | Rust コマンドはあるが UI がない |
-| `Open in New Window` の受け側 | U-021 | ウィンドウは開くが `?path=` を読んでいない |
-| File association | requirements §4 P1 | 未実装 |
+| 単体 `.md` ファイルを開く導線 | U-001 | **実装済み**（`Ctrl+O` / Recent） |
+| `Open in New Window` の受け側 | U-021 | **実装済み**（ADR-013） |
+| File association | ~~requirements §4 P1~~ ADR-013 | **実装済み**（インストール後の動作は未検証） |
 | TOC の active heading 追従 | ui-spec.md §10 | 一覧と移動は動く。スクロール追従は未実装 |
 | Settings の Default location | requirements §3.7 | UI 未実装 |
 | Search All | ~~U-013（P1）~~ ADR-011 | **実装済み**（`Ctrl+Shift+F`） |
@@ -370,3 +370,63 @@ panel を開かない `Mod-d` / `Mod-Shift-l` だけを残した。
   window のリサイズと Aero Snap）を目視していない。** ブラウザでは `isNative()` が
   false になり Window controls を描かないため。`npm run tauri:dev` での確認が必要
 - IME での日本語入力は引き続き未確認
+
+---
+
+## 追加分（2026-09-06・関連付け起動と Recent）
+
+仕様側の判断は ADR-013 に書いた。ここには**仕様にも ADR にも書いていない細かい判断**だけを残す。
+
+| ID | 判断 | 重要度 |
+|---|---|---|
+| AUTO-032 | `Ctrl+O` を「ファイルを開く」に割り当てた | Low |
+| AUTO-033 | Recent の表示件数の選択肢を 3 / 5 / 8 / 12 / 20 / 30、既定 8 にした | Low |
+| AUTO-034 | Workspace を指定して起動したときは「前回のノート」を開かない | Medium |
+| AUTO-035 | `useTruncationTooltip` に `always` オプションを足した | Low |
+| AUTO-036 | ブラウザのフォールバックに Workspace 外のサンプルと初期 Recent を入れた | Low |
+
+## AUTO-032 `Ctrl+O` を「ファイルを開く」に割り当てた
+
+U-029 のショートカット表に `Ctrl+O` はない。OS 共通の慣習であり、
+既存の割り当てと衝突しないのでそのまま採った。Command palette にも同じ項目を出している。
+
+## AUTO-033 Recent の表示件数
+
+上限 30 件を保持し、Sidebar に出す件数だけを設定にした（既定 8）。
+0 件を選べるようにはしていない。0 にしたい場合は「Recent を使わない」という別の要望であり、
+表示件数の選択肢に混ぜると意味が二重になる。
+
+## AUTO-034 Workspace 指定起動では前回のノートを開かない
+
+フォルダを Quiet で開いたときは、Workspace を開くところで止める。
+「このフォルダを見たい」という意図に対して、前回どこかで編集していた別の文書を
+勝手に開くのは応答としてずれている。ファイルを指定した場合はそのファイルを開く。
+
+## AUTO-035 `useTruncationTooltip` の `always`
+
+Recent の行は、ファイル名が省略されていなくてもフルパスを見せたい。
+同名のファイルが別のフォルダから並びうるため。既存の呼び出しの挙動は変えていない。
+
+## AUTO-036 フォールバックのサンプル
+
+Workspace 外のファイル（`/downloads/meeting-notes.md`、`/repo/README.md`）と、
+それを指す初期 `recentFiles` をフォールバックへ入れた。
+ブラウザで Recent を目視確認するためのもの。`resetFallback()` は従来どおり空へ戻すので、
+テストの前提は変わらない。
+
+## 検証状況（2026-09-06 更新）
+
+- `cargo test`: 29 passed（うち起動引数の解釈が4件）
+- `npm run check`（typecheck + vitest）: 132 passed（うち Recent の履歴操作が10件）
+- ブラウザでの目視（`npm run dev`）で確認したもの:
+  - Sidebar の Recent セクション（Notes / Archive の下、フラット、active 表示、フルパス Tooltip）
+  - Recent の行を開く → Breadcrumb が Workspace 名ではなく親フォルダ名になる
+  - 消えたファイルの行を開く → トーストを出して履歴から消える
+  - Recent の Context menu の項目
+  - Settings の「Recent の表示件数」
+  - `?path=` 付きで開くと、Workspace を復元したうえでそのファイルを開く
+  - `?workspace=` 付きで開くと、その Workspace を開いて文書は開かない
+- **未検証（デスクトップでしか確認できない）**:
+  - 関連付けからのダブルクリック起動（インストーラでの拡張子登録を含む）
+  - 二重起動時の argv 受け渡しと Window の選び方（single instance）
+  - macOS の `RunEvent::Opened`

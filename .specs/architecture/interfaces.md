@@ -178,15 +178,31 @@ FrontendでLocalStorageへバラバラに保存せず、ProductionではSettings
 
 ---
 
-## 11. Window
+## 11. Window / 起動対象
 
-[DRAFT]
+[DECIDED: ADR-013]
 
 ```ts
-openDocumentInNewWindow(path: string): Promise<void>
+type OpenTarget =
+  | { kind: "workspace"; path: string }
+  | { kind: "file"; path: string };
+
+openInNewWindow(path: string): Promise<void>
+
+/** 起動時に渡された対象を引き取る。2度目はnull。 */
+takeLaunchTarget(): Promise<OpenTarget | null>
+
+/** このWindowが開いている文書をNativeへ知らせる（U-021の判定に使う）。 */
+registerDocumentWindow(path: string | null): Promise<void>
+
+/** 実行中に届いた対象。自分のWindow宛だけを受け取る。 */
+onOpenTarget(handler: (target: OpenTarget) => void): Promise<() => void>
 ```
 
 Tabsを実装しないため、Multi-windowの責任はNative window layerへ置く。
+
+どのWindowがどの文書を開いているかはNative側が持つ（`AppState.document_windows`）。
+Frontendは開く・閉じるたびに `registerDocumentWindow` で通知する。
 
 ---
 

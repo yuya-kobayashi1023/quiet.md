@@ -59,20 +59,25 @@ export function Tooltip({
  * ラベルが省略されているときだけ Tooltip を出すフック。
  *
  * 返り値の `ref` をラベル要素へ、`handlers` を行へ付ける。
+ * `always` を渡すと省略されていなくても出す。Recent のように、行の文字列
+ * （ファイル名）だけでは足りず、常に全体（パス）を見せたい場合に使う。
  */
-export function useTruncationTooltip(text: string) {
+export function useTruncationTooltip(text: string, options?: { always?: boolean }) {
   const id = useId();
   const ref = useRef<HTMLElement>(null);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const always = options?.always ?? false;
   const show = useCallback((event: { currentTarget: HTMLElement }) => {
     const label = ref.current;
-    if (!label || label.scrollWidth <= label.clientWidth) return;
+    if (!label) return;
+    if (!always && label.scrollWidth <= label.clientWidth) return;
     const rect = event.currentTarget.getBoundingClientRect();
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setAnchor(rect), DELAY);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [always]);
 
   const hide = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);

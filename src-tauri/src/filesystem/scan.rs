@@ -40,16 +40,21 @@ pub struct WorkspaceSnapshot {
     pub truncated: bool,
 }
 
-fn is_markdown(entry: &DirEntry) -> bool {
-    entry
-        .path()
-        .extension()
+/// Markdown として扱う拡張子か。
+///
+/// Workspace の走査と、関連付け起動で渡されたパスの判定（ADR-013）で同じ規則を使う。
+pub fn is_markdown_path(path: &Path) -> bool {
+    path.extension()
         .and_then(|e| e.to_str())
         .map(|e| {
             let e = e.to_ascii_lowercase();
             e == "md" || e == "markdown"
         })
         .unwrap_or(false)
+}
+
+fn is_markdown(entry: &DirEntry) -> bool {
+    is_markdown_path(entry.path())
 }
 
 fn is_ignored_dir(entry: &DirEntry) -> bool {

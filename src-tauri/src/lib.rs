@@ -6,14 +6,28 @@
 pub mod commands;
 pub mod errors;
 pub mod filesystem;
+pub mod launch;
 pub mod settings;
 pub mod watcher;
 
 use commands::AppState;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    // 二重起動は新しいプロセスを立てず、引数だけを既存プロセスへ渡す（ADR-013）。
+    // `.quiet/workspace.json` を 2 プロセスが同時に書く事故を防ぐ（U-021）。
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+        match launch::target_from_args(&argv, std::path::Path::new(&cwd)) {
+            Some(target) => launch::deliver(app, target),
+            None => launch::focus_existing(app),
+        }
+    }));
+
+    let app = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppState::default())
@@ -25,6 +39,14 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // 関連付け起動 / CLI 引数。Frontend が初期化時に引き取る。
+            let cwd = std::env::current_dir().unwrap_or_default();
+            let args: Vec<String> = std::env::args().collect();
+            if let Some(target) = launch::target_from_args(&args, &cwd) {
+                launch::remember_launch_target(app.handle(), target);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -49,7 +71,36 @@ pub fn run() {
             commands::system::reveal_in_file_manager,
             commands::system::open_external,
             commands::system::open_in_new_window,
+            commands::system::take_launch_target,
+            commands::system::register_document_window,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app, event| match event {
+        // macOS の Open with。Windows / Linux は argv 経由で来る。
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Opened { urls } => {
+            for url in urls {
+                let Ok(path) = url.to_file_path() else { continue };
+                let Some(target) = launch::target_from_path(&path) else {
+                    continue;
+                };
+                if app.webview_windows().is_empty() {
+                    launch::remember_launch_target(app, target);
+                } else {
+                    launch::deliver(app, target);
+                }
+            }
+        }
+        // 閉じた Window の登録を残さない（U-021）。
+        tauri::RunEvent::WindowEvent {
+            label,
+            event: tauri::WindowEvent::Destroyed,
+            ..
+        } => {
+            app.state::<AppState>().forget_window(&label);
+        }
+        _ => {}
+    });
 }

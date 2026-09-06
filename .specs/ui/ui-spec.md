@@ -52,9 +52,24 @@ long-document-name-that-...
 ARCHIVE
 old.md
 
+RECENT
+outside-the-workspace.md
+
 
 Settings
 ```
+
+### Recent
+
+[DECIDED: ADR-013]
+
+- Workspace の外で開いたファイルを、開いた新しい順に並べる
+- 現在の Workspace の中にあるファイルは出さない（Notes 側に出ている）
+- 履歴は 30 件保持する。表示件数は Settings で変える（既定 8 件）
+- ツリーにしない。フォルダが違うファイルが混ざるため、常にフラットな1階層
+- Tooltip は常にフルパス。同名のファイルが並びうる
+- 1件もなければセクションごと出さない
+- Context menu は Workspace 内のファイルと別（Archive / 名前変更 / 複製は出さない）
 
 禁止:
 

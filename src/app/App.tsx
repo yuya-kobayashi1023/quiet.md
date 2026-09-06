@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
-import { Sidebar, FileContextMenu } from "@/features/sidebar/Sidebar";
+import { Sidebar, FileContextMenu, RecentContextMenu } from "@/features/sidebar/Sidebar";
 import { StatusBar, TopBar } from "@/features/shell/TopBar";
 import { useSyncScroll } from "@/features/shell/use-sync-scroll";
 import { Editor } from "@/features/editor/Editor";
@@ -26,6 +26,12 @@ import {
 } from "@/domain/document/frontmatter";
 import { extractHeadings, HEADING_ID_PREFIX } from "@/domain/document/markdown";
 import { filenameWithExtension, type DocumentSummary } from "@/domain/document/types";
+import {
+  filenameOf,
+  isInsideWorkspace,
+  visibleRecents,
+  type RecentFile,
+} from "@/domain/document/recents";
 import { documentService } from "@/services/document-service";
 import { settingsService, type ViewMode } from "@/services/settings-service";
 import { workspaceService } from "@/services/workspace-service";
@@ -35,6 +41,28 @@ import "@/ui/global.css";
 
 function useStore<T>(store: { get: () => T; subscribe: (fn: () => void) => () => void }): T {
   return useSyncExternalStore(store.subscribe, store.get, store.get);
+}
+
+/**
+ * New Window の URL から開く対象を取り出す（ADR-013）。
+ *
+ * Native は新しい Window を `index.html?path=` / `?workspace=` で開く。
+ */
+function targetFromLocation(): native.OpenTarget | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const file = params.get("path");
+  if (file) return { kind: "file", path: file };
+  const workspace = params.get("workspace");
+  if (workspace) return { kind: "workspace", path: workspace };
+  return null;
+}
+
+/** パスの親フォルダ。区切りは Native が返した形をそのまま使う。 */
+function parentOf(path: string): string {
+  const separator = path.includes("\\") ? "\\" : "/";
+  const at = path.lastIndexOf(separator);
+  return at <= 0 ? path : path.slice(0, at);
 }
 
 export function App() {
@@ -67,6 +95,10 @@ export function App() {
     document: DocumentSummary;
     position: { x: number; y: number };
   } | null>(null);
+  const [recentMenu, setRecentMenu] = useState<{
+    file: RecentFile;
+    position: { x: number; y: number };
+  } | null>(null);
 
   const editorView = useRef<EditorView | null>(null);
   const editorPane = useRef<HTMLDivElement>(null);
@@ -76,6 +108,26 @@ export function App() {
     setToast({ id: Date.now(), message, action });
   }, []);
 
+  /**
+   * 絶対パスで文書を開く（ADR-013）。
+   *
+   * Workspace の中なら通常どおり開く。外なら明示的に許可を取ってから開き、
+   * Recent へ積む。許可は「ユーザーが明示的に開いたもの」だけに与える
+   * （architecture.md §12）。
+   */
+  const openPath = useCallback(async (path: string): Promise<void> => {
+    const root = workspaceService.store.get().snapshot?.rootPath ?? null;
+    const inside = isInsideWorkspace(root, path);
+    const target = inside ? path : await native.allowSingleFile(path);
+
+    await documentService.open(target);
+    if (!inside) settingsService.rememberRecent(target);
+
+    workspaceService.setActive(target);
+    setTitleDraft(null);
+    setTitleError(null);
+  }, []);
+
   /* ---------------------------------------------------------------- *
    * 起動
    * ---------------------------------------------------------------- */
@@ -83,10 +135,20 @@ export function App() {
   useEffect(() => {
     void (async () => {
       await settingsService.load();
-      const last = settingsService.get().lastWorkspace;
-      if (last) {
+
+      // 起動経路は 1 本に正規化されている（ADR-013）。
+      // URL の query は New Window、take_launch_target は関連付け起動と CLI 引数。
+      const target = targetFromLocation() ?? (await native.takeLaunchTarget().catch(() => null));
+
+      const workspacePath =
+        target?.kind === "workspace" ? target.path : settingsService.get().lastWorkspace;
+
+      if (workspacePath) {
         try {
-          await workspaceService.open(last);
+          await workspaceService.open(workspacePath);
+          if (target?.kind === "workspace") {
+            settingsService.update({ lastWorkspace: workspacePath });
+          }
         } catch {
           // 前回の Workspace が無くなっていても起動は続ける。
         }
@@ -94,6 +156,16 @@ export function App() {
         // ブラウザでの確認用。フォールバックの Workspace を開く。
         await workspaceService.open("/notes");
       }
+
+      if (target?.kind === "file") {
+        await openPath(target.path).catch((error: unknown) => {
+          // 関連付けから開いたファイルが無い・読めない場合。黙って空の画面にしない。
+          showToast(error instanceof NativeError ? error.message : "ファイルを開けません");
+        });
+        return;
+      }
+      // Workspace を指定して開いたときは、前回のノートへは戻らない。
+      if (target) return;
 
       const state = workspaceService.store.get();
       const metadata = state.metadata;
@@ -107,7 +179,43 @@ export function App() {
         }
       }
     })();
+    // openPath は mount 時点の実装で足りる（依存は service 側が持つ）。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ---------------------------------------------------------------- *
+   * 実行中に届く起動対象（ADR-013）
+   * ---------------------------------------------------------------- */
+
+  useEffect(() => {
+    let dispose: (() => void) | undefined;
+    void native
+      .onOpenTarget((target) => {
+        void (async () => {
+          if (target.kind === "workspace") {
+            await workspaceService.open(target.path).catch(() => {});
+            settingsService.update({ lastWorkspace: target.path });
+            return;
+          }
+          await openPath(target.path).catch((error: unknown) => {
+            showToast(error instanceof NativeError ? error.message : "ファイルを開けません");
+          });
+        })();
+      })
+      .then((fn) => {
+        dispose = fn;
+      });
+    return () => dispose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------------------------------------------------------------- *
+   * この Window が開いている文書を Native へ知らせる（U-021）
+   * ---------------------------------------------------------------- */
+
+  useEffect(() => {
+    void native.registerDocumentWindow(session?.path ?? null).catch(() => {});
+  }, [session?.path]);
 
   /* ---------------------------------------------------------------- *
    * External change（U-010 / U-022）
@@ -167,6 +275,11 @@ export function App() {
 
   const breadcrumb = useMemo(() => {
     if (!session) return [workspace.snapshot?.name ?? "Quiet"];
+    // Workspace の外のファイルに Workspace 名を出すと、所属を偽ることになる（ADR-013）。
+    // 代わりに実際の親フォルダ名を見せる。
+    if (!isInsideWorkspace(workspace.snapshot?.rootPath ?? null, session.path)) {
+      return [filenameOf(parentOf(session.path)), session.filename].filter(Boolean);
+    }
     const doc = workspace.snapshot?.documents.find((d) => d.path === session.path);
     const segments = doc?.relativePath.split("/") ?? [session.filename];
     return [workspace.snapshot?.name ?? "", ...segments].filter(Boolean);
@@ -180,6 +293,17 @@ export function App() {
     }
     return (body.trim().match(/[A-Za-z0-9_'-]+|[぀-ヿ㐀-鿿]/g) ?? []).length;
   }, [slice.body, settings.countMode]);
+
+  // Workspace の中にあるものは Notes 側に出ているので、Recent には出さない（ADR-013）。
+  const recentRows = useMemo(
+    () =>
+      visibleRecents(
+        settings.recentFiles,
+        workspace.snapshot?.rootPath ?? null,
+        settings.recentVisibleCount,
+      ),
+    [settings.recentFiles, settings.recentVisibleCount, workspace.snapshot],
+  );
 
   const baseDir = useMemo(() => {
     if (!session) return "";
@@ -201,6 +325,34 @@ export function App() {
       showToast(error instanceof NativeError ? error.message : "ファイルを開けません");
     }
   }, [showToast]);
+
+  /** Recent の行を開く。無くなっていたらその場で履歴から外す（ADR-013）。 */
+  const openRecent = useCallback(
+    async (file: RecentFile) => {
+      try {
+        await openPath(file.path);
+      } catch (error) {
+        if (error instanceof NativeError && error.code === "NOT_FOUND") {
+          settingsService.forgetRecent(file.path);
+          showToast(`${file.filename} が見つかりません。履歴から削除しました`);
+          return;
+        }
+        showToast(error instanceof NativeError ? error.message : "ファイルを開けません");
+      }
+    },
+    [openPath, showToast],
+  );
+
+  /** ファイルを選んで開く。Workspace の外でもよい（U-001）。 */
+  const openFile = useCallback(async () => {
+    const path = await native.chooseMarkdownFile();
+    if (!path) return;
+    try {
+      await openPath(path);
+    } catch (error) {
+      showToast(error instanceof NativeError ? error.message : "ファイルを開けません");
+    }
+  }, [openPath, showToast]);
 
   const newNote = useCallback(async () => {
     if (!workspace.snapshot) {
@@ -355,6 +507,44 @@ export function App() {
     [openDocument, showToast],
   );
 
+  const onRecentAction = useCallback(
+    async (action: string, file: RecentFile) => {
+      try {
+        switch (action) {
+          case "open":
+            await openRecent(file);
+            break;
+          case "open-new-window":
+            await native.openInNewWindow(file.path);
+            break;
+          case "open-folder": {
+            const folder = parentOf(file.path);
+            await workspaceService.open(folder);
+            settingsService.update({ lastWorkspace: folder });
+            await openPath(file.path);
+            break;
+          }
+          case "copy-path":
+            await navigator.clipboard.writeText(file.path);
+            showToast("パスをコピーしました");
+            break;
+          case "reveal":
+            // Reveal は Workspace 内か、明示的に開いたファイルにしか使えない。
+            // 行を操作した時点で明示的な選択なので、ここで許可を取る。
+            await native.allowSingleFile(file.path);
+            await native.revealInFileManager(file.path);
+            break;
+          case "forget":
+            settingsService.forgetRecent(file.path);
+            break;
+        }
+      } catch (error) {
+        showToast(error instanceof NativeError ? error.message : "操作に失敗しました");
+      }
+    },
+    [openPath, openRecent, showToast],
+  );
+
   /* ---------------------------------------------------------------- *
    * TOC からの移動
    * ---------------------------------------------------------------- */
@@ -411,6 +601,12 @@ export function App() {
         run: () => void openWorkspace(),
       },
       {
+        id: "open-file",
+        label: "ファイルを開く",
+        shortcut: "Ctrl+O",
+        run: () => void openFile(),
+      },
+      {
         id: "toggle-sidebar",
         label: "サイドバーの表示切替",
         shortcut: "Ctrl+B",
@@ -430,7 +626,7 @@ export function App() {
       { id: "toc", label: "目次", run: () => setTocOpen(true) },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [newNote, openWorkspace, settings.sidebarCollapsed],
+    [newNote, openFile, openWorkspace, settings.sidebarCollapsed],
   );
 
   const setView = (mode: ViewMode) => settingsService.update({ viewMode: mode });
@@ -458,6 +654,9 @@ export function App() {
       } else if (key === "n") {
         e.preventDefault();
         void newNote();
+      } else if (key === "o") {
+        e.preventDefault();
+        void openFile();
       } else if (key === ",") {
         e.preventDefault();
         setSettingsOpen(true);
@@ -468,7 +667,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [newNote]);
+  }, [newNote, openFile]);
 
   /* ---------------------------------------------------------------- *
    * Render
@@ -531,6 +730,7 @@ export function App() {
       <div className="app" data-sidebar={settings.sidebarCollapsed ? "collapsed" : "expanded"}>
         <Sidebar
           documents={workspace.snapshot?.documents ?? []}
+          recents={recentRows}
           archived={workspace.metadata?.archived ?? []}
           expandedFolders={workspace.metadata?.expandedFolders ?? []}
           activePath={workspace.activePath}
@@ -545,6 +745,8 @@ export function App() {
           onToggleFolder={(path) => workspaceService.toggleFolder(path)}
           onOpenSettings={() => setSettingsOpen(true)}
           onContextMenu={(document, position) => setContextMenu({ document, position })}
+          onSelectRecent={(file) => void openRecent(file)}
+          onRecentContextMenu={(file, position) => setRecentMenu({ file, position })}
         />
 
         <div className="main">
@@ -688,6 +890,15 @@ export function App() {
       </div>
 
       <Toast toast={toast} onDismiss={() => setToast(null)} />
+
+      {recentMenu ? (
+        <RecentContextMenu
+          file={recentMenu.file}
+          position={recentMenu.position}
+          onClose={() => setRecentMenu(null)}
+          onAction={(action, file) => void onRecentAction(action, file)}
+        />
+      ) : null}
 
       {contextMenu ? (
         <FileContextMenu

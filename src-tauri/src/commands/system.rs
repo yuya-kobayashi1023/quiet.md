@@ -3,8 +3,10 @@
 use crate::commands::AppState;
 use crate::errors::{NativeError, Result};
 use crate::filesystem::paths;
+use crate::launch::OpenTarget;
 use std::path::Path;
-use tauri::State;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 /// Explorer / Finder で表示する。
 #[tauri::command]
@@ -63,25 +65,74 @@ pub fn open_external(app: tauri::AppHandle, url: String) -> Result<()> {
 /// 同一ファイルは 1 Window のみ（U-021）。
 ///
 /// 既に開いていればそのウィンドウを前面に出し、開いていなければ新しく作る。
+/// どの Window が何を開いているかは `AppState::document_windows` が持つ。
 #[tauri::command]
-pub async fn open_in_new_window(app: tauri::AppHandle, path: String) -> Result<()> {
-    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
-
+pub async fn open_in_new_window(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<()> {
     let canonical = paths::canonicalize(Path::new(&path))?;
-    let label = format!("doc-{}", blake3::hash(canonical.display().to_string().as_bytes()).to_hex());
-    let label: String = label.chars().take(60).collect();
 
-    if let Some(existing) = app.get_webview_window(&label) {
-        let _ = existing.unminimize();
-        let _ = existing.set_focus();
-        return Ok(());
+    if let Some(label) = state.window_for_document(&canonical) {
+        if let Some(existing) = app.get_webview_window(&label) {
+            let _ = existing.unminimize();
+            let _ = existing.set_focus();
+            return Ok(());
+        }
+        // Window は閉じられている。登録だけが残っていた。
+        state.forget_window(&label);
     }
 
-    let encoded = urlencode(&canonical.display().to_string());
-    WebviewWindowBuilder::new(
+    open_window_for(
         &app,
+        &OpenTarget::File {
+            path: canonical.display().to_string(),
+        },
+    )
+}
+
+/// 起動時に渡された対象を引き取る（ADR-013）。2 度目は None。
+#[tauri::command]
+pub fn take_launch_target(state: State<'_, AppState>) -> Option<OpenTarget> {
+    state.take_pending_open()
+}
+
+/// この Window が今開いている文書を Native へ知らせる（U-021）。
+///
+/// 関連付け起動や二重起動で同じファイルが来たとき、どの Window を前へ出せばよいかは
+/// Frontend しか知らない。開く / 閉じるたびにここへ通知する。
+#[tauri::command]
+pub fn register_document_window(
+    window: tauri::Window,
+    state: State<'_, AppState>,
+    path: Option<String>,
+) -> Result<()> {
+    let resolved = match path {
+        Some(path) if !path.is_empty() => Some(paths::canonicalize(Path::new(&path))?),
+        _ => None,
+    };
+    state.set_window_document(window.label(), resolved);
+    Ok(())
+}
+
+/// 対象を新しい Window で開く。Window label は毎回新しく振る。
+///
+/// 同一ファイル判定はレジストリ側の責任にして、label には持たせない。
+/// label に path のハッシュを使うと、その Window が別の文書へ移った後に衝突する。
+pub fn open_window_for(app: &AppHandle, target: &OpenTarget) -> Result<()> {
+    static NEXT_WINDOW: AtomicUsize = AtomicUsize::new(1);
+    let label = format!("doc-{}", NEXT_WINDOW.fetch_add(1, Ordering::Relaxed));
+
+    let query = match target {
+        OpenTarget::File { path } => format!("path={}", urlencode(path)),
+        OpenTarget::Workspace { path } => format!("workspace={}", urlencode(path)),
+    };
+
+    WebviewWindowBuilder::new(
+        app,
         &label,
-        WebviewUrl::App(format!("index.html?path={encoded}").into()),
+        WebviewUrl::App(format!("index.html?{query}").into()),
     )
     .title("Quiet")
     .inner_size(1200.0, 820.0)

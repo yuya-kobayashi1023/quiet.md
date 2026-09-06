@@ -2,7 +2,7 @@
   "name": "Quiet Markdown Editor Specification Draft",
   "version": "0.1",
   "based_on": "ui/ui-mockup.html",
-  "document_count": 31,
+  "document_count": 32,
   "files": [
     "AGENTS.md",
     "README.md",
@@ -20,6 +20,7 @@
     "decisions/010-custom-title-bar.md",
     "decisions/011-search-all.md",
     "decisions/012-sync-scroll.md",
+    "decisions/013-file-association-and-launch.md",
     "domain/document-model.md",
     "domain/file-lifecycle.md",
     "domain/frontmatter.md",

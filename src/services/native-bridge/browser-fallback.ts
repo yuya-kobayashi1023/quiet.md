@@ -71,6 +71,12 @@ const files = new Map<string, FakeFile>([
     { content: "# Design\n\nNested folder sample.\n", modifiedAt: Date.now() },
   ],
   ["/notes/2026-archive-sample.md", { content: "# Old note\n", modifiedAt: Date.now() }],
+  // Workspace の外。Recent セクション（ADR-013）の確認用。
+  [
+    "/downloads/meeting-notes.md",
+    { content: "# Meeting notes\n\nOutside the workspace.\n", modifiedAt: Date.now() },
+  ],
+  ["/repo/README.md", { content: "# README\n", modifiedAt: Date.now() }],
 ]);
 
 let metadata: WorkspaceMetadata = {
@@ -80,7 +86,18 @@ let metadata: WorkspaceMetadata = {
   expandedFolders: ["docs"],
 };
 
-let appSettings: unknown = null;
+/**
+ * ブラウザ確認用の初期 App settings。
+ *
+ * Recent（ADR-013）は Workspace 外のファイルを開かないと出ないので、
+ * 目視確認できるよう最初から数件入れておく。テストは resetFallback で null へ戻す。
+ */
+let appSettings: unknown = {
+  recentFiles: [
+    { path: "/downloads/meeting-notes.md", filename: "meeting-notes.md", openedAt: 2 },
+    { path: "/repo/README.md", filename: "README.md", openedAt: 1 },
+  ],
+};
 
 function hash(text: string): string {
   // 衝突検知の用途としては十分な簡易ハッシュ。本番は blake3（Rust 側）。
@@ -118,7 +135,10 @@ function snapshot() {
   return {
     rootPath: "/notes",
     name: "notes",
-    documents: [...files.keys()].sort().map(summaryOf),
+    documents: [...files.keys()]
+      .filter((path) => path.startsWith("/notes/"))
+      .sort()
+      .map(summaryOf),
     truncated: false,
   };
 }
@@ -320,8 +340,15 @@ export async function browserFallback<T>(
     case "list_recovery_snapshots":
       return [] as T;
 
+    case "allow_single_file":
+      return arg("path") as T;
+
+    case "take_launch_target":
+      return null as T;
+
     case "reveal_in_file_manager":
     case "open_in_new_window":
+    case "register_document_window":
       return undefined as T;
 
     case "open_external": {

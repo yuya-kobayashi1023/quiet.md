@@ -6,11 +6,15 @@
  */
 
 import * as native from "@/services/native-bridge";
+import { pushRecent, removeRecent, type RecentFile } from "@/domain/document/recents";
 import { Store } from "@/services/store";
 
 export type ThemePreference = "system" | "light" | "dark";
 export type PreviewTypeface = "serif" | "sans";
 export type ViewMode = "write" | "split" | "read";
+
+/** Sidebar の Recent に出す件数の選択肢（ADR-013）。画面の高さに合わせて選ぶ。 */
+export const RECENT_VISIBLE_COUNTS = [3, 5, 8, 12, 20, 30] as const;
 
 export interface AppSettings {
   /* General */
@@ -39,6 +43,12 @@ export interface AppSettings {
   countMode: "characters" | "words";
   /** ADR-011: Search All で Archive も探すか。既定は探す。 */
   searchIncludeArchived: boolean;
+
+  /* Recent（ADR-013） */
+  /** Workspace 外で開いたファイルの履歴。新しい順。上限は RECENT_LIMIT。 */
+  recentFiles: RecentFile[];
+  /** Sidebar の Recent セクションに出す件数。 */
+  recentVisibleCount: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -61,6 +71,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   viewMode: "write",
   countMode: "characters",
   searchIncludeArchived: true,
+
+  recentFiles: [],
+  recentVisibleCount: 8,
 };
 
 export class SettingsService {
@@ -89,6 +102,20 @@ export class SettingsService {
     this.store.set((prev) => ({ ...prev, ...patch }));
     if (patch.theme !== undefined) this.applyTheme();
     this.persistSoon();
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Recent（ADR-013）
+   * ---------------------------------------------------------------- */
+
+  /** Workspace 外で開いたファイルを履歴の先頭へ積む。 */
+  rememberRecent(path: string): void {
+    this.update({ recentFiles: pushRecent(this.get().recentFiles, path, Date.now()) });
+  }
+
+  /** 開けなくなったファイルを履歴から外す。 */
+  forgetRecent(path: string): void {
+    this.update({ recentFiles: removeRecent(this.get().recentFiles, path) });
   }
 
   private persistSoon(): void {

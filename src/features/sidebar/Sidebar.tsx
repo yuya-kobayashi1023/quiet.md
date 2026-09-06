@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DocumentSummary, SaveState } from "@/domain/document/types";
+import type { RecentFile } from "@/domain/document/recents";
 import { buildTree, type TreeRow } from "@/services/workspace-service";
 import {
   ArchiveIcon,
@@ -24,6 +25,8 @@ import "./sidebar.css";
 
 interface SidebarProps {
   documents: DocumentSummary[];
+  /** Workspace 外で開いたファイル（ADR-013）。表示件数で絞ったもの。 */
+  recents: RecentFile[];
   archived: string[];
   expandedFolders: string[];
   activePath: string | null;
@@ -36,6 +39,8 @@ interface SidebarProps {
   onToggleFolder: (path: string) => void;
   onOpenSettings: () => void;
   onContextMenu: (doc: DocumentSummary, position: { x: number; y: number }) => void;
+  onSelectRecent: (file: RecentFile) => void;
+  onRecentContextMenu: (file: RecentFile, position: { x: number; y: number }) => void;
 }
 
 /** Dirty dot。clean のときは何も出さない（ADR-003）。 */
@@ -83,6 +88,52 @@ function FileRow({
         <FileIcon className="tree-icon" />
         <span className="tree-label" ref={ref}>
           {row.document.filename}
+        </span>
+        {active ? <SaveDot state={saveState} /> : null}
+      </button>
+      {tooltip}
+    </>
+  );
+}
+
+/**
+ * Recent の 1 行。
+ *
+ * Workspace の外にあるので相対パスを持たない。名前が同じファイルが並びうるため、
+ * Tooltip では常にフルパスを見せる。
+ */
+function RecentRow({
+  file,
+  active,
+  saveState,
+  onSelect,
+  onContextMenu,
+}: {
+  file: RecentFile;
+  active: boolean;
+  saveState: SaveState;
+  onSelect: SidebarProps["onSelectRecent"];
+  onContextMenu: SidebarProps["onRecentContextMenu"];
+}) {
+  const { ref, tooltip, handlers } = useTruncationTooltip(file.path, { always: true });
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`tree-row tree-row--file${active ? " is-active" : ""}`}
+        style={{ paddingLeft: "8px" }}
+        aria-current={active ? "true" : undefined}
+        onClick={() => onSelect(file)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onContextMenu(file, { x: e.clientX, y: e.clientY });
+        }}
+        {...handlers}
+      >
+        <FileIcon className="tree-icon" />
+        <span className="tree-label" ref={ref}>
+          {file.filename}
         </span>
         {active ? <SaveDot state={saveState} /> : null}
       </button>
@@ -163,6 +214,7 @@ function Section({
 export function Sidebar(props: SidebarProps) {
   const {
     documents,
+    recents,
     archived,
     expandedFolders,
     activePath,
@@ -175,6 +227,8 @@ export function Sidebar(props: SidebarProps) {
     onToggleFolder,
     onOpenSettings,
     onContextMenu,
+    onSelectRecent,
+    onRecentContextMenu,
   } = props;
 
   const notes = buildTree(documents, archived, expandedFolders, "notes");
@@ -257,6 +311,25 @@ export function Sidebar(props: SidebarProps) {
           onToggleFolder={onToggleFolder}
           onContextMenu={onContextMenu}
         />
+
+        {/* Workspace 外で開いたファイル（ADR-013）。新しい順。 */}
+        {recents.length > 0 ? (
+          <section className="tree-section">
+            <div className="section-head">
+              <h2 className="section-label">Recent</h2>
+            </div>
+            {recents.map((file) => (
+              <RecentRow
+                key={file.path}
+                file={file}
+                active={file.path === activePath}
+                saveState={saveState}
+                onSelect={onSelectRecent}
+                onContextMenu={onRecentContextMenu}
+              />
+            ))}
+          </section>
+        ) : null}
       </nav>
 
       <div className="sidebar-bottom">
@@ -269,20 +342,12 @@ export function Sidebar(props: SidebarProps) {
   );
 }
 
-/** Context menu（interactions.md §13）。 */
-export function FileContextMenu({
-  document: doc,
-  position,
-  archived,
-  onClose,
-  onAction,
-}: {
-  document: DocumentSummary;
-  position: { x: number; y: number };
-  archived: boolean;
-  onClose: () => void;
-  onAction: (action: string, doc: DocumentSummary) => void;
-}) {
+/**
+ * Context menu の位置合わせと閉じ方（interactions.md §13）。
+ *
+ * 画面の右端・下端からはみ出さない位置へ寄せ、Escape と外側クリックで閉じる。
+ */
+function useMenuPosition(position: { x: number; y: number }, onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
   const [adjusted, setAdjusted] = useState(position);
 
@@ -309,6 +374,25 @@ export function FileContextMenu({
     };
   }, [onClose]);
 
+  return { ref, style: { left: adjusted.x, top: adjusted.y } };
+}
+
+/** Context menu（interactions.md §13）。 */
+export function FileContextMenu({
+  document: doc,
+  position,
+  archived,
+  onClose,
+  onAction,
+}: {
+  document: DocumentSummary;
+  position: { x: number; y: number };
+  archived: boolean;
+  onClose: () => void;
+  onAction: (action: string, doc: DocumentSummary) => void;
+}) {
+  const { ref, style } = useMenuPosition(position, onClose);
+
   const run = useCallback(
     (action: string) => {
       onAction(action, doc);
@@ -322,7 +406,7 @@ export function FileContextMenu({
       ref={ref}
       className="context-menu"
       role="menu"
-      style={{ left: adjusted.x, top: adjusted.y }}
+      style={style}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <button type="button" role="menuitem" onClick={() => run("open")}>
@@ -347,6 +431,62 @@ export function FileContextMenu({
       <hr />
       <button type="button" role="menuitem" onClick={() => run(archived ? "restore" : "archive")}>
         {archived ? "アーカイブから戻す" : "アーカイブ"}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Recent 行の Context menu（ADR-013）。
+ *
+ * Workspace の外にあるファイルなので、Archive・Rename・複製は出さない。
+ * Archive は Workspace metadata の相対パスに紐づくため、そもそも適用できない。
+ */
+export function RecentContextMenu({
+  file,
+  position,
+  onClose,
+  onAction,
+}: {
+  file: RecentFile;
+  position: { x: number; y: number };
+  onClose: () => void;
+  onAction: (action: string, file: RecentFile) => void;
+}) {
+  const { ref, style } = useMenuPosition(position, onClose);
+
+  const run = (action: string) => {
+    onAction(action, file);
+    onClose();
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="context-menu"
+      role="menu"
+      style={style}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <button type="button" role="menuitem" onClick={() => run("open")}>
+        開く
+      </button>
+      <button type="button" role="menuitem" onClick={() => run("open-new-window")}>
+        新しいウィンドウで開く
+      </button>
+      <hr />
+      <button type="button" role="menuitem" onClick={() => run("open-folder")}>
+        このフォルダを Workspace として開く
+      </button>
+      <button type="button" role="menuitem" onClick={() => run("copy-path")}>
+        パスをコピー
+      </button>
+      <button type="button" role="menuitem" onClick={() => run("reveal")}>
+        エクスプローラーで表示
+      </button>
+      <hr />
+      <button type="button" role="menuitem" onClick={() => run("forget")}>
+        履歴から削除
       </button>
     </div>
   );

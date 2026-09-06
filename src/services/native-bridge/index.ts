@@ -52,6 +52,8 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
 }
 
 export const FILE_CHANGE_EVENT = "quiet://file-change";
+/** 実行中のアプリへ「これを開け」と指示するイベント（ADR-013）。 */
+export const OPEN_TARGET_EVENT = "quiet://open-target";
 
 export type FileWatchEvent =
   | { type: "changed"; path: string; revision: DiskRevision }
@@ -67,6 +69,49 @@ export async function onFileChange(
     listenImpl = evt.listen as unknown as ListenFn;
   }
   return listenImpl(FILE_CHANGE_EVENT, (e) => handler(e.payload as FileWatchEvent));
+}
+
+/* ------------------------------------------------------------------ *
+ * 起動対象（ADR-013）
+ * ------------------------------------------------------------------ */
+
+/** 関連付け起動・CLI 引数・二重起動・Open with を正規化したもの。 */
+export type OpenTarget =
+  | { kind: "workspace"; path: string }
+  | { kind: "file"; path: string };
+
+/**
+ * 起動時に渡された対象を引き取る。2 度目は null。
+ *
+ * 起動直後は WebView がまだ listen していないので、event ではなくここで引き取る。
+ */
+export const takeLaunchTarget = () => invoke<OpenTarget | null>("take_launch_target");
+
+/** この Window が今開いている文書を Native へ知らせる（U-021）。 */
+export const registerDocumentWindow = (path: string | null) =>
+  invoke<void>("register_document_window", { path });
+
+export async function currentWindowLabel(): Promise<string> {
+  if (!isNative()) return "main";
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  return getCurrentWindow().label;
+}
+
+/** 実行中に届いた「これを開け」を受け取る。自分の Window 宛だけを通す。 */
+export async function onOpenTarget(
+  handler: (target: OpenTarget) => void,
+): Promise<() => void> {
+  if (!isNative()) return () => {};
+  const label = await currentWindowLabel();
+  if (!listenImpl) {
+    const evt = await import("@tauri-apps/api/event");
+    listenImpl = evt.listen as unknown as ListenFn;
+  }
+  return listenImpl(OPEN_TARGET_EVENT, (e) => {
+    const payload = e.payload as (OpenTarget & { window: string }) | undefined;
+    if (!payload || payload.window !== label) return;
+    handler({ kind: payload.kind, path: payload.path } as OpenTarget);
+  });
 }
 
 /* ------------------------------------------------------------------ *

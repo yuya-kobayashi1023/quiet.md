@@ -163,15 +163,29 @@ Tabsは採用しない。
 
 ## 8. File association
 
-[DRAFT]
+[DECIDED: ADR-013]
 
-`.md` の「Open with Quiet」をサポート。
+`.md` / `.markdown` の「Open with Quiet」をサポートする。
+インストーラで拡張子を登録する（`bundle.fileAssociations`）。
+Windows の既定アプリ（UserChoice）はインストーラから変更できないため、
+ユーザーが 1 度「既定のアプリ」で選ぶ必要がある。
 
-Double click起動時:
+起動経路（argv / 二重起動 / macOS Open with / Window URL の `?path=`）は
+Native 側で `OpenTarget` へ正規化してから Frontend へ渡す。
+
+アプリが起動していないとき:
 
 1. App起動
-2. 指定ファイルを開く
-3. Workspace外でも単体documentとして扱う
+2. 前回の Workspace を復元する
+3. 指定ファイルを開く。Workspace 外でも単体documentとして扱う（U-001）
+
+既に起動しているとき（single instance。プロセスは増やさない）:
+
+1. 同じファイルを開いているWindowがあれば、そのWindowをfocus（U-021）
+2. 文書を開いていないWindowがあれば、そこで開く
+3. どちらでもなければ新しいWindowで開く（U-011）
+
+Workspace 外で開いたファイルは Sidebar の `Recent` に残る（`ui-spec.md` §2）。
 
 ---
 
