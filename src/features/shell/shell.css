@@ -10,7 +10,14 @@
  */
 .topbar {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /*
+   * 3 列目（アイコン群と Window controls）は中身より狭くしない。
+   * 単なる 1fr だと 1 列目と同じ幅まで縮み、justify-content: flex-end の中身が
+   * 左へはみ出して View switch と重なる（幅 890px 以下で発生していた）。
+   * 幅が足りないときは View switch が中心からわずかに左へ寄るが、
+   * 重なるよりはよい。1 列目の Breadcrumb は元から省略される。
+   */
+  grid-template-columns: minmax(0, 1fr) auto minmax(min-content, 1fr);
   align-items: center;
   gap: 16px;
   height: var(--topbar-height);
@@ -79,7 +86,10 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  min-width: 0;
+  /*
+   * min-width: 0 は置かない。列の min-content 幅の見積もりが 0 まで落ち、
+   * 3 列目を中身より狭くしない指定が効かなくなる。
+   */
 }
 
 .top-actions {
