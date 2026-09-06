@@ -4,7 +4,3 @@ src-tauri/target/
 src-tauri/gen/
 .DS_Store
 *.local
-
-# 設計仕様と実装メモ。いったん公開対象から外す。
-.specs/
-IMPLEMENTATION-DECISIONS.md
