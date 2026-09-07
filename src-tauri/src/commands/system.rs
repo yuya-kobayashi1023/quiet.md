@@ -4,6 +4,7 @@ use crate::commands::AppState;
 use crate::errors::{NativeError, Result};
 use crate::filesystem::paths;
 use crate::launch::OpenTarget;
+use crate::shell_integration::{self, ContextMenuStatus};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
@@ -157,4 +158,20 @@ fn urlencode(s: &str) -> String {
             _ => format!("%{b:02X}"),
         })
         .collect()
+}
+
+/// Explorer の右クリック「Quiet で開く」の状態を返す（ADR-014）。
+///
+/// `supported` が false の OS では、設定画面に項目自体を出さない。
+#[tauri::command]
+pub fn context_menu_status() -> ContextMenuStatus {
+    shell_integration::status()
+}
+
+/// 右クリックメニューを登録する / 外す（ADR-014）。
+///
+/// 書くのは `HKCU\Software\Classes` の下だけなので、管理者権限は要らない。
+#[tauri::command]
+pub fn set_context_menu(enabled: bool) -> Result<ContextMenuStatus> {
+    shell_integration::set_enabled(enabled)
 }

@@ -210,6 +210,19 @@ export const openExternal = (url: string) =>
 export const openInNewWindow = (path: string) =>
   invoke<void>("open_in_new_window", { path });
 
+/** Explorer の右クリック「Quiet で開く」の登録状態（ADR-014）。 */
+export interface ContextMenuStatus {
+  /** この OS で登録できるか。Windows 以外は false。 */
+  supported: boolean;
+  /** 今の実行ファイルを指す登録が揃っているか。 */
+  enabled: boolean;
+}
+
+export const contextMenuStatus = () => invoke<ContextMenuStatus>("context_menu_status");
+
+export const setContextMenu = (enabled: boolean) =>
+  invoke<ContextMenuStatus>("set_context_menu", { enabled });
+
 /* ------------------------------------------------------------------ *
  * Window（ADR-010 / Custom title bar）
  *

@@ -210,6 +210,7 @@ DarkはLightの反転ではなく独立トークン。
 - Duplicate
 - Open in New Window
 - File association `.md`
+- Explorer の右クリック「Quiet で開く」（ADR-014）
 - Recent workspaces
 
 ### P2候補

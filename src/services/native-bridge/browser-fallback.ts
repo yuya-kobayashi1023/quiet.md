@@ -346,6 +346,10 @@ export async function browserFallback<T>(
     case "take_launch_target":
       return null as T;
 
+    // Explorer の右クリック登録（ADR-014）は Windows の実アプリだけの機能。
+    case "context_menu_status":
+      return { supported: false, enabled: false } as T;
+
     case "reveal_in_file_manager":
     case "open_in_new_window":
     case "register_document_window":
