@@ -819,6 +819,7 @@ export function App() {
           onSelectRecent={(file) => void openRecent(file)}
           onRecentContextMenu={(file, position) => setRecentMenu({ file, position })}
           onSelectWorkspace={(entry) => void openWorkspaceEntry(entry)}
+          onOpenWorkspace={() => void openWorkspace()}
           onWorkspaceContextMenu={(entry, position) => setWorkspaceMenu({ entry, position })}
         />
 

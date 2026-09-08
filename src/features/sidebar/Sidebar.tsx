@@ -47,6 +47,8 @@ interface SidebarProps {
   onSelectRecent: (file: RecentFile) => void;
   onRecentContextMenu: (file: RecentFile, position: { x: number; y: number }) => void;
   onSelectWorkspace: (entry: WorkspaceEntry) => void;
+  /** フォルダを選んで Workspace として開く。セクション見出しの + から呼ぶ。 */
+  onOpenWorkspace: () => void;
   onWorkspaceContextMenu: (
     entry: WorkspaceEntry,
     position: { x: number; y: number },
@@ -285,6 +287,7 @@ export function Sidebar(props: SidebarProps) {
     onSelectRecent,
     onRecentContextMenu,
     onSelectWorkspace,
+    onOpenWorkspace,
     onWorkspaceContextMenu,
   } = props;
 
@@ -389,22 +392,29 @@ export function Sidebar(props: SidebarProps) {
         ) : null}
 
         {/* 過去に開いた Workspace（ADR-015）。新しい順。今開いているものも残す。 */}
-        {workspaces.length > 0 ? (
-          <section className="tree-section">
-            <div className="section-head">
-              <h2 className="section-label">Workspace</h2>
-            </div>
-            {workspaces.map((entry) => (
-              <WorkspaceRow
-                key={entry.path}
-                entry={entry}
-                active={isSameWorkspace(entry.path, workspaceRoot)}
-                onSelect={onSelectWorkspace}
-                onContextMenu={onWorkspaceContextMenu}
-              />
-            ))}
-          </section>
-        ) : null}
+        <section className="tree-section">
+          <div className="section-head">
+            <h2 className="section-label">Workspace</h2>
+            <button
+              type="button"
+              className="section-action"
+              aria-label="フォルダを開く"
+              title="フォルダを開く"
+              onClick={onOpenWorkspace}
+            >
+              <PlusIcon />
+            </button>
+          </div>
+          {workspaces.map((entry) => (
+            <WorkspaceRow
+              key={entry.path}
+              entry={entry}
+              active={isSameWorkspace(entry.path, workspaceRoot)}
+              onSelect={onSelectWorkspace}
+              onContextMenu={onWorkspaceContextMenu}
+            />
+          ))}
+        </section>
       </nav>
 
       <div className="sidebar-bottom">
