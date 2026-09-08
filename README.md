@@ -14,6 +14,7 @@
 - コマンドパレット（`Ctrl+K`）、文書内検索（`Ctrl+F`）、Workspace 全文検索（`Ctrl+Shift+F`）
 - 論理 Archive（ファイルは移動しない）
 - `.md` の関連付け起動。Workspace 外で開いたファイルはサイドバーの Recent に残る
+- Explorer の右クリックに「Quiet で開く」を追加できる（Settings > General。Windows 11 では「その他のオプションを表示」の中）
 - 箇条書きの階層編集、``` の閉じ補完、コードブロックのシンタックスハイライト
 
 ## 技術構成

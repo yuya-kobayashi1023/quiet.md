@@ -8,6 +8,7 @@ pub mod errors;
 pub mod filesystem;
 pub mod launch;
 pub mod settings;
+pub mod shell_integration;
 pub mod watcher;
 
 use commands::AppState;
@@ -69,10 +70,14 @@ pub fn run() {
             commands::document::clear_recovery_snapshot,
             commands::document::list_recovery_snapshots,
             commands::system::reveal_in_file_manager,
+            commands::system::reveal_folder,
             commands::system::open_external,
             commands::system::open_in_new_window,
+            commands::system::open_workspace_in_new_window,
             commands::system::take_launch_target,
             commands::system::register_document_window,
+            commands::system::context_menu_status,
+            commands::system::set_context_menu,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

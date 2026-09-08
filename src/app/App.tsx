@@ -7,7 +7,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
-import { Sidebar, FileContextMenu, RecentContextMenu } from "@/features/sidebar/Sidebar";
+import {
+  Sidebar,
+  FileContextMenu,
+  RecentContextMenu,
+  WorkspaceContextMenu,
+} from "@/features/sidebar/Sidebar";
 import { StatusBar, TopBar } from "@/features/shell/TopBar";
 import { useSyncScroll } from "@/features/shell/use-sync-scroll";
 import { Editor } from "@/features/editor/Editor";
@@ -32,6 +37,7 @@ import {
   visibleRecents,
   type RecentFile,
 } from "@/domain/document/recents";
+import type { WorkspaceEntry } from "@/domain/document/workspaces";
 import { documentService } from "@/services/document-service";
 import { settingsService, type ViewMode } from "@/services/settings-service";
 import { workspaceService } from "@/services/workspace-service";
@@ -99,6 +105,10 @@ export function App() {
     file: RecentFile;
     position: { x: number; y: number };
   } | null>(null);
+  const [workspaceMenu, setWorkspaceMenu] = useState<{
+    entry: WorkspaceEntry;
+    position: { x: number; y: number };
+  } | null>(null);
 
   const editorView = useRef<EditorView | null>(null);
   const editorPane = useRef<HTMLDivElement>(null);
@@ -128,6 +138,19 @@ export function App() {
     setTitleError(null);
   }, []);
 
+  /**
+   * Workspace を開く唯一の経路（ADR-015）。
+   *
+   * 起動時の復元・フォルダ選択・New Window・Recent の「このフォルダを Workspace として開く」が
+   * ここへ集まる。履歴に積むのは Native が返した canonical な root path。
+   * 呼び出し側が渡した表記のままだと、同じフォルダが別の行として並びうる。
+   */
+  const openWorkspacePath = useCallback(async (path: string): Promise<void> => {
+    const snapshot = await workspaceService.open(path);
+    settingsService.update({ lastWorkspace: snapshot.rootPath });
+    settingsService.rememberWorkspace(snapshot.rootPath);
+  }, []);
+
   /* ---------------------------------------------------------------- *
    * 起動
    * ---------------------------------------------------------------- */
@@ -145,16 +168,13 @@ export function App() {
 
       if (workspacePath) {
         try {
-          await workspaceService.open(workspacePath);
-          if (target?.kind === "workspace") {
-            settingsService.update({ lastWorkspace: workspacePath });
-          }
+          await openWorkspacePath(workspacePath);
         } catch {
           // 前回の Workspace が無くなっていても起動は続ける。
         }
       } else if (!native.isNative()) {
         // ブラウザでの確認用。フォールバックの Workspace を開く。
-        await workspaceService.open("/notes");
+        await openWorkspacePath("/notes");
       }
 
       if (target?.kind === "file") {
@@ -193,8 +213,7 @@ export function App() {
       .onOpenTarget((target) => {
         void (async () => {
           if (target.kind === "workspace") {
-            await workspaceService.open(target.path).catch(() => {});
-            settingsService.update({ lastWorkspace: target.path });
+            await openWorkspacePath(target.path).catch(() => {});
             return;
           }
           await openPath(target.path).catch((error: unknown) => {
@@ -373,9 +392,61 @@ export function App() {
   const openWorkspace = useCallback(async () => {
     const path = await native.chooseWorkspace();
     if (!path) return;
-    await workspaceService.open(path);
-    settingsService.update({ lastWorkspace: path });
-  }, []);
+    try {
+      await openWorkspacePath(path);
+    } catch (error) {
+      showToast(error instanceof NativeError ? error.message : "フォルダを開けません");
+    }
+  }, [openWorkspacePath, showToast]);
+
+  /**
+   * Workspace 履歴の行を開く（ADR-015）。
+   *
+   * 無くなっていたらその場で履歴から外す。Recent の行と同じ扱い。
+   */
+  const openWorkspaceEntry = useCallback(
+    async (entry: WorkspaceEntry) => {
+      try {
+        await openWorkspacePath(entry.path);
+      } catch (error) {
+        if (error instanceof NativeError && error.code === "NOT_FOUND") {
+          settingsService.forgetWorkspace(entry.path);
+          showToast(`${entry.name} が見つかりません。履歴から削除しました`);
+          return;
+        }
+        showToast(error instanceof NativeError ? error.message : "フォルダを開けません");
+      }
+    },
+    [openWorkspacePath, showToast],
+  );
+
+  const onWorkspaceAction = useCallback(
+    async (action: string, entry: WorkspaceEntry) => {
+      try {
+        switch (action) {
+          case "open":
+            await openWorkspaceEntry(entry);
+            break;
+          case "open-new-window":
+            await native.openWorkspaceInNewWindow(entry.path);
+            break;
+          case "copy-path":
+            await navigator.clipboard.writeText(entry.path);
+            showToast("パスをコピーしました");
+            break;
+          case "reveal":
+            await native.revealFolder(entry.path);
+            break;
+          case "forget":
+            settingsService.forgetWorkspace(entry.path);
+            break;
+        }
+      } catch (error) {
+        showToast(error instanceof NativeError ? error.message : "操作に失敗しました");
+      }
+    },
+    [openWorkspaceEntry, showToast],
+  );
 
   const commitTitle = useCallback(async () => {
     if (titleDraft == null || !session) return;
@@ -518,9 +589,7 @@ export function App() {
             await native.openInNewWindow(file.path);
             break;
           case "open-folder": {
-            const folder = parentOf(file.path);
-            await workspaceService.open(folder);
-            settingsService.update({ lastWorkspace: folder });
+            await openWorkspacePath(parentOf(file.path));
             await openPath(file.path);
             break;
           }
@@ -542,7 +611,7 @@ export function App() {
         showToast(error instanceof NativeError ? error.message : "操作に失敗しました");
       }
     },
-    [openPath, openRecent, showToast],
+    [openPath, openRecent, openWorkspacePath, showToast],
   );
 
   /* ---------------------------------------------------------------- *
@@ -731,6 +800,8 @@ export function App() {
         <Sidebar
           documents={workspace.snapshot?.documents ?? []}
           recents={recentRows}
+          workspaces={settings.workspaces}
+          workspaceRoot={workspace.snapshot?.rootPath ?? null}
           archived={workspace.metadata?.archived ?? []}
           expandedFolders={workspace.metadata?.expandedFolders ?? []}
           activePath={workspace.activePath}
@@ -747,6 +818,9 @@ export function App() {
           onContextMenu={(document, position) => setContextMenu({ document, position })}
           onSelectRecent={(file) => void openRecent(file)}
           onRecentContextMenu={(file, position) => setRecentMenu({ file, position })}
+          onSelectWorkspace={(entry) => void openWorkspaceEntry(entry)}
+          onOpenWorkspace={() => void openWorkspace()}
+          onWorkspaceContextMenu={(entry, position) => setWorkspaceMenu({ entry, position })}
         />
 
         <div className="main">
@@ -897,6 +971,15 @@ export function App() {
           position={recentMenu.position}
           onClose={() => setRecentMenu(null)}
           onAction={(action, file) => void onRecentAction(action, file)}
+        />
+      ) : null}
+
+      {workspaceMenu ? (
+        <WorkspaceContextMenu
+          entry={workspaceMenu.entry}
+          position={workspaceMenu.position}
+          onClose={() => setWorkspaceMenu(null)}
+          onAction={(action, entry) => void onWorkspaceAction(action, entry)}
         />
       ) : null}
 

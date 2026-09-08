@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DocumentSummary, SaveState } from "@/domain/document/types";
 import type { RecentFile } from "@/domain/document/recents";
+import { isSameWorkspace, type WorkspaceEntry } from "@/domain/document/workspaces";
 import { buildTree, type TreeRow } from "@/services/workspace-service";
 import {
   ArchiveIcon,
@@ -27,6 +28,10 @@ interface SidebarProps {
   documents: DocumentSummary[];
   /** Workspace 外で開いたファイル（ADR-013）。表示件数で絞ったもの。 */
   recents: RecentFile[];
+  /** 過去に開いた Workspace（ADR-015）。新しい順。 */
+  workspaces: WorkspaceEntry[];
+  /** 今開いている Workspace の root path。 */
+  workspaceRoot: string | null;
   archived: string[];
   expandedFolders: string[];
   activePath: string | null;
@@ -41,6 +46,13 @@ interface SidebarProps {
   onContextMenu: (doc: DocumentSummary, position: { x: number; y: number }) => void;
   onSelectRecent: (file: RecentFile) => void;
   onRecentContextMenu: (file: RecentFile, position: { x: number; y: number }) => void;
+  onSelectWorkspace: (entry: WorkspaceEntry) => void;
+  /** フォルダを選んで Workspace として開く。セクション見出しの + から呼ぶ。 */
+  onOpenWorkspace: () => void;
+  onWorkspaceContextMenu: (
+    entry: WorkspaceEntry,
+    position: { x: number; y: number },
+  ) => void;
 }
 
 /** Dirty dot。clean のときは何も出さない（ADR-003）。 */
@@ -142,6 +154,49 @@ function RecentRow({
   );
 }
 
+/**
+ * Workspace 履歴の 1 行（ADR-015）。
+ *
+ * 今開いている Workspace も一覧に残し、選択行として見せる。
+ * 表示名はフォルダ名だけなので、同名フォルダが並びうる。Tooltip は常にフルパス。
+ */
+function WorkspaceRow({
+  entry,
+  active,
+  onSelect,
+  onContextMenu,
+}: {
+  entry: WorkspaceEntry;
+  active: boolean;
+  onSelect: SidebarProps["onSelectWorkspace"];
+  onContextMenu: SidebarProps["onWorkspaceContextMenu"];
+}) {
+  const { ref, tooltip, handlers } = useTruncationTooltip(entry.path, { always: true });
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`tree-row tree-row--file${active ? " is-active" : ""}`}
+        style={{ paddingLeft: "8px" }}
+        aria-current={active ? "true" : undefined}
+        onClick={() => onSelect(entry)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onContextMenu(entry, { x: e.clientX, y: e.clientY });
+        }}
+        {...handlers}
+      >
+        <FolderIcon className="tree-icon" />
+        <span className="tree-label" ref={ref}>
+          {entry.name}
+        </span>
+      </button>
+      {tooltip}
+    </>
+  );
+}
+
 function Section({
   label,
   rows,
@@ -215,6 +270,8 @@ export function Sidebar(props: SidebarProps) {
   const {
     documents,
     recents,
+    workspaces,
+    workspaceRoot,
     archived,
     expandedFolders,
     activePath,
@@ -229,6 +286,9 @@ export function Sidebar(props: SidebarProps) {
     onContextMenu,
     onSelectRecent,
     onRecentContextMenu,
+    onSelectWorkspace,
+    onOpenWorkspace,
+    onWorkspaceContextMenu,
   } = props;
 
   const notes = buildTree(documents, archived, expandedFolders, "notes");
@@ -330,6 +390,31 @@ export function Sidebar(props: SidebarProps) {
             ))}
           </section>
         ) : null}
+
+        {/* 過去に開いた Workspace（ADR-015）。新しい順。今開いているものも残す。 */}
+        <section className="tree-section">
+          <div className="section-head">
+            <h2 className="section-label">Workspace</h2>
+            <button
+              type="button"
+              className="section-action"
+              aria-label="フォルダを開く"
+              title="フォルダを開く"
+              onClick={onOpenWorkspace}
+            >
+              <PlusIcon />
+            </button>
+          </div>
+          {workspaces.map((entry) => (
+            <WorkspaceRow
+              key={entry.path}
+              entry={entry}
+              active={isSameWorkspace(entry.path, workspaceRoot)}
+              onSelect={onSelectWorkspace}
+              onContextMenu={onWorkspaceContextMenu}
+            />
+          ))}
+        </section>
       </nav>
 
       <div className="sidebar-bottom">
@@ -478,6 +563,58 @@ export function RecentContextMenu({
       <button type="button" role="menuitem" onClick={() => run("open-folder")}>
         このフォルダを Workspace として開く
       </button>
+      <button type="button" role="menuitem" onClick={() => run("copy-path")}>
+        パスをコピー
+      </button>
+      <button type="button" role="menuitem" onClick={() => run("reveal")}>
+        エクスプローラーで表示
+      </button>
+      <hr />
+      <button type="button" role="menuitem" onClick={() => run("forget")}>
+        履歴から削除
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Workspace 履歴の Context menu（ADR-015）。
+ *
+ * 対象はフォルダなので、ファイル向けの操作（名前変更・複製・Archive）は出さない。
+ */
+export function WorkspaceContextMenu({
+  entry,
+  position,
+  onClose,
+  onAction,
+}: {
+  entry: WorkspaceEntry;
+  position: { x: number; y: number };
+  onClose: () => void;
+  onAction: (action: string, entry: WorkspaceEntry) => void;
+}) {
+  const { ref, style } = useMenuPosition(position, onClose);
+
+  const run = (action: string) => {
+    onAction(action, entry);
+    onClose();
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="context-menu"
+      role="menu"
+      style={style}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <button type="button" role="menuitem" onClick={() => run("open")}>
+        開く
+      </button>
+      <button type="button" role="menuitem" onClick={() => run("open-new-window")}>
+        新しいウィンドウで開く
+      </button>
+      <hr />
       <button type="button" role="menuitem" onClick={() => run("copy-path")}>
         パスをコピー
       </button>

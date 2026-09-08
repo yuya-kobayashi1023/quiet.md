@@ -2887,6 +2887,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "thiserror 2.0.20",
  "walkdir",
+ "winreg",
 ]
 
 [[package]]

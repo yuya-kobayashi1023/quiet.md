@@ -38,3 +38,7 @@ strip = true
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2.4.4"
+
+# Explorer の右クリック登録（ADR-014）。HKCU だけを触る。
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"

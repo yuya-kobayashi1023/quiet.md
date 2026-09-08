@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import * as native from "@/services/native-bridge";
 import {
   RECENT_VISIBLE_COUNTS,
   settingsService,
@@ -76,11 +77,42 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const panel = useRef<HTMLDivElement>(null);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const update = (patch: Partial<AppSettings>) => {
-    settingsService.update(patch);
+  const [contextMenu, setContextMenu] = useState<native.ContextMenuStatus | null>(null);
+  const [contextMenuFailed, setContextMenuFailed] = useState(false);
+
+  const flashSaved = () => {
     setSaved(true);
     if (savedTimer.current) clearTimeout(savedTimer.current);
     savedTimer.current = setTimeout(() => setSaved(false), 1100);
+  };
+
+  const update = (patch: Partial<AppSettings>) => {
+    settingsService.update(patch);
+    flashSaved();
+  };
+
+  // 右クリックメニューの正はレジストリ側にある（ADR-014）。
+  // 設定 JSON へ写すと外部で外されたときに食い違うので、開くたびに OS へ聞く。
+  useEffect(() => {
+    let alive = true;
+    native
+      .contextMenuStatus()
+      .then((status) => alive && setContextMenu(status))
+      .catch(() => alive && setContextMenu({ supported: false, enabled: false }));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const toggleContextMenu = (next: boolean) => {
+    setContextMenuFailed(false);
+    void native
+      .setContextMenu(next)
+      .then((status) => {
+        setContextMenu(status);
+        flashSaved();
+      })
+      .catch(() => setContextMenuFailed(true));
   };
 
   // Focus trap（AC-I / desktop-ux.md §12）
@@ -193,6 +225,25 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   ))}
                 </select>
               </Row>
+              {contextMenu?.supported ? (
+                <>
+                  <Row
+                    label="右クリックメニューに追加"
+                    hint="Markdown ファイルとフォルダの右クリックへ「Quiet で開く」を出します。Windows 11 では「その他のオプションを表示」の中に入ります。"
+                  >
+                    <Switch
+                      checked={contextMenu.enabled}
+                      label="右クリックメニューに追加"
+                      onChange={toggleContextMenu}
+                    />
+                  </Row>
+                  {contextMenuFailed ? (
+                    <p className="settings-note" role="alert">
+                      右クリックメニューを更新できませんでした。もう一度お試しください。
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
               <Row label="コマンドパレット" hint="どこからでもコマンドとファイル検索を開きます。">
                 <span className="setting-shortcut">Ctrl+K</span>
               </Row>
