@@ -55,6 +55,10 @@ old.md
 RECENT
 outside-the-workspace.md
 
+WORKSPACE
+notes
+project-docs
+
 
 Settings
 ```
@@ -78,6 +82,19 @@ Settings
 - `3 notes / local` のFooter表示
 - Settings上の強いdivider
 - Saved文字列
+
+### Workspace
+
+[DECIDED: ADR-015]
+
+- 過去に開いた Workspace を、開いた新しい順に並べる
+- 位置は Recent の下（Sidebar の最下部セクション）
+- 覚えるのは 10 件。表示件数も同じ 10 件で、Settings に項目を作らない
+- 今開いている Workspace も一覧に残し、選択行として見せる
+- 表示名はフォルダ名。Tooltip は常にフルパス。同名フォルダが並びうる
+- 1件もなければセクションごと出さない（初回起動時）
+- Context menu は 開く / 新しいウィンドウで開く / パスをコピー / エクスプローラーで表示 / 履歴から削除
+- 行をクリックしたとき、フォルダが無ければその場で履歴から外してToastで知らせる
 
 ### Settings
 

@@ -7,6 +7,11 @@
 
 import * as native from "@/services/native-bridge";
 import { pushRecent, removeRecent, type RecentFile } from "@/domain/document/recents";
+import {
+  pushWorkspace,
+  removeWorkspace,
+  type WorkspaceEntry,
+} from "@/domain/document/workspaces";
 import { Store } from "@/services/store";
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -49,6 +54,10 @@ export interface AppSettings {
   recentFiles: RecentFile[];
   /** Sidebar の Recent セクションに出す件数。 */
   recentVisibleCount: number;
+
+  /* Workspace 履歴（ADR-015） */
+  /** 過去に開いた Workspace。新しい順。上限は WORKSPACE_LIMIT。 */
+  workspaces: WorkspaceEntry[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -74,6 +83,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
   recentFiles: [],
   recentVisibleCount: 8,
+
+  workspaces: [],
 };
 
 export class SettingsService {
@@ -116,6 +127,20 @@ export class SettingsService {
   /** 開けなくなったファイルを履歴から外す。 */
   forgetRecent(path: string): void {
     this.update({ recentFiles: removeRecent(this.get().recentFiles, path) });
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Workspace 履歴（ADR-015）
+   * ---------------------------------------------------------------- */
+
+  /** 開いた Workspace を履歴の先頭へ積む。 */
+  rememberWorkspace(path: string): void {
+    this.update({ workspaces: pushWorkspace(this.get().workspaces, path, Date.now()) });
+  }
+
+  /** 開けなくなった Workspace を履歴から外す。 */
+  forgetWorkspace(path: string): void {
+    this.update({ workspaces: removeWorkspace(this.get().workspaces, path) });
   }
 
   private persistSoon(): void {
