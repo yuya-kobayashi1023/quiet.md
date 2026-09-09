@@ -25,6 +25,19 @@ export const FolderIcon = ({ className }: IconProps) => (
   </svg>
 );
 
+/**
+ * Workspace（ADR-016）。
+ *
+ * Folder と同じ絵にしない。Workspace は「フォルダの中身の集合」であって
+ * ツリー上の 1 フォルダではないため、重ねた面で表す。
+ */
+export const WorkspaceIcon = ({ className }: IconProps) => (
+  <svg {...box} className={className}>
+    <path d="M8 2.4 14 5.7 8 9 2 5.7z" />
+    <path d="m2 9.6 6 3.3 6-3.3" />
+  </svg>
+);
+
 export const ChevronIcon = ({ className }: IconProps) => (
   <svg {...box} className={className}>
     <path d="m6 4 4 4-4 4" />

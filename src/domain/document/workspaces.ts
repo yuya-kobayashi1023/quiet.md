@@ -1,7 +1,7 @@
 /**
  * Workspace 履歴（過去に開いたフォルダ）。
  *
- * ADR-015 / ui-spec.md §2。
+ * ADR-016 / ui-spec.md §2。
  * Workspace そのものの履歴なので、特定の Workspace に属さない。
  * `.quiet/workspace.json` ではなく App settings が持つ（Recent と同じ理由）。
  */
@@ -36,6 +36,28 @@ export function pushWorkspace(
   const key = pathKey(path);
   const rest = list.filter((entry) => pathKey(entry.path) !== key);
   return [{ path, name: filenameOf(path), openedAt }, ...rest].slice(0, limit);
+}
+
+/**
+ * 履歴に添える相対時刻（ADR-016）。
+ *
+ * 並び順は既に新しい順なので、ここで要るのは「どのくらい前か」の粗い手がかりだけ。
+ * 分・時間・日・週・月・年で丸め、絶対時刻は出さない。
+ */
+export function relativeOpenedAt(openedAt: number, now = Date.now()): string {
+  const minutes = Math.floor(Math.max(0, now - openedAt) / 60_000);
+  if (minutes < 1) return "たった今";
+  if (minutes < 60) return `${minutes}分前`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間前`;
+
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "昨日";
+  if (days < 7) return `${days}日前`;
+  if (days < 30) return `${Math.floor(days / 7)}週間前`;
+  if (days < 365) return `${Math.floor(days / 30)}か月前`;
+  return `${Math.floor(days / 365)}年前`;
 }
 
 export function removeWorkspace(list: WorkspaceEntry[], path: string): WorkspaceEntry[] {

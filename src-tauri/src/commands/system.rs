@@ -17,7 +17,7 @@ pub fn reveal_in_file_manager(state: State<'_, AppState>, path: String) -> Resul
     reveal(&path)
 }
 
-/// フォルダを Explorer / Finder で表示する（ADR-015、Workspace 履歴の行）。
+/// フォルダを Explorer / Finder で表示する（ADR-016、Workspace 履歴の行）。
 ///
 /// `ensure_allowed` は「中身を読み書きしてよいか」の判定。ここは OS のファイルマネージャへ
 /// 渡すだけで中身に触れないため、実在するディレクトリであることだけを確かめる。
@@ -111,7 +111,7 @@ pub async fn open_in_new_window(
     )
 }
 
-/// Workspace を新しい Window で開く（ADR-015）。
+/// Workspace を新しい Window で開く（ADR-016）。
 ///
 /// 同一ファイル 1 Window（U-021）は文書の話で、Workspace には適用しない。
 /// 同じフォルダを 2 つの Window で開くことは、比較・並べ読みのために許す。

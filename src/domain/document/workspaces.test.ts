@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isSameWorkspace,
   pushWorkspace,
+  relativeOpenedAt,
   removeWorkspace,
   WORKSPACE_LIMIT,
   type WorkspaceEntry,
@@ -55,5 +56,39 @@ describe("isSameWorkspace", () => {
     expect(isSameWorkspace("C:\\Notes", "c:/notes")).toBe(true);
     expect(isSameWorkspace("C:\\Notes", "C:\\Notes\\sub")).toBe(false);
     expect(isSameWorkspace(null, "C:\\Notes")).toBe(false);
+  });
+});
+
+describe("relativeOpenedAt", () => {
+  const now = Date.parse("2026-09-09T12:00:00Z");
+  const ago = (ms: number) => relativeOpenedAt(now - ms, now);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  it("1 分未満は「たった今」", () => {
+    expect(ago(0)).toBe("たった今");
+    expect(ago(59_000)).toBe("たった今");
+  });
+
+  it("分・時間・日で丸める", () => {
+    expect(ago(3 * minute)).toBe("3分前");
+    expect(ago(5 * hour)).toBe("5時間前");
+    expect(ago(3 * day)).toBe("3日前");
+  });
+
+  it("1 日前だけ「昨日」と言う", () => {
+    expect(ago(day)).toBe("昨日");
+    expect(ago(2 * day)).toBe("2日前");
+  });
+
+  it("週・月・年へ粗くなる", () => {
+    expect(ago(10 * day)).toBe("1週間前");
+    expect(ago(60 * day)).toBe("2か月前");
+    expect(ago(400 * day)).toBe("1年前");
+  });
+
+  it("未来の時刻でも壊れない", () => {
+    expect(relativeOpenedAt(now + hour, now)).toBe("たった今");
   });
 });

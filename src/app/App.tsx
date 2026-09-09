@@ -139,7 +139,7 @@ export function App() {
   }, []);
 
   /**
-   * Workspace を開く唯一の経路（ADR-015）。
+   * Workspace を開く唯一の経路（ADR-016）。
    *
    * 起動時の復元・フォルダ選択・New Window・Recent の「このフォルダを Workspace として開く」が
    * ここへ集まる。履歴に積むのは Native が返した canonical な root path。
@@ -400,7 +400,7 @@ export function App() {
   }, [openWorkspacePath, showToast]);
 
   /**
-   * Workspace 履歴の行を開く（ADR-015）。
+   * Workspace 履歴の行を開く（ADR-016）。
    *
    * 無くなっていたらその場で履歴から外す。Recent の行と同じ扱い。
    */
@@ -802,6 +802,7 @@ export function App() {
           recents={recentRows}
           workspaces={settings.workspaces}
           workspaceRoot={workspace.snapshot?.rootPath ?? null}
+          workspaceName={workspace.snapshot?.name ?? null}
           archived={workspace.metadata?.archived ?? []}
           expandedFolders={workspace.metadata?.expandedFolders ?? []}
           activePath={workspace.activePath}

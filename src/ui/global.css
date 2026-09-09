@@ -73,6 +73,8 @@ select {
 
 /* Sidebar は Content Area の上端から下端まで貫通する（ADR-006）。 */
 .sidebar {
+  /* Workspace の Popover をここへ吊る（ADR-016）。 */
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;

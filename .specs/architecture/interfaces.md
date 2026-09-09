@@ -139,7 +139,7 @@ saveAsMarkdown(defaultName: string): Promise<string | null>
 ```ts
 revealInFileManager(path: string): Promise<void>
 
-/** フォルダを表示する。中身に触れないため Workspace scope の判定は行わない（ADR-015）。 */
+/** フォルダを表示する。中身に触れないため Workspace scope の判定は行わない（ADR-016）。 */
 revealFolder(path: string): Promise<void>
 ```
 
@@ -192,7 +192,7 @@ type OpenTarget =
 
 openInNewWindow(path: string): Promise<void>
 
-/** Workspaceを新しいWindowで開く（ADR-015）。同一フォルダの重複は許す。 */
+/** Workspaceを新しいWindowで開く（ADR-016）。同一フォルダの重複は許す。 */
 openWorkspaceInNewWindow(path: string): Promise<void>
 
 /** 起動時に渡された対象を引き取る。2度目はnull。 */

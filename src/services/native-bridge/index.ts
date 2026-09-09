@@ -205,7 +205,7 @@ export const revealInFileManager = (path: string) =>
   invoke<void>("reveal_in_file_manager", { path });
 
 /**
- * フォルダを Explorer / Finder で表示する（ADR-015）。
+ * フォルダを Explorer / Finder で表示する（ADR-016）。
  *
  * 中身へは触れないので Workspace scope の判定は要らない。実在確認だけ Native が行う。
  */
@@ -217,7 +217,7 @@ export const openExternal = (url: string) =>
 export const openInNewWindow = (path: string) =>
   invoke<void>("open_in_new_window", { path });
 
-/** Workspace を新しい Window で開く（ADR-015）。 */
+/** Workspace を新しい Window で開く（ADR-016）。 */
 export const openWorkspaceInNewWindow = (path: string) =>
   invoke<void>("open_workspace_in_new_window", { path });
 

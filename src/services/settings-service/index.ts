@@ -55,7 +55,7 @@ export interface AppSettings {
   /** Sidebar の Recent セクションに出す件数。 */
   recentVisibleCount: number;
 
-  /* Workspace 履歴（ADR-015） */
+  /* Workspace 履歴（ADR-016） */
   /** 過去に開いた Workspace。新しい順。上限は WORKSPACE_LIMIT。 */
   workspaces: WorkspaceEntry[];
 }
@@ -130,7 +130,7 @@ export class SettingsService {
   }
 
   /* ---------------------------------------------------------------- *
-   * Workspace 履歴（ADR-015）
+   * Workspace 履歴（ADR-016）
    * ---------------------------------------------------------------- */
 
   /** 開いた Workspace を履歴の先頭へ積む。 */
