@@ -62,6 +62,12 @@
   flex: none;
   width: 13px;
   height: 13px;
+  /* 塗りではなく線で描く。指定を落とすと SVG 既定の黒塗りになる。 */
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   color: var(--text-subtle);
   transition: transform var(--duration-flyout) var(--ease);
 }
