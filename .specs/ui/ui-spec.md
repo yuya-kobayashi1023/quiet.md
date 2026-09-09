@@ -45,20 +45,20 @@ Expanded:
 ```text
 [collapse]
 
+WORKSPACE                     ⌄
+notes
+
 NOTES                         +
 document.md                 ●
 long-document-name-that-...
 
 ARCHIVE
 old.md
-
-RECENT
-outside-the-workspace.md
-
-WORKSPACE
-notes
-project-docs
-
+                              ← ここまでがスクロール領域
+─────────────────────────
+RECENT                        ⌄   ← 既定は閉じている
+outside-the-workspace.md          （開いたときだけ出る）
+More (3)
 
 Settings
 ```
@@ -68,8 +68,18 @@ Settings
 [DECIDED: ADR-013]
 
 - Workspace の外で開いたファイルを、開いた新しい順に並べる
+- 位置は Sidebar の下端に固定する。Notes / Archive と一緒にスクロールさせない。
+  Notes が増減しても Recent の位置が動かないようにするため
+- 見出しの上に薄い区切り線を置く。Notes / Archive は Workspace の中身、Recent はその外で、
+  出所が違うため。禁止事項の「Settings上の強いdivider」とは別物で、行と同じ左右インセット・
+  border 色を落とした 1px に留める
+- Settings との間には余白を取る。線は引かない
 - 現在の Workspace の中にあるファイルは出さない（Notes 側に出ている）
-- 履歴は 30 件保持する。表示件数は Settings で変える（既定 8 件）
+- 見出しごと disclosure にする。既定は閉じた状態で、見出しの行だけを出す。
+  「たまに戻る」ためのものを常に視界へ入れない
+- 履歴は 30 件保持する。開いたとき出すのは 10 件。残りは `More` を押したときだけ出す。
+  表示件数は Settings に項目を作らない（Sidebar の高さは Recent より Notes に使う）
+- リストの高さは 10 行ぶんが上限。`More` で開いたぶんはこの中でスクロールする
 - ツリーにしない。フォルダが違うファイルが混ざるため、常にフラットな1階層
 - Tooltip は常にフルパス。同名のファイルが並びうる
 - 1件もなければセクションごと出さない
@@ -85,17 +95,23 @@ Settings
 
 ### Workspace
 
-[DECIDED: ADR-015]
+[DECIDED: ADR-016]
 
-- 過去に開いた Workspace を、開いた新しい順に並べる
-- 位置は Recent の下（Sidebar の最下部セクション）
-- 覚えるのは 10 件。表示件数も同じ 10 件で、Settings に項目を作らない
-- 今開いている Workspace も一覧に残し、選択行として見せる
+- 位置は Sidebar 最上部（Notes の上）。Notes / Archive の中身を決めるものなので、結果より上に置く
+- 常設するのは今開いている Workspace の 1 行だけ。Notes の選択行と同じハイライトを付ける
+- 未選択のときは `Workspace を選択` と出し、ハイライトしない
+- 見出しの右に `⌄`。押すと履歴のドロップダウンが開く。現在の行を押しても開く
+- ドロップダウンの各行は フォルダ名 + 相対時刻（`たった今` / `2時間前` / `昨日` / `1週間前`）。
+  並び順が「開いた新しい順」なので絶対時刻は出さない
 - 表示名はフォルダ名。Tooltip は常にフルパス。同名フォルダが並びうる
-- 見出しの右に `+`（フォルダを開く）。Notes の新規ノートと同じ位置・同じ見た目
-- 履歴が空でもセクションは出す。`+` が Workspace を開く導線になるため
+- 今開いている Workspace も一覧に残し、アイコンを accent で塗って現在地を示す
+- 一覧はスクロールする。その外側の固定行として `新しいワークスペースを開く…`（フォルダ選択）を置く
+- 履歴が空でも固定行は出る。ここが Workspace を開く導線になるため
+- 覚えるのは 10 件。表示件数も同じ 10 件で、Settings に項目を作らない
+- アイコンは Folder と分ける（重ねた面）。ツリー上の 1 フォルダではないため
 - Context menu は 開く / 新しいウィンドウで開く / パスをコピー / エクスプローラーで表示 / 履歴から削除
 - 行をクリックしたとき、フォルダが無ければその場で履歴から外してToastで知らせる
+- Keyboard: `↑` `↓` で候補移動（固定行も含む）、`Escape` と外側クリックで閉じる
 
 ### Settings
 
@@ -133,6 +149,7 @@ Settings
 表示するアイコン候補:
 
 - Expand
+- Workspace（切り替えドロップダウン。最上部、他と divider で分ける — ADR-016）
 - Notes
 - New note
 - Archive

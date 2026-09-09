@@ -18,9 +18,6 @@ export type ThemePreference = "system" | "light" | "dark";
 export type PreviewTypeface = "serif" | "sans";
 export type ViewMode = "write" | "split" | "read";
 
-/** Sidebar の Recent に出す件数の選択肢（ADR-013）。画面の高さに合わせて選ぶ。 */
-export const RECENT_VISIBLE_COUNTS = [3, 5, 8, 12, 20, 30] as const;
-
 export interface AppSettings {
   /* General */
   autosave: boolean;
@@ -52,10 +49,8 @@ export interface AppSettings {
   /* Recent（ADR-013） */
   /** Workspace 外で開いたファイルの履歴。新しい順。上限は RECENT_LIMIT。 */
   recentFiles: RecentFile[];
-  /** Sidebar の Recent セクションに出す件数。 */
-  recentVisibleCount: number;
 
-  /* Workspace 履歴（ADR-015） */
+  /* Workspace 履歴（ADR-016） */
   /** 過去に開いた Workspace。新しい順。上限は WORKSPACE_LIMIT。 */
   workspaces: WorkspaceEntry[];
 }
@@ -82,7 +77,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   searchIncludeArchived: true,
 
   recentFiles: [],
-  recentVisibleCount: 8,
 
   workspaces: [],
 };
@@ -130,7 +124,7 @@ export class SettingsService {
   }
 
   /* ---------------------------------------------------------------- *
-   * Workspace 履歴（ADR-015）
+   * Workspace 履歴（ADR-016）
    * ---------------------------------------------------------------- */
 
   /** 開いた Workspace を履歴の先頭へ積む。 */

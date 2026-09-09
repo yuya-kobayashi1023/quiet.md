@@ -1,6 +1,6 @@
 # ADR-015 — Workspace 履歴
 
-Status: **Accepted**（2026-09-09）
+Status: **Superseded**（2026-09-09、ADR-016 が置き換えた）
 
 Related: U-001, U-005, U-009, U-011, ADR-013, `ui/ui-spec.md` §2, `architecture/interfaces.md` §8 / §11
 

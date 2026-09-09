@@ -7,31 +7,42 @@
  * Settings 上の強い divider / `Saved` 文字列。
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentSummary, SaveState } from "@/domain/document/types";
-import type { RecentFile } from "@/domain/document/recents";
-import { isSameWorkspace, type WorkspaceEntry } from "@/domain/document/workspaces";
+import { RECENT_COLLAPSED_COUNT, type RecentFile } from "@/domain/document/recents";
+import {
+  isSameWorkspace,
+  relativeOpenedAt,
+  type WorkspaceEntry,
+} from "@/domain/document/workspaces";
 import { buildTree, type TreeRow } from "@/services/workspace-service";
 import {
   ArchiveIcon,
+  ChevronDownIcon,
   ChevronIcon,
   FileIcon,
   FolderIcon,
   PlusIcon,
   SettingsIcon,
   SidebarIcon,
+  WorkspaceIcon,
 } from "@/ui/components/icons";
 import { Tooltip, useTruncationTooltip } from "@/ui/components/Tooltip";
 import "./sidebar.css";
 
 interface SidebarProps {
   documents: DocumentSummary[];
-  /** Workspace 外で開いたファイル（ADR-013）。表示件数で絞ったもの。 */
+  /**
+   * Workspace 外で開いたファイル（ADR-013）。新しい順、履歴ぶんすべて。
+   * 何件見せるかは Sidebar 側の畳み状態で決める。
+   */
   recents: RecentFile[];
-  /** 過去に開いた Workspace（ADR-015）。新しい順。 */
+  /** 過去に開いた Workspace（ADR-016）。新しい順。 */
   workspaces: WorkspaceEntry[];
   /** 今開いている Workspace の root path。 */
   workspaceRoot: string | null;
+  /** 今開いている Workspace の表示名。未選択なら null。 */
+  workspaceName: string | null;
   archived: string[];
   expandedFolders: string[];
   activePath: string | null;
@@ -47,7 +58,7 @@ interface SidebarProps {
   onSelectRecent: (file: RecentFile) => void;
   onRecentContextMenu: (file: RecentFile, position: { x: number; y: number }) => void;
   onSelectWorkspace: (entry: WorkspaceEntry) => void;
-  /** フォルダを選んで Workspace として開く。セクション見出しの + から呼ぶ。 */
+  /** フォルダを選んで Workspace として開く。ドロップダウン最下部から呼ぶ。 */
   onOpenWorkspace: () => void;
   onWorkspaceContextMenu: (
     entry: WorkspaceEntry,
@@ -155,19 +166,19 @@ function RecentRow({
 }
 
 /**
- * Workspace 履歴の 1 行（ADR-015）。
+ * Workspace 履歴の 1 件（ADR-016）。
  *
- * 今開いている Workspace も一覧に残し、選択行として見せる。
  * 表示名はフォルダ名だけなので、同名フォルダが並びうる。Tooltip は常にフルパス。
+ * 右端に相対時刻を添える。並び順そのものが「新しい順」なので、絶対時刻は出さない。
  */
-function WorkspaceRow({
+function WorkspaceMenuItem({
   entry,
-  active,
+  current,
   onSelect,
   onContextMenu,
 }: {
   entry: WorkspaceEntry;
-  active: boolean;
+  current: boolean;
   onSelect: SidebarProps["onSelectWorkspace"];
   onContextMenu: SidebarProps["onWorkspaceContextMenu"];
 }) {
@@ -177,9 +188,9 @@ function WorkspaceRow({
     <>
       <button
         type="button"
-        className={`tree-row tree-row--file${active ? " is-active" : ""}`}
-        style={{ paddingLeft: "8px" }}
-        aria-current={active ? "true" : undefined}
+        role="menuitem"
+        className={`ws-item${current ? " is-current" : ""}`}
+        aria-current={current ? "true" : undefined}
         onClick={() => onSelect(entry)}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -187,13 +198,122 @@ function WorkspaceRow({
         }}
         {...handlers}
       >
-        <FolderIcon className="tree-icon" />
-        <span className="tree-label" ref={ref}>
+        <WorkspaceIcon className="tree-icon" />
+        <span className="ws-item-name" ref={ref}>
           {entry.name}
         </span>
+        <span className="ws-item-time">{relativeOpenedAt(entry.openedAt)}</span>
       </button>
       {tooltip}
     </>
+  );
+}
+
+/**
+ * Workspace の切り替えドロップダウン（ADR-016）。
+ *
+ * `.tree` は overflow を持つので、この Popover は `.tree` の外・Sidebar 直下に置く。
+ * 位置は開いた時点の anchor から決める。
+ */
+function WorkspacePicker({
+  workspaces,
+  workspaceRoot,
+  anchor,
+  collapsed,
+  onSelect,
+  onOpenWorkspace,
+  onContextMenu,
+  onClose,
+}: {
+  workspaces: WorkspaceEntry[];
+  workspaceRoot: string | null;
+  anchor: HTMLElement | null;
+  collapsed: boolean;
+  onSelect: SidebarProps["onSelectWorkspace"];
+  onOpenWorkspace: () => void;
+  onContextMenu: SidebarProps["onWorkspaceContextMenu"];
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  /*
+   * 位置は開いた時点で確定させる（最初の paint から正しい位置に出す）。
+   * 後から effect でずらすと、その 1 フレームぶん別の場所に見える。
+   */
+  const [top] = useState(() => {
+    const parent = anchor?.closest(".sidebar");
+    if (!anchor || !parent) return 0;
+    return anchor.getBoundingClientRect().bottom - parent.getBoundingClientRect().top + 4;
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onClose();
+    };
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    // click ではなく mousedown。開閉ボタン側の toggle と二重発火しないよう遅らせる。
+    const timer = setTimeout(() => window.addEventListener("mousedown", onDown), 0);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousedown", onDown);
+    };
+  }, [onClose]);
+
+  // 開いた直後は今の Workspace へ focus を置く。無ければ先頭。
+  useLayoutEffect(() => {
+    const first = ref.current?.querySelector<HTMLButtonElement>('[role="menuitem"]');
+    const current = ref.current?.querySelector<HTMLButtonElement>(".ws-item.is-current");
+    (current ?? first)?.focus();
+  }, []);
+
+  /** ↑↓ で候補を移動する。末尾の「新しいワークスペースを開く」も移動先に含める。 */
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = Array.from(
+      ref.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [],
+    );
+    if (items.length === 0) return;
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    const step = e.key === "ArrowDown" ? 1 : -1;
+    const next = (index + step + items.length) % items.length;
+    items[next]?.focus();
+  };
+
+  return (
+    <div
+      ref={ref}
+      className={`ws-pop${collapsed ? " ws-pop--rail" : ""}`}
+      role="menu"
+      aria-label="Workspace"
+      style={{ top }}
+      onKeyDown={onKeyDown}
+    >
+      <div className="ws-list">
+        {workspaces.map((entry) => (
+          <WorkspaceMenuItem
+            key={entry.path}
+            entry={entry}
+            current={isSameWorkspace(entry.path, workspaceRoot)}
+            onSelect={onSelect}
+            onContextMenu={onContextMenu}
+          />
+        ))}
+      </div>
+      {/* 一覧のスクロールに巻き込まれない位置に置く。履歴が空でもここは必ず出る。 */}
+      <div className="ws-foot">
+        <button type="button" role="menuitem" className="ws-item" onClick={onOpenWorkspace}>
+          <PlusIcon className="tree-icon" />
+          <span className="ws-item-name">新しいワークスペースを開く…</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -272,6 +392,7 @@ export function Sidebar(props: SidebarProps) {
     recents,
     workspaces,
     workspaceRoot,
+    workspaceName,
     archived,
     expandedFolders,
     activePath,
@@ -295,6 +416,38 @@ export function Sidebar(props: SidebarProps) {
   const archiveRows = buildTree(documents, archived, expandedFolders, "archive");
   const hasDirty = saveState !== "clean";
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+  /*
+   * Recent は畳んだ状態で始める。開いていると Notes より下が賑やかになり、
+   * 「たまに戻る」ためのものが常に視界へ入る（ui-spec.md §2）。
+   */
+  const [recentOpen, setRecentOpen] = useState(false);
+  const [recentExpanded, setRecentExpanded] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const closePicker = useCallback(() => setPickerOpen(false), []);
+
+  // Workspace が変わったら閉じる。Context menu の「開く」から切り替えたときもここで閉じる。
+  useEffect(() => setPickerOpen(false), [workspaceRoot]);
+
+  const picker = pickerOpen ? (
+    <WorkspacePicker
+      workspaces={workspaces}
+      workspaceRoot={workspaceRoot}
+      anchor={anchorRef.current}
+      collapsed={collapsed}
+      onSelect={(entry) => {
+        closePicker();
+        onSelectWorkspace(entry);
+      }}
+      onOpenWorkspace={() => {
+        closePicker();
+        onOpenWorkspace();
+      }}
+      onContextMenu={onWorkspaceContextMenu}
+      onClose={closePicker}
+    />
+  ) : null;
+
   if (collapsed) {
     return (
       <aside className="sidebar sidebar--collapsed" data-compact={compact}>
@@ -311,6 +464,20 @@ export function Sidebar(props: SidebarProps) {
           </button>
         </div>
         <nav className="rail" aria-label="サイドバー">
+          {/* Workspace の切り替えは畳んだままでもできる（ADR-016）。 */}
+          <button
+            type="button"
+            ref={anchorRef}
+            className="rail-btn"
+            aria-label="Workspace を切り替える"
+            title="Workspace を切り替える"
+            aria-haspopup="menu"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((open) => !open)}
+          >
+            <WorkspaceIcon />
+          </button>
+          <div className="rail-divider" aria-hidden="true" />
           <button type="button" className="rail-btn" aria-label="ノート" onClick={onToggleCollapsed}>
             <FileIcon />
             {hasDirty ? <span className="rail-dot" aria-hidden="true" /> : null}
@@ -322,6 +489,7 @@ export function Sidebar(props: SidebarProps) {
             <ArchiveIcon />
           </button>
         </nav>
+        {picker}
         <div className="sidebar-bottom">
           <button
             type="button"
@@ -352,6 +520,40 @@ export function Sidebar(props: SidebarProps) {
       </div>
 
       <nav className="tree" aria-label="ファイル">
+        {/*
+          今開いている Workspace（ADR-016）。
+          履歴を並べるのではなく 1 行だけ出し、切り替えは右の ⌄ から。
+        */}
+        <section className="tree-section">
+          <div className="section-head">
+            <h2 className="section-label">Workspace</h2>
+            <button
+              type="button"
+              className="section-action"
+              aria-label="Workspace を切り替える"
+              title="Workspace を切り替える"
+              aria-haspopup="menu"
+              aria-expanded={pickerOpen}
+              onClick={() => setPickerOpen((open) => !open)}
+            >
+              <ChevronDownIcon className={`ws-caret${pickerOpen ? " is-open" : ""}`} />
+            </button>
+          </div>
+          <button
+            type="button"
+            ref={anchorRef}
+            className={`tree-row tree-row--file${workspaceName ? " is-active" : ""}`}
+            style={{ paddingLeft: "8px" }}
+            title={workspaceRoot ?? undefined}
+            aria-haspopup="menu"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((open) => !open)}
+          >
+            <WorkspaceIcon className="tree-icon" />
+            <span className="tree-label">{workspaceName ?? "Workspace を選択"}</span>
+          </button>
+        </section>
+
         <Section
           label="Notes"
           rows={notes}
@@ -372,50 +574,56 @@ export function Sidebar(props: SidebarProps) {
           onContextMenu={onContextMenu}
         />
 
-        {/* Workspace 外で開いたファイル（ADR-013）。新しい順。 */}
-        {recents.length > 0 ? (
-          <section className="tree-section">
-            <div className="section-head">
-              <h2 className="section-label">Recent</h2>
-            </div>
-            {recents.map((file) => (
-              <RecentRow
-                key={file.path}
-                file={file}
-                active={file.path === activePath}
-                saveState={saveState}
-                onSelect={onSelectRecent}
-                onContextMenu={onRecentContextMenu}
-              />
-            ))}
-          </section>
-        ) : null}
-
-        {/* 過去に開いた Workspace（ADR-015）。新しい順。今開いているものも残す。 */}
-        <section className="tree-section">
-          <div className="section-head">
-            <h2 className="section-label">Workspace</h2>
-            <button
-              type="button"
-              className="section-action"
-              aria-label="フォルダを開く"
-              title="フォルダを開く"
-              onClick={onOpenWorkspace}
-            >
-              <PlusIcon />
-            </button>
-          </div>
-          {workspaces.map((entry) => (
-            <WorkspaceRow
-              key={entry.path}
-              entry={entry}
-              active={isSameWorkspace(entry.path, workspaceRoot)}
-              onSelect={onSelectWorkspace}
-              onContextMenu={onWorkspaceContextMenu}
-            />
-          ))}
-        </section>
       </nav>
+
+      {picker}
+
+      {/*
+        Workspace 外で開いたファイル（ADR-013）。新しい順。
+        Notes と一緒にスクロールさせず、Sidebar の下端へ固定する。
+      */}
+      {recents.length > 0 ? (
+        <section className="sidebar-recent" aria-label="Recent">
+          <button
+            type="button"
+            className="section-head section-head--toggle"
+            aria-expanded={recentOpen}
+            aria-controls="recent-list"
+            onClick={() => setRecentOpen((open) => !open)}
+          >
+            <span className="section-label">Recent</span>
+            <ChevronDownIcon className="recent-caret" />
+          </button>
+          {recentOpen ? (
+            <>
+              <div className="recent-list" id="recent-list">
+                {(recentExpanded ? recents : recents.slice(0, RECENT_COLLAPSED_COUNT)).map(
+                  (file) => (
+                    <RecentRow
+                      key={file.path}
+                      file={file}
+                      active={file.path === activePath}
+                      saveState={saveState}
+                      onSelect={onSelectRecent}
+                      onContextMenu={onRecentContextMenu}
+                    />
+                  ),
+                )}
+              </div>
+              {recents.length > RECENT_COLLAPSED_COUNT ? (
+                <button
+                  type="button"
+                  className="recent-more"
+                  aria-expanded={recentExpanded}
+                  onClick={() => setRecentExpanded((expanded) => !expanded)}
+                >
+                  {recentExpanded ? "Less" : `More (${recents.length - RECENT_COLLAPSED_COUNT})`}
+                </button>
+              ) : null}
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className="sidebar-bottom">
         <button type="button" className="utility-row" onClick={onOpenSettings}>
@@ -578,7 +786,7 @@ export function RecentContextMenu({
 }
 
 /**
- * Workspace 履歴の Context menu（ADR-015）。
+ * Workspace 履歴の Context menu（ADR-016）。
  *
  * 対象はフォルダなので、ファイル向けの操作（名前変更・複製・Archive）は出さない。
  */

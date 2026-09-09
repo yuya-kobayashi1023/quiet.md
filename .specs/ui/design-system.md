@@ -35,7 +35,7 @@ Sidebarの方が背景が暗いため、canvasだけで検証すると不足す�
 
 --accent: #f54e00;
 --accent-text: #c63f00;
---syntax-marker: #96623e;
+--syntax-marker: #c63f00; /* Markdown記号はaccentのオレンジ */
 --success: #34785c;
 --selection: #8bc4f8;
 --selection-text: #16150f;
@@ -57,7 +57,7 @@ Sidebarの方が背景が暗いため、canvasだけで検証すると不足す�
 --text-subtle: #77756c;
 
 --accent: #ff6a2a;
---syntax-marker: #d19368;
+--syntax-marker: #ff6a2a;
 --success: #67a987;
 --selection: #25578a;
 --selection-text: #ebe8df;

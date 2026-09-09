@@ -89,13 +89,36 @@ let metadata: WorkspaceMetadata = {
 /**
  * ブラウザ確認用の初期 App settings。
  *
- * Recent（ADR-013）は Workspace 外のファイルを開かないと出ないので、
+ * Recent（ADR-013）と Workspace 履歴（ADR-016）は、実際に開かないと出ない。
  * 目視確認できるよう最初から数件入れておく。テストは resetFallback で null へ戻す。
  */
 let appSettings: unknown = {
+  // 10 件 + `More` の見え方まで確認できるよう、畳んだ表示件数より多く入れておく。
   recentFiles: [
-    { path: "/downloads/meeting-notes.md", filename: "meeting-notes.md", openedAt: 2 },
-    { path: "/repo/README.md", filename: "README.md", openedAt: 1 },
+    "/downloads/meeting-notes.md",
+    "/repo/README.md",
+    "/downloads/spec.md",
+    "/repo/CHANGELOG.md",
+    "/desktop/idea.md",
+    "/downloads/agenda.md",
+    "/repo/docs/api.md",
+    "/desktop/todo.md",
+    "/downloads/report.md",
+    "/repo/docs/setup.md",
+    "/desktop/scratch.md",
+    "/downloads/old-notes.md",
+    "/repo/LICENSE.md",
+  ].map((path, index, all) => ({
+    path,
+    filename: path.slice(path.lastIndexOf("/") + 1),
+    openedAt: all.length - index,
+  })),
+  workspaces: [
+    { path: "/work-notes", name: "work-notes", openedAt: Date.now() - 2 * 3_600_000 },
+    { path: "/repo/docs", name: "docs", openedAt: Date.now() - 26 * 3_600_000 },
+    { path: "/personal", name: "personal", openedAt: Date.now() - 4 * 86_400_000 },
+    { path: "/research", name: "research", openedAt: Date.now() - 12 * 86_400_000 },
+    { path: "/blog/content", name: "content", openedAt: Date.now() - 40 * 86_400_000 },
   ],
 };
 
