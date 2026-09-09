@@ -567,7 +567,7 @@ export function Sidebar(props: SidebarProps) {
 
         {/* Workspace 外で開いたファイル（ADR-013）。新しい順。 */}
         {recents.length > 0 ? (
-          <section className="tree-section">
+          <section className="tree-section tree-section--divided">
             <div className="section-head">
               <h2 className="section-label">Recent</h2>
             </div>

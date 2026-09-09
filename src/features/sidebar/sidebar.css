@@ -27,6 +27,18 @@
   margin-top: 14px;
 }
 
+/*
+ * Recent の上だけ薄い線で切る。Notes / Archive は Workspace の中身だが、
+ * Recent はその外にあるファイルで出所が違う（ADR-013）。
+ * Settings 上に置かない「強い divider」（ui-spec.md §2 禁止事項）とは別物で、
+ * 行の左右インセットに合わせ、border 色も落として境目だけを示す。
+ */
+.tree-section + .tree-section--divided {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
 .section-head {
   display: flex;
   align-items: center;

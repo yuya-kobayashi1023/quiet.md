@@ -67,6 +67,9 @@ Settings
 [DECIDED: ADR-013]
 
 - Workspace の外で開いたファイルを、開いた新しい順に並べる
+- 見出しの上に薄い区切り線を置く。Notes / Archive は Workspace の中身、Recent はその外で、
+  出所が違うため。禁止事項の「Settings上の強いdivider」とは別物で、行と同じ左右インセット・
+  border 色を落とした 1px に留める
 - 現在の Workspace の中にあるファイルは出さない（Notes 側に出ている）
 - 履歴は 30 件保持する。表示件数は Settings で変える（既定 8 件）
 - ツリーにしない。フォルダが違うファイルが混ざるため、常にフラットな1階層
