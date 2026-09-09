@@ -417,6 +417,11 @@ export function Sidebar(props: SidebarProps) {
   const hasDirty = saveState !== "clean";
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  /*
+   * Recent は畳んだ状態で始める。開いていると Notes より下が賑やかになり、
+   * 「たまに戻る」ためのものが常に視界へ入る（ui-spec.md §2）。
+   */
+  const [recentOpen, setRecentOpen] = useState(false);
   const [recentExpanded, setRecentExpanded] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const closePicker = useCallback(() => setPickerOpen(false), []);
@@ -579,30 +584,43 @@ export function Sidebar(props: SidebarProps) {
       */}
       {recents.length > 0 ? (
         <section className="sidebar-recent" aria-label="Recent">
-          <div className="section-head">
-            <h2 className="section-label">Recent</h2>
-          </div>
-          <div className="recent-list">
-            {(recentExpanded ? recents : recents.slice(0, RECENT_COLLAPSED_COUNT)).map((file) => (
-              <RecentRow
-                key={file.path}
-                file={file}
-                active={file.path === activePath}
-                saveState={saveState}
-                onSelect={onSelectRecent}
-                onContextMenu={onRecentContextMenu}
-              />
-            ))}
-          </div>
-          {recents.length > RECENT_COLLAPSED_COUNT ? (
-            <button
-              type="button"
-              className="recent-more"
-              aria-expanded={recentExpanded}
-              onClick={() => setRecentExpanded((expanded) => !expanded)}
-            >
-              {recentExpanded ? "Less" : `More (${recents.length - RECENT_COLLAPSED_COUNT})`}
-            </button>
+          <button
+            type="button"
+            className="section-head section-head--toggle"
+            aria-expanded={recentOpen}
+            aria-controls="recent-list"
+            onClick={() => setRecentOpen((open) => !open)}
+          >
+            <span className="section-label">Recent</span>
+            <ChevronDownIcon className="recent-caret" />
+          </button>
+          {recentOpen ? (
+            <>
+              <div className="recent-list" id="recent-list">
+                {(recentExpanded ? recents : recents.slice(0, RECENT_COLLAPSED_COUNT)).map(
+                  (file) => (
+                    <RecentRow
+                      key={file.path}
+                      file={file}
+                      active={file.path === activePath}
+                      saveState={saveState}
+                      onSelect={onSelectRecent}
+                      onContextMenu={onRecentContextMenu}
+                    />
+                  ),
+                )}
+              </div>
+              {recents.length > RECENT_COLLAPSED_COUNT ? (
+                <button
+                  type="button"
+                  className="recent-more"
+                  aria-expanded={recentExpanded}
+                  onClick={() => setRecentExpanded((expanded) => !expanded)}
+                >
+                  {recentExpanded ? "Less" : `More (${recents.length - RECENT_COLLAPSED_COUNT})`}
+                </button>
+              ) : null}
+            </>
           ) : null}
         </section>
       ) : null}

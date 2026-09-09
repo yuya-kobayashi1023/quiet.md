@@ -43,6 +43,33 @@
   border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
 }
 
+/* 見出しごと disclosure にする。既定は畳んだ状態（ADR-013 Amendment）。 */
+.section-head--toggle {
+  width: 100%;
+  border-radius: var(--radius);
+  transition: background var(--duration-hover) var(--ease);
+}
+
+.section-head--toggle:hover {
+  background: var(--selected);
+}
+
+.section-head--toggle:hover .section-label {
+  color: var(--text-secondary);
+}
+
+.recent-caret {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: var(--text-subtle);
+  transition: transform var(--duration-flyout) var(--ease);
+}
+
+.section-head--toggle[aria-expanded="true"] .recent-caret {
+  transform: rotate(180deg);
+}
+
 /*
  * 高さは 10 行ぶんで頭打ちにする。`More` で残りを出したときはここがスクロールする。
  * 件数が増えても Sidebar のレイアウトが動かないようにするための上限。
