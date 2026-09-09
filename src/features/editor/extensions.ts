@@ -22,9 +22,6 @@ import { fenceInput } from "./fence-input";
  * 本文自体を多色にしない（ui-spec.md §8）。
  */
 export const quietHighlight = HighlightStyle.define([
-  { tag: tags.processingInstruction, color: "var(--syntax-marker)" },
-  { tag: tags.meta, color: "var(--syntax-marker)" },
-  { tag: tags.contentSeparator, color: "var(--syntax-marker)" },
   { tag: tags.url, color: "var(--text-muted)" },
   { tag: tags.link, color: "var(--accent-text)" },
   { tag: tags.heading, color: "var(--text-primary)", fontWeight: "500" },
@@ -32,6 +29,19 @@ export const quietHighlight = HighlightStyle.define([
   { tag: tags.strong, fontWeight: "600" },
   { tag: tags.strikethrough, textDecoration: "line-through" },
   { tag: tags.quote, color: "var(--text-prose)" },
+
+  /*
+   * 記号（#, >, -, backtick, []() など）は**必ずこの並びの最後に置く**。
+   *
+   * lezer-markdown は ATXHeading1/... のように子孫へも役を継がせるので、
+   * HeaderMark には heading と processingInstruction の両方の class が付く。
+   * HighlightStyle は配列順のまま CSS を吐き、詳細度は同じ（class 1 個）なので
+   * **後ろに書いた規則が勝つ**。記号を前に置くと heading / quote の色で塗り潰され、
+   * 見出しの # や引用の > が本文と同色になる（ui-spec.md §8 に反する）。
+   */
+  { tag: tags.processingInstruction, color: "var(--syntax-marker)" },
+  { tag: tags.meta, color: "var(--syntax-marker)" },
+  { tag: tags.contentSeparator, color: "var(--syntax-marker)" },
 
   /*
    * Fenced code block の中だけで効く役（ADR-009）。

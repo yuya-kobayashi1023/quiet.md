@@ -21,7 +21,8 @@
 
   --accent: #f54e00;
   --accent-text: #c63f00;
-  --syntax-marker: #96623e;
+  /* Markdown 記号はアクセントのオレンジで出す。canvas 4.76 / sidebar 4.52。 */
+  --syntax-marker: #c63f00;
 
   /*
    * Code token roles（ADR-009）。
@@ -100,7 +101,7 @@
 
   --accent: #ff6a2a;
   --accent-text: #ff6a2a;
-  --syntax-marker: #d19368;
+  --syntax-marker: #ff6a2a;
 
   --code-keyword: #d38ab8;
   --code-string: #8fbf8a;
