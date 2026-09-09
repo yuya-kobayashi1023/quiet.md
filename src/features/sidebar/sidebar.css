@@ -27,16 +27,51 @@
   margin-top: 14px;
 }
 
-/*
- * Recent の上だけ薄い線で切る。Notes / Archive は Workspace の中身だが、
- * Recent はその外にあるファイルで出所が違う（ADR-013）。
- * Settings 上に置かない「強い divider」（ui-spec.md §2 禁止事項）とは別物で、
- * 行の左右インセットに合わせ、border 色も落として境目だけを示す。
- */
-.tree-section + .tree-section--divided {
-  margin-top: 16px;
-  padding-top: 14px;
+/* ------------------------------------------------------------------ *
+ * Recent（ADR-013）
+ *
+ * Notes と一緒にスクロールさせず、Sidebar の下端へ固定する。
+ * 上の薄い線は、Notes / Archive が Workspace の中身なのに対し Recent は
+ * その外という出所の違いを示すもの。Settings 上に置かない「強い divider」
+ * （ui-spec.md §2 禁止事項）とは別物で、border 色を落とした 1px に留める。
+ * ------------------------------------------------------------------ */
+
+.sidebar-recent {
+  flex: none;
+  margin: 0 8px;
+  padding-top: 10px;
   border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+/*
+ * 高さは 10 行ぶんで頭打ちにする。`More` で残りを出したときはここがスクロールする。
+ * 件数が増えても Sidebar のレイアウトが動かないようにするための上限。
+ */
+.recent-list {
+  max-height: calc(26px * 10);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sidebar[data-compact="true"] .recent-list {
+  max-height: calc(22px * 10);
+}
+
+/* ラベル列へ字下げする（行の左 8px + アイコン 14px + gap 7px）。 */
+.recent-more {
+  width: 100%;
+  height: 24px;
+  padding-left: 29px;
+  border-radius: var(--radius);
+  color: var(--text-subtle);
+  font-size: var(--size-file);
+  text-align: left;
+  transition: background var(--duration-hover) var(--ease), color var(--duration-hover) var(--ease);
+}
+
+.recent-more:hover {
+  background: var(--selected);
+  color: var(--text-secondary);
 }
 
 .section-head {
@@ -286,7 +321,8 @@
 /* Settings 行。上に強い divider を置かない（ui-spec.md §2 禁止事項）。 */
 .sidebar-bottom {
   flex: none;
-  padding: 6px 8px 10px;
+  /* 上の余白は Recent と詰まって見えない程度に取る。線は引かない。 */
+  padding: 12px 8px 10px;
 }
 
 .sidebar--collapsed .sidebar-bottom {

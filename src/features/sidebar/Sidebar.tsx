@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentSummary, SaveState } from "@/domain/document/types";
-import type { RecentFile } from "@/domain/document/recents";
+import { RECENT_COLLAPSED_COUNT, type RecentFile } from "@/domain/document/recents";
 import {
   isSameWorkspace,
   relativeOpenedAt,
@@ -32,7 +32,10 @@ import "./sidebar.css";
 
 interface SidebarProps {
   documents: DocumentSummary[];
-  /** Workspace 外で開いたファイル（ADR-013）。表示件数で絞ったもの。 */
+  /**
+   * Workspace 外で開いたファイル（ADR-013）。新しい順、履歴ぶんすべて。
+   * 何件見せるかは Sidebar 側の畳み状態で決める。
+   */
   recents: RecentFile[];
   /** 過去に開いた Workspace（ADR-016）。新しい順。 */
   workspaces: WorkspaceEntry[];
@@ -414,6 +417,7 @@ export function Sidebar(props: SidebarProps) {
   const hasDirty = saveState !== "clean";
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [recentExpanded, setRecentExpanded] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const closePicker = useCallback(() => setPickerOpen(false), []);
 
@@ -565,13 +569,21 @@ export function Sidebar(props: SidebarProps) {
           onContextMenu={onContextMenu}
         />
 
-        {/* Workspace 外で開いたファイル（ADR-013）。新しい順。 */}
-        {recents.length > 0 ? (
-          <section className="tree-section tree-section--divided">
-            <div className="section-head">
-              <h2 className="section-label">Recent</h2>
-            </div>
-            {recents.map((file) => (
+      </nav>
+
+      {picker}
+
+      {/*
+        Workspace 外で開いたファイル（ADR-013）。新しい順。
+        Notes と一緒にスクロールさせず、Sidebar の下端へ固定する。
+      */}
+      {recents.length > 0 ? (
+        <section className="sidebar-recent" aria-label="Recent">
+          <div className="section-head">
+            <h2 className="section-label">Recent</h2>
+          </div>
+          <div className="recent-list">
+            {(recentExpanded ? recents : recents.slice(0, RECENT_COLLAPSED_COUNT)).map((file) => (
               <RecentRow
                 key={file.path}
                 file={file}
@@ -581,12 +593,19 @@ export function Sidebar(props: SidebarProps) {
                 onContextMenu={onRecentContextMenu}
               />
             ))}
-          </section>
-        ) : null}
-
-      </nav>
-
-      {picker}
+          </div>
+          {recents.length > RECENT_COLLAPSED_COUNT ? (
+            <button
+              type="button"
+              className="recent-more"
+              aria-expanded={recentExpanded}
+              onClick={() => setRecentExpanded((expanded) => !expanded)}
+            >
+              {recentExpanded ? "Less" : `More (${recents.length - RECENT_COLLAPSED_COUNT})`}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className="sidebar-bottom">
         <button type="button" className="utility-row" onClick={onOpenSettings}>

@@ -10,11 +10,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as native from "@/services/native-bridge";
-import {
-  RECENT_VISIBLE_COUNTS,
-  settingsService,
-  type AppSettings,
-} from "@/services/settings-service";
+import { settingsService, type AppSettings } from "@/services/settings-service";
 import "./settings.css";
 
 type Page = "general" | "editor" | "appearance";
@@ -207,23 +203,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   label="起動時に前回のノートを開く"
                   onChange={(v) => update({ openLastNoteOnLaunch: v })}
                 />
-              </Row>
-              <Row
-                label="Recent の表示件数"
-                hint="Workspace の外で開いたファイルを、サイドバーへ何件出すか。"
-              >
-                <select
-                  className="setting-select"
-                  aria-label="Recent の表示件数"
-                  value={settings.recentVisibleCount}
-                  onChange={(e) => update({ recentVisibleCount: Number(e.target.value) })}
-                >
-                  {RECENT_VISIBLE_COUNTS.map((count) => (
-                    <option key={count} value={count}>
-                      {count} 件
-                    </option>
-                  ))}
-                </select>
               </Row>
               {contextMenu?.supported ? (
                 <>

@@ -6,8 +6,16 @@
  * Workspace を開いていない状態でも記録できる必要があるため、これは実装上の制約でもある。
  */
 
-/** 履歴として持つ上限。表示件数は設定（recentVisibleCount）で別に決める。 */
+/** 履歴として持つ上限。 */
 export const RECENT_LIMIT = 30;
+
+/**
+ * 畳んでいるときに Sidebar へ出す件数。
+ *
+ * これを超えるぶんは `More` を押したときだけ見せる（ui-spec.md §2）。
+ * 設定にはしない。Sidebar の高さは Recent より Notes に使いたい。
+ */
+export const RECENT_COLLAPSED_COUNT = 10;
 
 export interface RecentFile {
   /** Native が返す canonical path。 */

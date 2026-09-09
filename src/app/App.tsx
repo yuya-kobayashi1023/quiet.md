@@ -34,6 +34,7 @@ import { filenameWithExtension, type DocumentSummary } from "@/domain/document/t
 import {
   filenameOf,
   isInsideWorkspace,
+  RECENT_LIMIT,
   visibleRecents,
   type RecentFile,
 } from "@/domain/document/recents";
@@ -314,14 +315,11 @@ export function App() {
   }, [slice.body, settings.countMode]);
 
   // Workspace の中にあるものは Notes 側に出ているので、Recent には出さない（ADR-013）。
+  // 何件見せるかは Sidebar 側の畳み状態が決めるので、ここでは履歴ぶんすべて渡す。
   const recentRows = useMemo(
     () =>
-      visibleRecents(
-        settings.recentFiles,
-        workspace.snapshot?.rootPath ?? null,
-        settings.recentVisibleCount,
-      ),
-    [settings.recentFiles, settings.recentVisibleCount, workspace.snapshot],
+      visibleRecents(settings.recentFiles, workspace.snapshot?.rootPath ?? null, RECENT_LIMIT),
+    [settings.recentFiles, workspace.snapshot],
   );
 
   const baseDir = useMemo(() => {

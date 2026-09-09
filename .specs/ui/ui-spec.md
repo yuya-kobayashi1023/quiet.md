@@ -54,10 +54,11 @@ long-document-name-that-...
 
 ARCHIVE
 old.md
-
+                              ← ここまでがスクロール領域
+─────────────────────────
 RECENT
 outside-the-workspace.md
-
+More (3)
 
 Settings
 ```
@@ -67,11 +68,16 @@ Settings
 [DECIDED: ADR-013]
 
 - Workspace の外で開いたファイルを、開いた新しい順に並べる
+- 位置は Sidebar の下端に固定する。Notes / Archive と一緒にスクロールさせない。
+  Notes が増減しても Recent の位置が動かないようにするため
 - 見出しの上に薄い区切り線を置く。Notes / Archive は Workspace の中身、Recent はその外で、
   出所が違うため。禁止事項の「Settings上の強いdivider」とは別物で、行と同じ左右インセット・
   border 色を落とした 1px に留める
+- Settings との間には余白を取る。線は引かない
 - 現在の Workspace の中にあるファイルは出さない（Notes 側に出ている）
-- 履歴は 30 件保持する。表示件数は Settings で変える（既定 8 件）
+- 履歴は 30 件保持する。畳んだ状態で出すのは 10 件。残りは `More` を押したときだけ出す。
+  表示件数は Settings に項目を作らない（Sidebar の高さは Recent より Notes に使う）
+- リストの高さは 10 行ぶんが上限。`More` で開いたぶんはこの中でスクロールする
 - ツリーにしない。フォルダが違うファイルが混ざるため、常にフラットな1階層
 - Tooltip は常にフルパス。同名のファイルが並びうる
 - 1件もなければセクションごと出さない
