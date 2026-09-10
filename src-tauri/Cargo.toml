@@ -1,6 +1,6 @@
 [package]
 name = "quiet-md"
-version = "0.1.0"
+version = "0.1.1"
 description = "Quiet Markdown Editor"
 authors = ["Yuya Kobayashi"]
 license = "MIT"
