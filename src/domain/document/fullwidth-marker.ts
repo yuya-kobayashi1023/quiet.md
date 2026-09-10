@@ -22,16 +22,31 @@ import { handleBacktick } from "./code-fence";
 import type { EditChange } from "./list-editing";
 
 /** 行頭に置ける全角記号。行頭の空白のあとに、記号だけがある形。 */
-const LINE_MARKER = /^([ \t]*)(＃{1,6}|＞{1,6}|[－ー＊＋]|[０-９]{1,9}[．。])$/;
+const LINE_MARKER = /^([ \t]*)(＃{1,6}|＞{1,6}|[－ー＊＋]|[0-9０-９]{1,9}[．。])$/;
+
+/**
+ * 記号のうしろの空白まで**既に入り終わっている**形。
+ *
+ * IME が変換確定として空白を入れた場合、入力ハンドラでは拾えないので、
+ * 確定後の本文をこちらで見直す（`handleCommittedMarker`）。
+ */
+const COMMITTED_LINE_MARKER =
+  /^([ \t]*)(＃{1,6}|＞{1,6}|[－ー＊＋]|[0-9０-９]{1,9}[．。])[ 　]$/;
 
 /** 半角空白と全角空白のどちらでも「確定した」と見なす。 */
 const SPACE = /^[ 　]$/;
 
-/** 全角数字を半角へ。`１。` → `1.` に使う。 */
+/**
+ * 数字を半角へ。`１。` → `1.` に使う。
+ *
+ * 半角数字も受ける。実機の MS-IME は数字を半角のまま出す一方で `.` は `。` にするので、
+ * `1。` という混ざった形が普通に出てくる。
+ */
 function asciiDigits(digits: string): string {
   let out = "";
   for (const char of digits) {
-    out += String.fromCharCode(char.charCodeAt(0) - 0xff10 + 0x30);
+    const code = char.charCodeAt(0);
+    out += code >= 0xff10 ? String.fromCharCode(code - 0xff10 + 0x30) : char;
   }
   return out;
 }
@@ -44,7 +59,7 @@ function halfWidthMarker(marker: string): string | null {
   if (marker === "＊") return "*";
   if (marker === "＋") return "+";
 
-  const ordered = /^([０-９]{1,9})[．。]$/.exec(marker);
+  const ordered = /^([0-9０-９]{1,9})[．。]$/.exec(marker);
   if (ordered) return `${asciiDigits(ordered[1] ?? "")}.`;
 
   return null;
@@ -77,6 +92,30 @@ export function handleFullWidthInput(
   if (input === "｀") return convertBacktick(text, from, to);
   if (input === "｜") return convertPipe(text, from, to);
   return null;
+}
+
+/**
+ * IME が確定した直後の本文を見直し、行頭の全角記号 + 空白を半角へ直す。
+ *
+ * **入力ハンドラだけでは足りないので、これが要る。**
+ * MS-IME はひらがなモードで空白キーを押したとき、全角空白を composition として入れる。
+ * その最中の変更は `view.composing` が立つため入力ハンドラは介入できず、
+ * 確定時には新しい変更が起きないので、もう一度ハンドラが呼ばれることもない。
+ * 実機（Windows 11 / WebView2）で、`ー` + 空白キーが直らないことを確認済み。
+ *
+ * @param text 確定後の全文
+ * @param pos  カーソル位置
+ */
+export function handleCommittedMarker(text: string, pos: number): EditChange | null {
+  const lineStart = lineStartOf(text, pos);
+  const matched = COMMITTED_LINE_MARKER.exec(text.slice(lineStart, pos));
+  if (!matched) return null;
+
+  const half = halfWidthMarker(matched[2] ?? "");
+  if (half === null) return null;
+
+  const insert = `${matched[1] ?? ""}${half} `;
+  return { from: lineStart, to: pos, insert, cursor: lineStart + insert.length };
 }
 
 /** 行頭の全角記号 + 空白 → 半角記号 + 半角空白。 */

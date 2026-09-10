@@ -13,7 +13,7 @@ import { EditorSelection, EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { undo } from "@codemirror/commands";
 import { coreExtensions } from "./extensions";
-import { handleFullWidth } from "./fullwidth-input";
+import { handleCompositionEnded, handleFullWidth } from "./fullwidth-input";
 
 /** カーソルの印。`|` は表のテストで使うため、ここでも `‸` にする。 */
 const CARET = "‸";
@@ -102,6 +102,20 @@ describe("CodeMirror 上の全角記号の置き換え", () => {
     const editor = editorWith("あ‸");
     expect(type(editor, " ")).toBe(false);
     expect(editor.state.doc.toString()).toBe("あ");
+  });
+
+  it("IME が全角空白まで入れて確定した場合は、確定後に直す", () => {
+    // MS-IME はひらがなモードの空白キーで全角空白を composition として入れるため、
+    // inputHandler では拾えない。実機で確認した経路。
+    const editor = editorWith("ー　‸");
+    expect(handleCompositionEnded(editor)).toBe(true);
+    expect(snapshot(editor)).toBe("- ‸");
+  });
+
+  it("普通の日本語を確定しただけでは何もしない", () => {
+    const editor = editorWith("日本語‸");
+    expect(handleCompositionEnded(editor)).toBe(false);
+    expect(editor.state.doc.toString()).toBe("日本語");
   });
 
   it("IME 変換中は横取りしない", () => {

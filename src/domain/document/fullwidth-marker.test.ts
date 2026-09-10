@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleFullWidthInput } from "./fullwidth-marker";
+import { handleCommittedMarker, handleFullWidthInput } from "./fullwidth-marker";
 
 /**
  * カーソルの印は `‸`。
@@ -64,6 +64,12 @@ describe("行頭の全角記号", () => {
     expect(type("１２。‸", " ")).toBe("12. ‸");
   });
 
+  it("半角数字 + 全角句点でも直す", () => {
+    // 実機の MS-IME は数字を半角のまま出すのに `.` は `。` にするので、この形が普通に出る。
+    expect(type("1。‸", " ")).toBe("1. ‸");
+    expect(type("12。‸", " ")).toBe("12. ‸");
+  });
+
   it("字下げを保つ", () => {
     expect(type("- 手順\n  ー‸", " ")).toBe("- 手順\n  - ‸");
   });
@@ -120,6 +126,56 @@ describe("｀（コード）", () => {
   it("行に文字が先にあるときは閉じを置かない", () => {
     // インラインコードを 3 つ書いただけ。fence ではない。
     expect(type("これは｀｀‸", "｀")).toBe("これは```‸");
+  });
+});
+
+describe("変換確定のあとの見直し", () => {
+  /** `‸` の位置にカーソルがある本文を、確定後として見直す。 */
+  function review(source: string): string | null {
+    const pos = source.indexOf(CARET);
+    if (pos === -1) throw new Error(`テストの入力に ${CARET} が必要です`);
+    const text = source.slice(0, pos) + source.slice(pos + CARET.length);
+
+    const change = handleCommittedMarker(text, pos);
+    if (!change) return null;
+
+    const applied = text.slice(0, change.from) + change.insert + text.slice(change.to);
+    return applied.slice(0, change.cursor) + CARET + applied.slice(change.cursor);
+  }
+
+  it("全角空白まで入り終わっていても直す", () => {
+    // MS-IME はひらがなモードの空白キーで全角空白を composition として入れるため、
+    // 入力ハンドラでは拾えない。実機で確認した経路。
+    expect(review(`ー${IDEOGRAPHIC_SPACE}‸`)).toBe("- ‸");
+    expect(review(`＃${IDEOGRAPHIC_SPACE}‸`)).toBe("# ‸");
+    expect(review(`＞＞${IDEOGRAPHIC_SPACE}‸`)).toBe(">> ‸");
+    expect(review(`１。${IDEOGRAPHIC_SPACE}‸`)).toBe("1. ‸");
+  });
+
+  it("半角空白で確定していても直す", () => {
+    expect(review("ー ‸")).toBe("- ‸");
+  });
+
+  it("字下げを保つ", () => {
+    expect(review(`- 手順\n  ー${IDEOGRAPHIC_SPACE}‸`)).toBe("- 手順\n  - ‸");
+  });
+
+  it("普通の日本語を確定しただけでは直さない", () => {
+    expect(review("日本語‸")).toBeNull();
+    expect(review(`日本語${IDEOGRAPHIC_SPACE}‸`)).toBeNull();
+  });
+
+  it("既に半角の記号には触らない", () => {
+    expect(review("- ‸")).toBeNull();
+    expect(review("# ‸")).toBeNull();
+  });
+
+  it("空白がまだ無ければ直さない（入力ハンドラの担当）", () => {
+    expect(review("ー‸")).toBeNull();
+  });
+
+  it("行の途中では直さない", () => {
+    expect(review(`本文 ー${IDEOGRAPHIC_SPACE}‸`)).toBeNull();
   });
 });
 
