@@ -20,6 +20,13 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 
 `npm run check` は TypeScript strict + vitest のみ。**入れるなら早い方が良い**（あとからだと既存コード全体に警告が出る）。
 
+### ADR-017 CJK の改行を詰める設定を作っていない — Medium
+
+段落内の改行が CJK 同士に挟まれているとき、Preview では空白を残さずに詰める（ADR-017）。
+ファイルは変えないが、**同じ文書を GitHub 等で開くと従来どおり空白が入る**ため、
+表示が Quiet だけ違う。off にする設定を持つかどうかは決めていない。
+他ツールへ貼る場面が出たら判断してほしい。
+
 ### AUTO-018 UI 文言を日本語にした — **High**
 
 「新規ノート」「設定」など本文は日本語。ただし画面の骨格に当たる短い語（`Notes` / `Archive` / `Write` / `Split` / `Read` /
@@ -67,6 +74,9 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-036 | ブラウザのフォールバックに Workspace 外のサンプルと初期 Recent を入れた | Low |
 | AUTO-037 | ``` を打つと閉じの ``` を補完する（介入条件は履歴側に記載） | Medium |
 | AUTO-038 | リリースは手動起動の GitHub Actions で行い、バージョンは 5 ファイル一括で上げる | Medium |
+| AUTO-039 | React の入力欄でも IME 変換中は Enter / Escape を横取りしない（AUTO-024 の適用先を広げた） | Medium |
+| AUTO-040 | 全角で打たれた Markdown 記号を、入力時に文脈を限って半角へ直す | Medium |
+| AUTO-041 | `--font-mono` の末尾に日本語等幅フォントを足した | Low |
 
 ## 未実装リスト
 
@@ -85,7 +95,14 @@ MVP に含まれるが、まだ手を付けていないもの。
 
 最新の実行結果だけを置く。過去の回は git 履歴を見る。
 
-- 2026-09-09: `npm run check` 161 passed（11 files）
-- 2026-09-09: `cargo test` 32 passed
+- 2026-09-10: `npm run check` 206 passed（15 files）
+- 2026-09-09: `cargo test` 32 passed（以降 Rust 側は未変更）
 - **未検証**: デスクトップでの起動（`npm run tauri:dev` 未実行）、関連付けからのダブルクリック起動、
-  二重起動時の argv 受け渡し、macOS の `RunEvent::Opened`、IME での日本語入力
+  二重起動時の argv 受け渡し、macOS の `RunEvent::Opened`
+- 2026-09-10: `npm run dev`（ブラウザ）で確認 — 全角記号の置き換え（`＃`＋空白 / `ー`＋全角空白 /
+  `｀｀｀` / `｜`）、CJK の改行が詰まること、Command Palette の Enter が従来どおり動くこと。
+  `BIZ UDGothic` / `MS Gothic` の実在も確認（ただし ASCII と CJK の字幅比は 1:1.82。
+  1:2 にはならない — design-system.md §3 に記載）
+- **未検証（IME 実機が要る）**: 日本語入力での文字欠落（AC-C）、
+  変換確定の Enter が実行にならないこと（AUTO-039）、
+  IME が確定した全角記号が `inputHandler` へ届くこと（AUTO-040）
