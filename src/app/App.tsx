@@ -24,6 +24,7 @@ import { CommandPalette, type Command } from "@/features/command-palette/Command
 import { FindBar } from "@/features/search/FindBar";
 import { SearchAllPanel, type SearchHit } from "@/features/search/SearchAllPanel";
 import { ProblemBanner, Toast, type ToastState } from "@/ui/components/Banner";
+import { whenNotComposing } from "@/ui/ime";
 import {
   addFrontmatter,
   detectFrontmatter,
@@ -868,7 +869,13 @@ export function App() {
                       onChange={(e) => setTitleDraft(e.target.value.replace(/\n/g, ""))}
                       onFocus={() => setTitleDraft((v) => v ?? session.title)}
                       onBlur={() => void commitTitle()}
-                      onKeyDown={(e) => {
+                      /*
+                       * IME 変換中の Enter / Escape は横取りしない（ui/ime.ts）。
+                       * ここはファイル名そのものなので、変換確定の Enter で blur すると
+                       * 変換途中の文字列で Rename が走る。Escape も同様に、
+                       * 変換の取り消しのつもりが編集全体の破棄になる。
+                       */
+                      onKeyDown={whenNotComposing((e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
                           setBodyFocusToken((n) => n + 1);
@@ -879,7 +886,7 @@ export function App() {
                           setTitleError(null);
                           e.currentTarget.blur();
                         }
-                      }}
+                      })}
                       ref={(el) => {
                         if (!el) return;
                         el.style.height = "auto";

@@ -16,6 +16,7 @@ import type { SearchFileResult, SearchMatch, SearchResults } from "@/domain/docu
 import * as native from "@/services/native-bridge";
 import { NativeError } from "@/domain/document/errors";
 import { ArchiveIcon, FileIcon } from "@/ui/components/icons";
+import { whenNotComposing } from "@/ui/ime";
 import "./search-all.css";
 
 /** 1 文字での検索は Workspace 全体を舐めるだけで役に立たない。 */
@@ -227,7 +228,8 @@ export function SearchAllPanel({
             aria-label="ワークスペース内の本文を検索"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
+            // IME 変換中の Enter / Escape は横取りしない（ui/ime.ts）。
+            onKeyDown={whenNotComposing((e) => {
               if (e.key === "Escape") {
                 e.preventDefault();
                 onClose();
@@ -242,7 +244,7 @@ export function SearchAllPanel({
                 const row = flat.find((r) => r.key === activeKey);
                 if (row) open(row.path, row.match);
               }
-            }}
+            })}
           />
 
           <button
