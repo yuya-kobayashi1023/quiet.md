@@ -167,7 +167,19 @@ SFMono-Regular
 Menlo
 Monaco
 Consolas
+Liberation Mono
+BIZ UDGothic     ← 日本語（Windows 同梱の等幅）
+MS Gothic
+Osaka-Mono
 ```
+
+日本語の顔を**必ず末尾に持つ**。font-familyは1文字ずつ前から解決するため、
+CJKを持たないConsolas等では日本語だけがWebViewの既定フォントへ落ち、
+ASCIIと字幅が揃わなくなる（表の桁が崩れる）。
+
+ただしASCIIとCJKの字幅比は1:2にはならない。実測（Chromium / 14px）でCJKは1em、
+ASCIIは約0.55emなので1:1.82。日本語が等幅になるところまでを目的とし、
+Latinの見た目を犠牲にしてまで比を揃えることはしない。
 
 用途:
 
