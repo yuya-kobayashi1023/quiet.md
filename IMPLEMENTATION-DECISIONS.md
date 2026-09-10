@@ -75,7 +75,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-037 | ``` を打つと閉じの ``` を補完する（介入条件は履歴側に記載） | Medium |
 | AUTO-038 | リリースは手動起動の GitHub Actions で行い、バージョンは 5 ファイル一括で上げる | Medium |
 | AUTO-039 | React の入力欄でも IME 変換中は Enter / Escape を横取りしない（AUTO-024 の適用先を広げた） | Medium |
-| AUTO-040 | 全角で打たれた Markdown 記号を、入力時に文脈を限って半角へ直す | Medium |
+| AUTO-040 | 全角で打たれた Markdown 記号を、入力時と変換確定後の 2 経路で半角へ直す | Medium |
 | AUTO-041 | `--font-mono` の末尾に日本語等幅フォントを足した | Low |
 
 ## 未実装リスト
@@ -103,6 +103,21 @@ MVP に含まれるが、まだ手を付けていないもの。
   `｀｀｀` / `｜`）、CJK の改行が詰まること、Command Palette の Enter が従来どおり動くこと。
   `BIZ UDGothic` / `MS Gothic` の実在も確認（ただし ASCII と CJK の字幅比は 1:1.82。
   1:2 にはならない — design-system.md §3 に記載）
-- **未検証（IME 実機が要る）**: 日本語入力での文字欠落（AC-C）、
-  変換確定の Enter が実行にならないこと（AUTO-039）、
-  IME が確定した全角記号が `inputHandler` へ届くこと（AUTO-040）
+- 2026-09-10: **IME 実機で確認**（Windows 11 / WebView2 / MS-IME、`npm run tauri:dev`）
+  - AUTO-039: Command Palette で変換確定の Enter が実行にならず、確定後の Enter は実行される。
+    タイトル欄でも変換確定の Enter で Rename が走らない
+  - AUTO-040: **入力ハンドラだけでは足りず、修正が要った。**
+    MS-IME はひらがなモードの空白キーで全角空白を composition として入れるため、
+    `view.composing` が立って `inputHandler` が介入できない。`compositionend` 後の見直しを足し、
+    `ー` + 空白キー → `- ` になることを確認
+  - AUTO-041: `BIZ UDGothic` / `MS Gothic` の実在を確認
+- **未検証**: 日本語入力での文字欠落（AC-C）。
+  AUTO-039 の Escape 側（変換中の Escape で編集が破棄されないこと）は、
+  自動操作から Escape をアプリへ届けられず再現できなかった。手で確認したい
+
+### この端末で分かったこと（AUTO-040 の効き方）
+
+MS-IME はひらがなモードでも `#` `>` を**半角のまま**出す。全角になるのは
+`-` → `ー`、`.` → `。`、空白 → `　` など。つまり AUTO-040 が実際に効くのは
+箇条書き（`ー`）と番号付きリスト（`1。`）が中心で、見出しの `#` には効かない。
+IME の設定次第で全角になる環境もあるため両方を扱っているが、**効果は端末の IME 設定に依存する。**
