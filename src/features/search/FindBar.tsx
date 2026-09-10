@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EditorView } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from "@/ui/components/icons";
+import { whenNotComposing } from "@/ui/ime";
 import "./find.css";
 
 interface FindBarProps {
@@ -89,7 +90,8 @@ export function FindBar({ view, onClose }: FindBarProps) {
         aria-label="この文書内を検索"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
+        // IME 変換中の Enter / Escape は横取りしない（ui/ime.ts）。
+        onKeyDown={whenNotComposing((e) => {
           if (e.key === "Escape") {
             e.preventDefault();
             onClose();
@@ -97,7 +99,7 @@ export function FindBar({ view, onClose }: FindBarProps) {
             e.preventDefault();
             step(e.shiftKey ? -1 : 1);
           }
-        }}
+        })}
       />
 
       <span className="find-count" aria-live="polite">

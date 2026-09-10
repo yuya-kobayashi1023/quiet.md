@@ -172,6 +172,54 @@ describe("renderMarkdown — source lines（ADR-012）", () => {
   });
 });
 
+describe("renderMarkdown — CJK の改行（ADR-017）", () => {
+  it("CJK 同士の改行は空白を残さず詰める", () => {
+    const { html } = renderMarkdown("日本語の文で\n次の行です\n");
+    expect(html).toContain("<p>日本語の文で次の行です</p>");
+  });
+
+  it("句読点や鍵括弧をまたいでも詰める", () => {
+    const { html } = renderMarkdown("ここまでです。\n「次の行」から続く\n");
+    expect(html).toContain("<p>ここまでです。「次の行」から続く</p>");
+  });
+
+  it("英文の語間の改行は空白のまま残す", () => {
+    const { html } = renderMarkdown("first line\nsecond line\n");
+    expect(html).toContain("first line\nsecond line");
+  });
+
+  it("CJK と英単語の間は空白のまま残す", () => {
+    // ここで詰めると単語がくっつく。片側が CJK でないときは触らない。
+    const { html } = renderMarkdown("日本語\nEnglish\n");
+    expect(html).toContain("日本語\nEnglish");
+    const reverse = renderMarkdown("English\n日本語\n");
+    expect(reverse.html).toContain("English\n日本語");
+  });
+
+  it("inline 要素をまたぐ改行も詰める", () => {
+    // 行末が強調で切れていても、書き手から見た改行の意味は変わらない。
+    const { html } = renderMarkdown("日本語の文で\n**強調**が続く\n");
+    expect(html).toContain("<p>日本語の文で<strong>強調</strong>が続く</p>");
+  });
+
+  it("hard break（行末 2 スペース）は改行のまま残す", () => {
+    const { html } = renderMarkdown("日本語  \n次の行\n");
+    expect(html).toContain("<br>");
+    expect(html).not.toContain("<p>日本語次の行</p>");
+  });
+
+  it("段落の区切りは変えない", () => {
+    const { html } = renderMarkdown("一段落目\n\n二段落目\n");
+    expect(html).toContain("<p>一段落目</p>");
+    expect(html).toContain("<p>二段落目</p>");
+  });
+
+  it("コードブロックの中は詰めない", () => {
+    const { html } = renderMarkdown("```\n日本語\n次の行\n```\n");
+    expect(html).toContain("日本語\n次の行");
+  });
+});
+
 describe("extractHeadings", () => {
   it("レベルとオフセットを返す", () => {
     const body = "# A\n\ntext\n\n### C\n";

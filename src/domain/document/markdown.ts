@@ -54,6 +54,94 @@ export interface RenderResult {
 const EXTERNAL = /^(https?:)?\/\//i;
 const PROTOCOL = /^[a-z][a-z0-9+.-]*:/i;
 
+/**
+ * CJK と見なす範囲。
+ *
+ * 日本語の本文で改行を挟みうる文字はこの中に収まる。範囲は順に:
+ *
+ * - U+2E80–U+303F  CJK 部首補助・康熙部首・記号と句読点（「」。、 など）
+ * - U+3040–U+30FF  ひらがな・カタカナ
+ * - U+3400–U+4DBF  漢字 拡張 A
+ * - U+4E00–U+9FFF  漢字
+ * - U+F900–U+FAFF  互換漢字
+ * - U+FF00–U+FFEF  半角・全角形（＃ ｜ など）
+ */
+const CJK =
+  /[⺀-〿぀-ヿ㐀-䶿一-鿿豈-﫿＀-￯]/;
+
+/** 文字を拾うためだけの、mdast の構造の当たり。 */
+interface TextLike {
+  type: string;
+  value?: string;
+  children?: TextLike[];
+}
+
+/** その節点が描画する最後の 1 文字。持たなければ undefined。 */
+function lastCharOf(node: TextLike | undefined): string | undefined {
+  if (!node || node.type === "break") return undefined;
+  if (typeof node.value === "string") return node.value.slice(-1) || undefined;
+  const children = node.children;
+  if (!children) return undefined;
+  for (let i = children.length - 1; i >= 0; i--) {
+    const char = lastCharOf(children[i]);
+    if (char) return char;
+  }
+  return undefined;
+}
+
+/** その節点が描画する最初の 1 文字。持たなければ undefined。 */
+function firstCharOf(node: TextLike | undefined): string | undefined {
+  if (!node || node.type === "break") return undefined;
+  if (typeof node.value === "string") return node.value.slice(0, 1) || undefined;
+  const children = node.children;
+  if (!children) return undefined;
+  for (const child of children) {
+    const char = firstCharOf(child);
+    if (char) return char;
+  }
+  return undefined;
+}
+
+/**
+ * CJK 同士に挟まれた soft break を、空白を残さずに詰める（ADR-017）。
+ *
+ * Markdown では段落内の改行は空白 1 つとして描画される。英文ではそれが語の区切りとして
+ * 正しいが、日本語では語の間に不要な空きが入る。「1 文 1 行」で書くと表示が崩れるので、
+ * 日本語では 1 段落を 1 行の長文で書くしかなくなり、書き方の選択肢が 1 つ潰れていた。
+ *
+ * **これは Markdown 方言の追加ではなく、描画時の CJK 組版**として入れている。
+ * ファイルの中身は CommonMark のまま一切変えない（principles.md §5）。
+ * 両側が CJK のときだけ詰めるので、英文の語間の空白はそのまま残る。
+ *
+ * 行末が inline 要素で切れている場合（`日本語\n**強調**` など）も同じ扱いにするため、
+ * 節点をまたいで前後の 1 文字を見る。
+ */
+function compactCjkLineBreaks() {
+  return (tree: MdastRoot) => {
+    visit(tree, (node) => {
+      const children = (node as unknown as TextLike).children;
+      if (!children) return;
+
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (!child || child.type !== "text" || typeof child.value !== "string") continue;
+        if (!child.value.includes("\n")) continue;
+
+        // 節点の端に来た改行は、隣の節点の文字と突き合わせる。
+        const beforeNode = lastCharOf(children[i - 1]);
+        const afterNode = firstCharOf(children[i + 1]);
+
+        child.value = child.value.replace(/\n/g, (_match, offset: number, whole: string) => {
+          const left = offset > 0 ? whole[offset - 1] : beforeNode;
+          const right = offset + 1 < whole.length ? whole[offset + 1] : afterNode;
+          if (!left || !right) return "\n";
+          return CJK.test(left) && CJK.test(right) ? "" : "\n";
+        });
+      }
+    });
+  };
+}
+
 /** 見出しテキストから id を作る。重複時は連番を足す。 */
 function slugger() {
   const seen = new Map<string, number>();
@@ -219,6 +307,8 @@ export function renderMarkdown(body: string, options: RenderOptions = {}): Rende
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
+    // HTML へ変換する前に、mdast の段階で改行を詰める（ADR-017）。
+    .use(compactCjkLineBreaks)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(addHeadingIds)
     .use(decorateLinksAndImages, options);

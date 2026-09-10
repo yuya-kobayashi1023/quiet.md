@@ -20,6 +20,13 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 
 `npm run check` は TypeScript strict + vitest のみ。**入れるなら早い方が良い**（あとからだと既存コード全体に警告が出る）。
 
+### ADR-017 CJK の改行を詰める設定を作っていない — Medium
+
+段落内の改行が CJK 同士に挟まれているとき、Preview では空白を残さずに詰める（ADR-017）。
+ファイルは変えないが、**同じ文書を GitHub 等で開くと従来どおり空白が入る**ため、
+表示が Quiet だけ違う。off にする設定を持つかどうかは決めていない。
+他ツールへ貼る場面が出たら判断してほしい。
+
 ### AUTO-018 UI 文言を日本語にした — **High**
 
 「新規ノート」「設定」など本文は日本語。ただし画面の骨格に当たる短い語（`Notes` / `Archive` / `Write` / `Split` / `Read` /
@@ -67,6 +74,9 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-036 | ブラウザのフォールバックに Workspace 外のサンプルと初期 Recent を入れた | Low |
 | AUTO-037 | ``` を打つと閉じの ``` を補完する（介入条件は履歴側に記載） | Medium |
 | AUTO-038 | リリースは手動起動の GitHub Actions で行い、バージョンは 5 ファイル一括で上げる | Medium |
+| AUTO-039 | React の入力欄でも IME 変換中は Enter / Escape を横取りしない（AUTO-024 の適用先を広げた） | Medium |
+| AUTO-040 | 全角で打たれた Markdown 記号を、入力時と変換確定後の 2 経路で半角へ直す | Medium |
+| AUTO-041 | `--font-mono` の末尾に日本語等幅フォントを足した | Low |
 
 ## 未実装リスト
 
@@ -85,7 +95,39 @@ MVP に含まれるが、まだ手を付けていないもの。
 
 最新の実行結果だけを置く。過去の回は git 履歴を見る。
 
-- 2026-09-09: `npm run check` 161 passed（11 files）
-- 2026-09-09: `cargo test` 32 passed
+- 2026-09-10: `npm run check` 206 passed（15 files）
+- 2026-09-09: `cargo test` 32 passed（以降 Rust 側は未変更）
 - **未検証**: デスクトップでの起動（`npm run tauri:dev` 未実行）、関連付けからのダブルクリック起動、
-  二重起動時の argv 受け渡し、macOS の `RunEvent::Opened`、IME での日本語入力
+  二重起動時の argv 受け渡し、macOS の `RunEvent::Opened`
+- 2026-09-10: `npm run dev`（ブラウザ）で確認 — 全角記号の置き換え（`＃`＋空白 / `ー`＋全角空白 /
+  `｀｀｀` / `｜`）、CJK の改行が詰まること、Command Palette の Enter が従来どおり動くこと。
+  `BIZ UDGothic` / `MS Gothic` の実在も確認（ただし ASCII と CJK の字幅比は 1:1.82。
+  1:2 にはならない — design-system.md §3 に記載）
+- 2026-09-10: **IME 実機で確認**（Windows 11 / WebView2 / MS-IME、`npm run tauri:dev`）
+  - AUTO-039: Command Palette で変換確定の Enter が実行にならず、確定後の Enter は実行される。
+    タイトル欄でも変換確定の Enter で Rename が走らない
+  - AUTO-040: **入力ハンドラだけでは足りず、修正が要った。**
+    MS-IME はひらがなモードの空白キーで全角空白を composition として入れるため、
+    `view.composing` が立って `inputHandler` が介入できない。`compositionend` 後の見直しを足し、
+    `ー` + 空白キー → `- ` になることを確認
+  - AUTO-041: `BIZ UDGothic` / `MS Gothic` の実在を確認
+- 2026-09-10（2 回目）: AUTO-040 を「空白キーを待たない」形へ広げて再確認
+  - `-` キー → Enter（変換確定）だけで `- ` になる
+  - 半角 `-` + 全角空白 → `- ` になる（`#　` も同じ経路）
+  - `keydown` の `preventDefault()` では IME を止められないことを実測（`- ` と `ー` が両方入る）
+- **未検証**: 日本語入力での文字欠落（AC-C）。
+  AUTO-039 の Escape 側（変換中の Escape で編集が破棄されないこと）は、
+  自動操作から Escape をアプリへ届けられず再現できなかった。手で確認したい
+
+### この端末で分かったこと（AUTO-040 の効き方）
+
+MS-IME はひらがなモードでも `#` `>` を**半角のまま**出す。全角になるのは
+`-` → `ー`、`.` → `。`、空白 → `　` など。そのため直す形は 2 通りある。
+
+- 記号が全角（`ー` `＃` `１。`）→ 半角記号 + 半角空白へ
+- 記号は半角だが**うしろの空白だけ全角**（`#　` `-　`）→ 半角空白へ
+
+どちらも変換確定のあとに直す。**打った瞬間には直せない。**
+`keydown` を `preventDefault()` しても Windows の IME はキーを受け取るため、
+実機では `- ` と `ー` が両方入る（2026-09-10 に確認）。確定（Enter）を待つのが、
+IME を壊さずにできる最短。記号が半角で出る `#` は Enter すら要らず、空白キーだけで直る。

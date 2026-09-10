@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentSummary } from "@/domain/document/types";
+import { whenNotComposing } from "@/ui/ime";
 import "./palette.css";
 
 export interface Command {
@@ -110,7 +111,8 @@ export function CommandPalette({
           placeholder="ファイル名で検索、または > でコマンド"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
+          // IME 変換中の Enter / Escape は横取りしない（ui/ime.ts）。
+          onKeyDown={whenNotComposing((e) => {
             if (e.key === "Escape") {
               e.preventDefault();
               onClose();
@@ -124,7 +126,7 @@ export function CommandPalette({
               e.preventDefault();
               run(rows[index]);
             }
-          }}
+          })}
         />
 
         <div className="palette-list" ref={listRef} role="listbox">

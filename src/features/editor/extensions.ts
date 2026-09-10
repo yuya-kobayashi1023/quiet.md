@@ -16,6 +16,7 @@ import { tags } from "@lezer/highlight";
 import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
 import { listKeymap } from "./list-keymap";
 import { fenceInput } from "./fence-input";
+import { fullWidthInput } from "./fullwidth-input";
 
 /**
  * Markdown の「意味を持つ記号」だけを色付ける。
@@ -131,8 +132,15 @@ export const baseTheme = EditorView.theme({
 export function coreExtensions(): Extension[] {
   return [
     Prec.highest(listKeymap),
-    // ``` の閉じ補完。入力ハンドラなので keymap の順序とは干渉しない。
+    /*
+     * 入力ハンドラなので keymap の順序とは干渉しない。
+     * 2 つの間でも、反応する文字が半角の `` ` `` と全角の `｀` で分かれているため
+     * 並び順は結果を変えない。
+     */
+    // ``` の閉じ補完。
     fenceInput,
+    // 全角で打たれた Markdown 記号を半角へ直す。
+    fullWidthInput,
     history(),
     drawSelection(),
     highlightSpecialChars(),

@@ -69,8 +69,21 @@
   /* --- Typography（§3） --- */
   --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     "Yu Gothic UI", "Hiragino Sans", sans-serif;
+  /*
+   * 日本語の顔を必ず末尾に置く。
+   *
+   * font-family は 1 文字ずつ前から解決するので、CJK を持たない Consolas 等は
+   * 日本語の字形で飛ばされる。ここに CJK の顔が 1 つも無いと、日本語だけが
+   * WebView の既定フォント（多くはプロポーショナル）へ落ちて ASCII と字幅が揃わず、
+   * エディタの表の桁が崩れる。Windows 同梱の等幅（BIZ UDGothic / MS Gothic）を置く。
+   *
+   * これで日本語も等幅にはなるが、**ASCII と CJK の字幅比は 1:2 にはならない**。
+   * 実測（Chromium / 14px）で CJK は 1em、ASCII は約 0.55em なので比は 1:1.82。
+   * 揃えたいなら ASCII 側も MS Gothic にするしかなく、その代償は Latin の見た目。
+   * ここでは Latin の見た目を優先し、CJK は「等幅になる」ところまでとする。
+   */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", monospace;
+    "Liberation Mono", "BIZ UDGothic", "MS Gothic", "Osaka-Mono", monospace;
   --font-prose-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
     "Yu Mincho", serif;
   --font-prose-sans: var(--font-ui);
