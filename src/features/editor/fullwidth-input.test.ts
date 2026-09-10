@@ -104,6 +104,15 @@ describe("CodeMirror 上の全角記号の置き換え", () => {
     expect(editor.state.doc.toString()).toBe("あ");
   });
 
+  it("`-` を確定した時点で、空白を待たずに箇条書きになる", () => {
+    // ひらがなモードの `-` キーは `ー` の composition になる。
+    // 打った瞬間には直せない（preventDefault では IME を止められない）ので、
+    // 確定した直後がいちばん早い。
+    const editor = editorWith("ー‸");
+    expect(handleCompositionEnded(editor)).toBe(true);
+    expect(snapshot(editor)).toBe("- ‸");
+  });
+
   it("IME が全角空白まで入れて確定した場合は、確定後に直す", () => {
     // MS-IME はひらがなモードの空白キーで全角空白を composition として入れるため、
     // inputHandler では拾えない。実機で確認した経路。

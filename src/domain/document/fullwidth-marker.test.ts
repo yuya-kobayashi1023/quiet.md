@@ -165,13 +165,34 @@ describe("変換確定のあとの見直し", () => {
     expect(review(`日本語${IDEOGRAPHIC_SPACE}‸`)).toBeNull();
   });
 
-  it("既に半角の記号には触らない", () => {
-    expect(review("- ‸")).toBeNull();
-    expect(review("# ‸")).toBeNull();
+  it("記号が半角でも、うしろが全角空白なら直す", () => {
+    // 実機の MS-IME はひらがなモードでも `#` `>` を半角のまま出す。
+    // そのあと空白キーを押すと全角空白が入り、Markdown として効かなくなる。
+    expect(review(`#${IDEOGRAPHIC_SPACE}‸`)).toBe("# ‸");
+    expect(review(`###${IDEOGRAPHIC_SPACE}‸`)).toBe("### ‸");
+    expect(review(`>${IDEOGRAPHIC_SPACE}‸`)).toBe("> ‸");
+    expect(review(`-${IDEOGRAPHIC_SPACE}‸`)).toBe("- ‸");
+    expect(review(`1.${IDEOGRAPHIC_SPACE}‸`)).toBe("1. ‸");
   });
 
-  it("空白がまだ無ければ直さない（入力ハンドラの担当）", () => {
-    expect(review("ー‸")).toBeNull();
+  it("既に半角で揃っているものには触らない", () => {
+    expect(review("- ‸")).toBeNull();
+    expect(review("# ‸")).toBeNull();
+    // 半角記号だけで空白がまだ無い状態も、直す理由がない。
+    expect(review("#‸")).toBeNull();
+    expect(review("-‸")).toBeNull();
+  });
+
+  it("空白を待たずに直す", () => {
+    // `-` キーを確定した時点で箇条書きになる。空白キーを押させない。
+    expect(review("ー‸")).toBe("- ‸");
+    expect(review("＃‸")).toBe("# ‸");
+    expect(review("＞‸")).toBe("> ‸");
+    expect(review("１。‸")).toBe("1. ‸");
+  });
+
+  it("字下げがあっても空白を待たない", () => {
+    expect(review("- 手順\n  ー‸")).toBe("- 手順\n  - ‸");
   });
 
   it("行の途中では直さない", () => {

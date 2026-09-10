@@ -25,13 +25,25 @@ import type { EditChange } from "./list-editing";
 const LINE_MARKER = /^([ \t]*)(＃{1,6}|＞{1,6}|[－ー＊＋]|[0-9０-９]{1,9}[．。])$/;
 
 /**
- * 記号のうしろの空白まで**既に入り終わっている**形。
+ * IME が確定した直後の行頭を見るときの形。**うしろの空白は要らない。**
  *
- * IME が変換確定として空白を入れた場合、入力ハンドラでは拾えないので、
- * 確定後の本文をこちらで見直す（`handleCommittedMarker`）。
+ * 空白を必須にしていると、`-` キー（＝ `ー`）を確定したあと、
+ * さらに空白キーを押すまで箇条書きにならない。行頭に記号だけが確定して置かれた時点で、
+ * それは Markdown の記号を書こうとした操作だと見なす。
  */
 const COMMITTED_LINE_MARKER =
-  /^([ \t]*)(＃{1,6}|＞{1,6}|[－ー＊＋]|[0-9０-９]{1,9}[．。])[ 　]$/;
+  /^([ \t]*)(＃{1,6}|＞{1,6}|[－ー＊＋]|[0-9０-９]{1,9}[．。])[ 　]?$/;
+
+/**
+ * 記号は半角なのに、うしろの空白だけが全角になっている形。
+ *
+ * 実機の MS-IME はひらがなモードでも `#` `>` を半角のまま出す。その状態で空白キーを押すと
+ * 全角空白が入り、`#　見出し` になって Markdown として効かない。記号側が全角のときと
+ * 見た目は同じ失敗なので、同じ場所で直す。
+ *
+ * **全角空白のときだけ**直す。半角空白なら既に正しく、触る理由がない。
+ */
+const COMMITTED_HALF_MARKER = /^([ \t]*)(#{1,6}|>{1,6}|[-*+]|[0-9]{1,9}[.)])　$/;
 
 /** 半角空白と全角空白のどちらでも「確定した」と見なす。 */
 const SPACE = /^[ 　]$/;
@@ -95,26 +107,48 @@ export function handleFullWidthInput(
 }
 
 /**
- * IME が確定した直後の本文を見直し、行頭の全角記号 + 空白を半角へ直す。
+ * IME が確定した直後の本文を見直し、行頭の全角記号を半角記号 + 半角空白へ直す。
  *
  * **入力ハンドラだけでは足りないので、これが要る。**
- * MS-IME はひらがなモードで空白キーを押したとき、全角空白を composition として入れる。
- * その最中の変更は `view.composing` が立つため入力ハンドラは介入できず、
- * 確定時には新しい変更が起きないので、もう一度ハンドラが呼ばれることもない。
- * 実機（Windows 11 / WebView2）で、`ー` + 空白キーが直らないことを確認済み。
+ * `-` キーはひらがなモードで `ー` の composition になる。確定するまで文字は IME のもので、
+ * 変換中に触ると壊れる。だから確定した直後に見直す。
+ * MS-IME は空白キーでも全角空白を composition として入れるので、そちらも同じ経路で拾う。
+ *
+ * **打った瞬間に直すことはできない。**
+ * keydown を `preventDefault()` しても Windows の IME はキーを受け取る。
+ * 実機（Windows 11 / WebView2 / MS-IME）で確認済みで、`- ` と `ー` が両方入ってしまう。
+ * 確定（Enter）を待つのが、IME を壊さずにできる最短。
  *
  * @param text 確定後の全文
  * @param pos  カーソル位置
  */
 export function handleCommittedMarker(text: string, pos: number): EditChange | null {
   const lineStart = lineStartOf(text, pos);
-  const matched = COMMITTED_LINE_MARKER.exec(text.slice(lineStart, pos));
-  if (!matched) return null;
+  const before = text.slice(lineStart, pos);
 
-  const half = halfWidthMarker(matched[2] ?? "");
-  if (half === null) return null;
+  const matched = COMMITTED_LINE_MARKER.exec(before);
+  if (matched) {
+    const half = halfWidthMarker(matched[2] ?? "");
+    if (half === null) return null;
+    return replaceLineHead(lineStart, pos, matched[1] ?? "", half);
+  }
 
-  const insert = `${matched[1] ?? ""}${half} `;
+  // 記号は半角で、うしろの全角空白だけを直す場合。
+  const halfMatched = COMMITTED_HALF_MARKER.exec(before);
+  if (halfMatched) {
+    return replaceLineHead(lineStart, pos, halfMatched[1] ?? "", halfMatched[2] ?? "");
+  }
+
+  return null;
+}
+
+function replaceLineHead(
+  lineStart: number,
+  pos: number,
+  indent: string,
+  marker: string,
+): EditChange {
+  const insert = `${indent}${marker} `;
   return { from: lineStart, to: pos, insert, cursor: lineStart + insert.length };
 }
 
