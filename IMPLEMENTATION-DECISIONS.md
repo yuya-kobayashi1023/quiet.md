@@ -66,6 +66,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-035 | `useTruncationTooltip` に `always` オプションを足した | Low |
 | AUTO-036 | ブラウザのフォールバックに Workspace 外のサンプルと初期 Recent を入れた | Low |
 | AUTO-037 | ``` を打つと閉じの ``` を補完する（介入条件は履歴側に記載） | Medium |
+| AUTO-038 | リリースは手動起動の GitHub Actions で行い、バージョンは 5 ファイル一括で上げる | Medium |
 
 ## 未実装リスト
 

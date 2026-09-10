@@ -1,0 +1,115 @@
+name: Release
+
+# 手動で回す。GitHub の Actions タブ、または `gh workflow run release.yml -f bump=patch`。
+# 実行したブランチの内容をそのままビルドしてリリースする。
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: バージョンの上げ方
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: バージョンを直接指定する場合（例 1.2.3。空なら bump を使う）
+        type: string
+        default: ''
+      dry_run:
+        description: 'ビルドだけして Release も commit もしない（動作確認用）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Cargo のキャッシュ
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            src-tauri/target
+          key: cargo-release-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-release-
+
+      - run: npm ci
+
+      - name: 型チェックとテスト
+        run: npm run check
+
+      - name: Rust のテスト
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: バージョンを上げる
+        id: bump
+        run: node scripts/bump-version.mjs "${{ inputs.version || inputs.bump }}"
+
+      - name: タグの重複を確認
+        run: |
+          tag="v${{ steps.bump.outputs.version }}"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::$tag は既にある。version を指定し直すこと。"
+            exit 1
+          fi
+
+      - name: インストーラをビルド
+        run: npm run tauri:build
+
+      - name: 成果物の場所を確認
+        id: artifact
+        run: |
+          installer=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe | head -1)
+          echo "path=$installer" >> "$GITHUB_OUTPUT"
+          ls -lh "$installer"
+
+      # --- ここから先は dry_run では動かさない ---
+
+      - name: dry-run の成果物を上げる
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiet-setup-${{ steps.bump.outputs.version }}
+          path: ${{ steps.artifact.outputs.path }}
+
+      - name: バージョンを commit して tag を打つ
+        if: ${{ !inputs.dry_run }}
+        run: |
+          version="${{ steps.bump.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+          git commit -m "chore(release): v$version"
+          git tag -a "v$version" -m "v$version"
+          git push origin "HEAD:${{ github.ref_name }}" --follow-tags
+
+      - name: Release を作る
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.bump.outputs.version }}"
+          gh release create "v$version" \
+            --title "v$version" \
+            --generate-notes \
+            "${{ steps.artifact.outputs.path }}"

@@ -34,6 +34,22 @@ npm run tauri:build   # インストーラ（NSIS）を作る
 
 Rust 側は `src-tauri/` で `cargo test` / `cargo check`。
 
+## リリース
+
+インストーラは GitHub Actions で作る。ローカルでビルドして手で上げる必要はない。
+
+1. リリースしたい内容を GitHub へ push する
+2. Actions > Release > Run workflow で、ブランチと `bump`（patch / minor / major）を選んで実行
+   - CLI なら `gh workflow run release.yml -f bump=patch`
+   - 試すだけなら `dry_run` を on にする（commit も Release もせず、成果物だけ Actions に残る）
+3. ワークフローが `npm run check` と `cargo test` を通したうえで、
+   バージョンを全ファイル（`package.json` / `package-lock.json` / `tauri.conf.json` / `Cargo.toml` / `Cargo.lock`）で上げ、
+   `chore(release): vX.Y.Z` を commit、`vX.Y.Z` タグを push、NSIS インストーラを添えた Release を公開する
+
+バージョンだけ手で動かしたいときは `node scripts/bump-version.mjs <patch|minor|major|X.Y.Z>`。
+
+配布物にコード署名はしていないので、初回インストール時に SmartScreen の警告が出る。
+
 ## ライセンス
 
 MIT
