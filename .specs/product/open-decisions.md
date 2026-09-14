@@ -20,7 +20,7 @@
 | U-008 | Autosave delay | 700ms idle debounce。**カーソル位置を保持すること** |
 | U-009 | 初期対応OS | Windows first（exe）、macOS next |
 | U-010 | External change | File watcher既定ON |
-| U-011 | 複数文書 | Tabsなし。New Windowで対応 |
+| U-011 | 複数文書 | Tabsなし。New Windowで対応（増やすのはアプリ内の明示操作だけ。ADR-018） |
 | U-012 | App固有Workspace metadata | `.quiet/workspace.json` を許可 |
 | U-013 | Search All | ~~Search AllはP1~~ → `Ctrl+Shift+F` で実装済み（ADR-011） |
 | U-014 | Local history | Atomic write + Crash recoveryまで |
@@ -134,6 +134,10 @@ File watcherは既定ON。Cleanは自動Reload、DirtyはConflict。
 
 Tabsなし。複数文書はNew Window。
 
+Window を増やすのは、ユーザーがアプリ内で明示的に指示した場合のみとする
+（`Open in New Window` / `Ctrl+Shift+N`）。関連付け起動・CLI 引数・二重起動により
+外部から渡された対象は、最後に focus した Window で開く（ADR-018）。
+
 ## U-012 App metadata
 
 [DECIDED: U-012]
@@ -223,6 +227,7 @@ Lightの小さい文字に使うroleだけ暗くする。Darkは変更しない�
 [DECIDED: U-021]
 
 同一ファイルは同時に1Windowのみ。既に開いていればそのWindowをfocusする。
+外部から渡された対象の配り順においても、この判定を最初に行う（ADR-018）。
 
 ## U-022 Conflict / Save error / External deleteのUI
 

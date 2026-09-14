@@ -90,8 +90,11 @@ pub fn remember_launch_target(app: &AppHandle, target: OpenTarget) {
 /// 実行中のアプリへ対象を配る（二重起動・macOS の Open with）。
 ///
 /// 1. 同じファイルを開いている Window があれば、それを前へ出す（U-021）
-/// 2. 文書を開いていない Window があれば、そこへ渡す
-/// 3. どちらでもなければ新しい Window を作る（U-011: Tabs の代わり）
+/// 2. 最後に focus した Window へ渡す（ADR-018）
+/// 3. Window が 1 つも無いときだけ、新しく作る（U-011: Tabs の代わり）
+///
+/// 外から渡された対象で Window を増やさない。複数 Window を並べるのは
+/// アプリ内の `Open in New Window` に集約する（ADR-018）。
 pub fn deliver(app: &AppHandle, target: OpenTarget) {
     let state = app.state::<AppState>();
 
@@ -106,18 +109,17 @@ pub fn deliver(app: &AppHandle, target: OpenTarget) {
         }
     }
 
-    if let Some(label) = idle_window(app) {
-        if let Some(window) = app.get_webview_window(&label) {
-            focus(&window);
-            let payload = OpenTargetEvent {
-                window: label.clone(),
-                target,
-            };
-            if let Err(e) = app.emit_to(label, OPEN_TARGET_EVENT, payload) {
-                log::warn!("failed to deliver open target: {e}");
-            }
-            return;
+    if let Some(window) = delivery_window(app) {
+        let label = window.label().to_string();
+        focus(&window);
+        let payload = OpenTargetEvent {
+            window: label.clone(),
+            target,
+        };
+        if let Err(e) = app.emit_to(label, OPEN_TARGET_EVENT, payload) {
+            log::warn!("failed to deliver open target: {e}");
         }
+        return;
     }
 
     if let Err(e) = crate::commands::system::open_window_for(app, &target) {
@@ -127,22 +129,32 @@ pub fn deliver(app: &AppHandle, target: OpenTarget) {
 
 /// 対象なしで二重起動されたときは、既存の Window を前へ出すだけにする。
 pub fn focus_existing(app: &AppHandle) {
-    let label = idle_window(app).or_else(|| app.webview_windows().keys().next().cloned());
-    if let Some(window) = label.and_then(|l| app.get_webview_window(&l)) {
+    if let Some(window) = delivery_window(app) {
         focus(&window);
     }
 }
 
-/// 文書を開いていない Window。main を優先する。
-fn idle_window(app: &AppHandle) -> Option<String> {
-    let state = app.state::<AppState>();
-    let mut idle: Vec<String> = app
-        .webview_windows()
-        .into_keys()
-        .filter(|label| !state.window_has_document(label))
-        .collect();
-    idle.sort_by_key(|label| if label == "main" { 0 } else { 1 });
-    idle.into_iter().next()
+/// 外から渡された対象の配り先（ADR-018）。選び方そのものは `pick_delivery_label`。
+fn delivery_window(app: &AppHandle) -> Option<tauri::WebviewWindow> {
+    let live: Vec<String> = app.webview_windows().into_keys().collect();
+    let label = pick_delivery_label(&app.state::<AppState>().focus_order(), &live)?;
+    app.get_webview_window(&label)
+}
+
+/// 生きている Window のうち、どれへ配るかを決める（ADR-018 §1）。
+///
+/// `focus_order` は破棄済みの label を含みうるので、`live` にあるものだけを見る。
+/// focus を 1 度も観測していない起動直後は `focus_order` が空になる。そのときは
+/// main を優先し、main が無ければ label 順にする。`webview_windows()` の反復順は
+/// 一定ではないため、並べ替えずに選ぶと配り先が実行ごとに変わる。
+fn pick_delivery_label(focus_order: &[String], live: &[String]) -> Option<String> {
+    if let Some(label) = focus_order.iter().find(|&label| live.contains(label)) {
+        return Some(label.clone());
+    }
+
+    let mut live = live.to_vec();
+    live.sort_by_key(|label| (label != "main", label.clone()));
+    live.into_iter().next()
 }
 
 fn focus(window: &tauri::WebviewWindow) {
@@ -158,6 +170,61 @@ mod tests {
         let dir = std::env::temp_dir().join(name);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    fn labels(list: &[&str]) -> Vec<String> {
+        list.iter().map(|label| label.to_string()).collect()
+    }
+
+    #[test]
+    fn delivers_to_the_most_recently_focused_window() {
+        let live = labels(&["doc-1", "doc-2"]);
+        assert_eq!(
+            pick_delivery_label(&labels(&["doc-2", "doc-1"]), &live).as_deref(),
+            Some("doc-2")
+        );
+        assert_eq!(
+            pick_delivery_label(&labels(&["doc-1", "doc-2"]), &live).as_deref(),
+            Some("doc-1")
+        );
+    }
+
+    #[test]
+    fn the_last_focused_window_wins_over_main() {
+        // 複数 Window を開いている利用者の main を奪わない（ADR-018 §1）。
+        let picked = pick_delivery_label(&labels(&["doc-1", "main"]), &labels(&["main", "doc-1"]));
+        assert_eq!(picked.as_deref(), Some("doc-1"));
+    }
+
+    #[test]
+    fn skips_labels_whose_window_is_gone() {
+        let picked = pick_delivery_label(&labels(&["closed", "main"]), &labels(&["main"]));
+        assert_eq!(picked.as_deref(), Some("main"));
+    }
+
+    #[test]
+    fn prefers_main_before_any_focus_is_observed() {
+        assert_eq!(
+            pick_delivery_label(&[], &labels(&["doc-1", "main"])).as_deref(),
+            Some("main")
+        );
+    }
+
+    #[test]
+    fn picks_deterministically_without_main() {
+        assert_eq!(
+            pick_delivery_label(&[], &labels(&["doc-2", "doc-1"])).as_deref(),
+            Some("doc-1")
+        );
+        assert_eq!(
+            pick_delivery_label(&[], &labels(&["doc-1", "doc-2"])).as_deref(),
+            Some("doc-1")
+        );
+    }
+
+    #[test]
+    fn picks_nothing_without_a_live_window() {
+        assert_eq!(pick_delivery_label(&labels(&["main"]), &[]), None);
     }
 
     #[test]

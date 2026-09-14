@@ -6,7 +6,7 @@
  * `.quiet/workspace.json` ではなく App settings が持つ（Recent と同じ理由）。
  */
 
-import { filenameOf, pathKey } from "./recents";
+import { filenameOf, isInsideWorkspace, pathKey } from "./recents";
 
 /** 覚えておく Workspace の数。表示件数もこれと同じ。 */
 export const WORKSPACE_LIMIT = 10;
@@ -24,6 +24,19 @@ export interface WorkspaceEntry {
 export function isSameWorkspace(a: string | null, b: string | null): boolean {
   if (!a || !b) return false;
   return pathKey(a) === pathKey(b);
+}
+
+/**
+ * `path` を含む Workspace のうち、最も深いもの。どれにも属さなければ null（ADR-018 §2）。
+ *
+ * 入れ子の Workspace で外側へ切り替わらないよう、root が長いほうを採る。
+ */
+export function workspaceForPath(list: WorkspaceEntry[], path: string): WorkspaceEntry | null {
+  return list.reduce<WorkspaceEntry | null>((deepest, entry) => {
+    if (!isInsideWorkspace(entry.path, path)) return deepest;
+    if (deepest && pathKey(deepest.path).length >= pathKey(entry.path).length) return deepest;
+    return entry;
+  }, null);
 }
 
 /** 開いた Workspace を先頭へ積む。同じフォルダは 1 件に畳み、上限を超えた古いものは捨てる。 */

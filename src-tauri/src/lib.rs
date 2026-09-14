@@ -98,6 +98,14 @@ pub fn run() {
                 }
             }
         }
+        // 外から渡された対象は、最後に focus した Window へ配る（ADR-018）。
+        tauri::RunEvent::WindowEvent {
+            label,
+            event: tauri::WindowEvent::Focused(true),
+            ..
+        } => {
+            app.state::<AppState>().note_focus(&label);
+        }
         // 閉じた Window の登録を残さない（U-021）。
         tauri::RunEvent::WindowEvent {
             label,

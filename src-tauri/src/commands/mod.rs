@@ -23,6 +23,9 @@ pub struct AppState {
     pub pending_open: Mutex<Option<OpenTarget>>,
     /// どの Window がどの文書を開いているか。同一ファイル 1 Window の判定に使う（U-021）。
     pub document_windows: Mutex<Vec<(String, PathBuf)>>,
+    /// Window label を focus した順（新しい順）に並べたもの。
+    /// 外から渡された対象の配り先を決めるのに使う（ADR-018）。
+    pub focus_order: Mutex<Vec<String>>,
     pub watcher: WatcherState,
 }
 
@@ -68,15 +71,32 @@ impl AppState {
             .map(|(label, _)| label.clone())
     }
 
-    pub fn window_has_document(&self, label: &str) -> bool {
-        self.document_windows
+    /* ------------------------------------------------------------ *
+     * Window の focus 順（ADR-018）
+     * ------------------------------------------------------------ */
+
+    /// focus された Window を先頭へ置く。同じ label は 1 件に畳む。
+    pub fn note_focus(&self, label: &str) {
+        if let Ok(mut order) = self.focus_order.lock() {
+            order.retain(|l| l != label);
+            order.insert(0, label.to_string());
+        }
+    }
+
+    /// focus した順（新しい順）。破棄済みの label が残りうるので、
+    /// 使う側が `get_webview_window` で実在を確かめる。
+    pub fn focus_order(&self) -> Vec<String> {
+        self.focus_order
             .lock()
-            .map(|windows| windows.iter().any(|(l, _)| l == label))
-            .unwrap_or(false)
+            .map(|order| order.clone())
+            .unwrap_or_default()
     }
 
     pub fn forget_window(&self, label: &str) {
         self.set_window_document(label, None);
+        if let Ok(mut order) = self.focus_order.lock() {
+            order.retain(|l| l != label);
+        }
     }
 
     pub fn allow_file(&self, path: &std::path::Path) {
@@ -113,5 +133,43 @@ impl AppState {
                 path: path.display().to_string(),
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn focus_order_starts_with_the_newest_label() {
+        let state = AppState::default();
+        state.note_focus("main");
+        state.note_focus("doc-1");
+
+        assert_eq!(state.focus_order(), ["doc-1", "main"]);
+    }
+
+    #[test]
+    fn re_focusing_moves_a_label_to_the_front() {
+        let state = AppState::default();
+        state.note_focus("main");
+        state.note_focus("doc-1");
+        state.note_focus("main");
+
+        assert_eq!(state.focus_order(), ["main", "doc-1"]);
+    }
+
+    #[test]
+    fn forget_window_clears_both_registries() {
+        let state = AppState::default();
+        let note = PathBuf::from("C:/notes/a.md");
+        state.note_focus("doc-1");
+        state.note_focus("main");
+        state.set_window_document("doc-1", Some(note.clone()));
+
+        state.forget_window("doc-1");
+
+        assert_eq!(state.focus_order(), ["main"]);
+        assert_eq!(state.window_for_document(&note), None);
     }
 }
