@@ -154,6 +154,22 @@ export function App() {
   }, []);
 
   /**
+   * 履歴から開いた Workspace が見つからなかったときの後始末（ADR-016 §8）。
+   *
+   * 履歴の行・外から渡されたファイルの所属・起動時の復元の 3 経路が同じ判断をする。
+   * 扱えたら true。それ以外の失敗は呼び出し側が受け持つ。
+   */
+  const forgetMissingWorkspace = useCallback(
+    (entry: WorkspaceEntry, error: unknown): boolean => {
+      if (!(error instanceof NativeError && error.code === "NOT_FOUND")) return false;
+      settingsService.forgetWorkspace(entry.path);
+      showToast(`${entry.name} が見つかりません。履歴から削除しました`);
+      return true;
+    },
+    [showToast],
+  );
+
+  /**
    * 外から渡されたファイルを開く（ADR-018 §2）。
    *
    * 関連付け起動・CLI 引数・二重起動で届いたファイルの唯一の入口。
@@ -173,10 +189,7 @@ export function App() {
           await openWorkspacePath(owner.path);
         } catch (error) {
           // 切り替えに失敗しても、対象のファイルは単体ファイルとして開く（ADR-018 §2）。
-          if (error instanceof NativeError && error.code === "NOT_FOUND") {
-            settingsService.forgetWorkspace(owner.path);
-            showToast(`${owner.name} が見つかりません。履歴から削除しました`);
-          } else {
+          if (!forgetMissingWorkspace(owner, error)) {
             showToast(error instanceof NativeError ? error.message : "フォルダを開けません");
           }
         }
@@ -184,7 +197,7 @@ export function App() {
 
       await openPath(path);
     },
-    [openPath, openWorkspacePath, showToast],
+    [forgetMissingWorkspace, openPath, openWorkspacePath, showToast],
   );
 
   /* ---------------------------------------------------------------- *
@@ -213,8 +226,10 @@ export function App() {
       if (workspacePath) {
         try {
           await openWorkspacePath(workspacePath);
-        } catch {
+        } catch (error) {
           // 前回の Workspace が無くなっていても起動は続ける。
+          // 履歴から引いた所属先が消えていたときだけ、履歴からも外す（ADR-018 §2）。
+          if (owner) forgetMissingWorkspace(owner, error);
         }
       } else if (!native.isNative()) {
         // ブラウザでの確認用。フォールバックの Workspace を開く。
@@ -450,15 +465,11 @@ export function App() {
       try {
         await openWorkspacePath(entry.path);
       } catch (error) {
-        if (error instanceof NativeError && error.code === "NOT_FOUND") {
-          settingsService.forgetWorkspace(entry.path);
-          showToast(`${entry.name} が見つかりません。履歴から削除しました`);
-          return;
-        }
+        if (forgetMissingWorkspace(entry, error)) return;
         showToast(error instanceof NativeError ? error.message : "フォルダを開けません");
       }
     },
-    [openWorkspacePath, showToast],
+    [forgetMissingWorkspace, openWorkspacePath, showToast],
   );
 
   const onWorkspaceAction = useCallback(
