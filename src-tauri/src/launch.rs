@@ -90,8 +90,11 @@ pub fn remember_launch_target(app: &AppHandle, target: OpenTarget) {
 /// 実行中のアプリへ対象を配る（二重起動・macOS の Open with）。
 ///
 /// 1. 同じファイルを開いている Window があれば、それを前へ出す（U-021）
-/// 2. 文書を開いていない Window があれば、そこへ渡す
-/// 3. どちらでもなければ新しい Window を作る（U-011: Tabs の代わり）
+/// 2. 最後に focus した Window へ渡す（ADR-018）
+/// 3. Window が 1 つも無いときだけ、新しく作る（U-011: Tabs の代わり）
+///
+/// 外から渡された対象で Window を増やさない。複数 Window を並べるのは
+/// アプリ内の `Open in New Window` に集約する（ADR-018）。
 pub fn deliver(app: &AppHandle, target: OpenTarget) {
     let state = app.state::<AppState>();
 
@@ -106,18 +109,17 @@ pub fn deliver(app: &AppHandle, target: OpenTarget) {
         }
     }
 
-    if let Some(label) = idle_window(app) {
-        if let Some(window) = app.get_webview_window(&label) {
-            focus(&window);
-            let payload = OpenTargetEvent {
-                window: label.clone(),
-                target,
-            };
-            if let Err(e) = app.emit_to(label, OPEN_TARGET_EVENT, payload) {
-                log::warn!("failed to deliver open target: {e}");
-            }
-            return;
+    if let Some(window) = delivery_window(app) {
+        let label = window.label().to_string();
+        focus(&window);
+        let payload = OpenTargetEvent {
+            window: label.clone(),
+            target,
+        };
+        if let Err(e) = app.emit_to(label, OPEN_TARGET_EVENT, payload) {
+            log::warn!("failed to deliver open target: {e}");
         }
+        return;
     }
 
     if let Err(e) = crate::commands::system::open_window_for(app, &target) {
@@ -127,22 +129,26 @@ pub fn deliver(app: &AppHandle, target: OpenTarget) {
 
 /// 対象なしで二重起動されたときは、既存の Window を前へ出すだけにする。
 pub fn focus_existing(app: &AppHandle) {
-    let label = idle_window(app).or_else(|| app.webview_windows().keys().next().cloned());
-    if let Some(window) = label.and_then(|l| app.get_webview_window(&l)) {
+    if let Some(window) = delivery_window(app) {
         focus(&window);
     }
 }
 
-/// 文書を開いていない Window。main を優先する。
-fn idle_window(app: &AppHandle) -> Option<String> {
-    let state = app.state::<AppState>();
-    let mut idle: Vec<String> = app
-        .webview_windows()
-        .into_keys()
-        .filter(|label| !state.window_has_document(label))
-        .collect();
-    idle.sort_by_key(|label| if label == "main" { 0 } else { 1 });
-    idle.into_iter().next()
+/// 外から渡された対象の配り先（ADR-018）。
+///
+/// 最後に focus した Window のうち、まだ実在するもの。focus を 1 度も観測していない
+/// 起動直後は順序が空なので、残っている Window から main を優先して選ぶ。
+fn delivery_window(app: &AppHandle) -> Option<tauri::WebviewWindow> {
+    app.state::<AppState>()
+        .focus_order()
+        .into_iter()
+        .find_map(|label| app.get_webview_window(&label))
+        .or_else(|| {
+            let mut windows: Vec<(String, tauri::WebviewWindow)> =
+                app.webview_windows().into_iter().collect();
+            windows.sort_by_key(|(label, _)| (label != "main", label.clone()));
+            windows.into_iter().next().map(|(_, window)| window)
+        })
 }
 
 fn focus(window: &tauri::WebviewWindow) {
