@@ -5,6 +5,7 @@ import {
   relativeOpenedAt,
   removeWorkspace,
   WORKSPACE_LIMIT,
+  workspaceForPath,
   type WorkspaceEntry,
 } from "./workspaces";
 
@@ -56,6 +57,38 @@ describe("isSameWorkspace", () => {
     expect(isSameWorkspace("C:\\Notes", "c:/notes")).toBe(true);
     expect(isSameWorkspace("C:\\Notes", "C:\\Notes\\sub")).toBe(false);
     expect(isSameWorkspace(null, "C:\\Notes")).toBe(false);
+  });
+});
+
+describe("workspaceForPath", () => {
+  const history = (...paths: string[]) =>
+    paths.reduce<WorkspaceEntry[]>((list, path, i) => pushWorkspace(list, path, i), []);
+
+  it("どの Workspace にも属さなければ null", () => {
+    expect(workspaceForPath(history("C:\\Notes", "C:\\repo"), "D:\\tmp\\a.md")).toBeNull();
+    expect(workspaceForPath([], "C:\\Notes\\a.md")).toBeNull();
+  });
+
+  it("含んでいる Workspace を返す", () => {
+    const found = workspaceForPath(history("C:\\Notes", "C:\\repo"), "C:\\repo\\docs\\a.md");
+    expect(found?.path).toBe("C:\\repo");
+  });
+
+  it("入れ子なら深いほうを返す。履歴の並び順には依らない", () => {
+    const deepFirst = history("C:\\Notes\\Project", "C:\\Notes");
+    const shallowFirst = history("C:\\Notes", "C:\\Notes\\Project");
+    for (const list of [deepFirst, shallowFirst]) {
+      expect(workspaceForPath(list, "C:\\Notes\\Project\\a.md")?.path).toBe("C:\\Notes\\Project");
+      expect(workspaceForPath(list, "C:\\Notes\\a.md")?.path).toBe("C:\\Notes");
+    }
+  });
+
+  it("Windows の大小文字差と区切りの違いを同一視する", () => {
+    expect(workspaceForPath(history("C:\\Notes"), "c:/notes/a.md")?.path).toBe("C:\\Notes");
+  });
+
+  it("名前の前方一致では属していると見なさない", () => {
+    expect(workspaceForPath(history("C:/Notes"), "C:/Notes2/a.md")).toBeNull();
   });
 });
 
