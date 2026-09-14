@@ -210,6 +210,13 @@ Tabsを実装しないため、Multi-windowの責任はNative window layerへ置
 どのWindowがどの文書を開いているかはNative側が持つ（`AppState.document_windows`）。
 Frontendは開く・閉じるたびに `registerDocumentWindow` で通知する。
 
+[DECIDED: ADR-018] 外部から渡された対象の配り先も Native 側が決定する。Native が Window の
+focus 順を保持し、「同一ファイルのWindow」→「最後にfocusしたWindow」→「Windowが無ければ新規作成」
+の順で配る。Frontend への新しい IPC は追加されない。
+
+受け取った側が Workspace を切り替えるかどうかは Frontend が判断し、App settings の
+Workspace 履歴（ADR-016）のみに基づいて決定する。Native はファイルの所属を調べない。
+
 ---
 
 ## 12. Search

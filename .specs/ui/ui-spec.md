@@ -67,7 +67,9 @@ Settings
 
 [DECIDED: ADR-013]
 
-- Workspace の外で開いたファイルを、開いた新しい順に並べる
+- Workspace 外で開いたファイルのうち、いずれの既知 Workspace にも属さないファイルのみを
+  開いた新しい順に並べる。Workspace 履歴のいずれかに属するファイルは、その Workspace へ
+  切り替えて開くためここには表示されない（ADR-018）
 - 位置は Sidebar の下端に固定する。Notes / Archive と一緒にスクロールさせない。
   Notes が増減しても Recent の位置が動かないようにするため
 - 見出しの上に薄い区切り線を置く。Notes / Archive は Workspace の中身、Recent はその外で、

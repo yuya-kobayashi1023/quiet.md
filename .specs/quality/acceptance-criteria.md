@@ -198,6 +198,20 @@
 - [ ] New Windowが仕様通り
 - [ ] Tabsを追加しない
 
+### 外部から渡された対象（ADR-018）
+
+アプリが起動し、いずれかのファイルを開いている状態から確認する。
+
+- [ ] 現在の Workspace 内の `.md` をエクスプローラーで開く → 同一Windowで開き、選択行がそのファイルへ移動する
+- [ ] 既知のどの Workspace にも属さない `.md` を開く → 同一Windowで開き、Recent に追加される
+- [ ] Workspace 履歴にある別 Workspace の `.md` を開く → 同一Windowでその Workspace に切り替わった後に開く（Recent には追加されない）
+- [ ] 既に開いているファイルを開く → そのファイルを表示しているWindowが前面に表示される（U-021）
+- [ ] いずれの場合もWindowが増えない
+- [ ] `Open in New Window` は従来どおりWindowを増やす
+- [ ] 2つのWindowを開き、片方をfocusした状態で外部ファイルを開く → focusしていた側のWindowで開く
+- [ ] 切り替え先の Workspace フォルダが存在しない場合 → 履歴から除外され、Toast が表示されて単体ファイルとして開く
+- [ ] アプリが終了している状態から別 Workspace の `.md` をダブルクリックする → その Workspace が開いた状態で起動する
+
 ---
 
 ## M. Accessibility

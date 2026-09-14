@@ -147,8 +147,12 @@ Tabsは採用しない。
 推奨:
 
 - Sidebar click → same window
+- 関連付け起動 / CLI 引数 / 二重起動で外から渡された対象 → same window（ADR-018）
 - `Open in New Window` → another window
 - OS Snapで比較
+
+Window を増やすのは、ユーザーがアプリ内で明示的に指示した場合のみとする。
+外部から渡された対象に対しては Window を増やさない（ADR-018）。
 
 各Windowは同じWorkspaceを共有可能。
 
@@ -176,16 +180,24 @@ Native 側で `OpenTarget` へ正規化してから Frontend へ渡す。
 アプリが起動していないとき:
 
 1. App起動
-2. 前回の Workspace を復元する
-3. 指定ファイルを開く。Workspace 外でも単体documentとして扱う（U-001）
+2. Workspace を決める。指定ファイルが Workspace 履歴のいずれかに属していればその Workspace、
+   属していなければ前回の Workspace（ADR-018）
+3. 指定ファイルを開く。どの履歴にも属さなければ単体documentとして扱う（U-001）
 
 既に起動しているとき（single instance。プロセスは増やさない）:
 
 1. 同じファイルを開いているWindowがあれば、そのWindowをfocus（U-021）
-2. 文書を開いていないWindowがあれば、そこで開く
-3. どちらでもなければ新しいWindowで開く（U-011）
+2. 最後にfocusしたWindowで開く（ADR-018）
+3. Windowが1つも無いときだけ、新しいWindowを作る
 
-Workspace 外で開いたファイルは Sidebar の `Recent` に残る（`ui-spec.md` §2）。
+[DECIDED: ADR-018] 外部から渡された対象でWindowを増やさない。
+
+開くファイルが現在の Workspace 外にあり、かつ Workspace 履歴（ADR-016、10 件）の
+いずれかに含まれる場合は、該当する Workspace へ切り替えてから開く。複数に含まれる場合は、
+最も深いものを選択する。切り替え先が存在しない場合は履歴から除外して Toast で通知し、
+そのファイルは単体 document として開く。
+
+いずれの履歴にも属さないファイルは、Sidebar の `Recent` に残る（`ui-spec.md` §2）。
 
 ---
 
