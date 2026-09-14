@@ -134,21 +134,27 @@ pub fn focus_existing(app: &AppHandle) {
     }
 }
 
-/// 外から渡された対象の配り先（ADR-018）。
-///
-/// 最後に focus した Window のうち、まだ実在するもの。focus を 1 度も観測していない
-/// 起動直後は順序が空なので、残っている Window から main を優先して選ぶ。
+/// 外から渡された対象の配り先（ADR-018）。選び方そのものは `pick_delivery_label`。
 fn delivery_window(app: &AppHandle) -> Option<tauri::WebviewWindow> {
-    app.state::<AppState>()
-        .focus_order()
-        .into_iter()
-        .find_map(|label| app.get_webview_window(&label))
-        .or_else(|| {
-            let mut windows: Vec<(String, tauri::WebviewWindow)> =
-                app.webview_windows().into_iter().collect();
-            windows.sort_by_key(|(label, _)| (label != "main", label.clone()));
-            windows.into_iter().next().map(|(_, window)| window)
-        })
+    let live: Vec<String> = app.webview_windows().into_keys().collect();
+    let label = pick_delivery_label(&app.state::<AppState>().focus_order(), &live)?;
+    app.get_webview_window(&label)
+}
+
+/// 生きている Window のうち、どれへ配るかを決める（ADR-018 §1）。
+///
+/// `focus_order` は破棄済みの label を含みうるので、`live` にあるものだけを見る。
+/// focus を 1 度も観測していない起動直後は `focus_order` が空になる。そのときは
+/// main を優先し、main が無ければ label 順にする。`webview_windows()` の反復順は
+/// 一定ではないため、並べ替えずに選ぶと配り先が実行ごとに変わる。
+fn pick_delivery_label(focus_order: &[String], live: &[String]) -> Option<String> {
+    if let Some(label) = focus_order.iter().find(|&label| live.contains(label)) {
+        return Some(label.clone());
+    }
+
+    let mut live = live.to_vec();
+    live.sort_by_key(|label| (label != "main", label.clone()));
+    live.into_iter().next()
 }
 
 fn focus(window: &tauri::WebviewWindow) {
@@ -164,6 +170,61 @@ mod tests {
         let dir = std::env::temp_dir().join(name);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    fn labels(list: &[&str]) -> Vec<String> {
+        list.iter().map(|label| label.to_string()).collect()
+    }
+
+    #[test]
+    fn delivers_to_the_most_recently_focused_window() {
+        let live = labels(&["doc-1", "doc-2"]);
+        assert_eq!(
+            pick_delivery_label(&labels(&["doc-2", "doc-1"]), &live).as_deref(),
+            Some("doc-2")
+        );
+        assert_eq!(
+            pick_delivery_label(&labels(&["doc-1", "doc-2"]), &live).as_deref(),
+            Some("doc-1")
+        );
+    }
+
+    #[test]
+    fn the_last_focused_window_wins_over_main() {
+        // 複数 Window を開いている利用者の main を奪わない（ADR-018 §1）。
+        let picked = pick_delivery_label(&labels(&["doc-1", "main"]), &labels(&["main", "doc-1"]));
+        assert_eq!(picked.as_deref(), Some("doc-1"));
+    }
+
+    #[test]
+    fn skips_labels_whose_window_is_gone() {
+        let picked = pick_delivery_label(&labels(&["closed", "main"]), &labels(&["main"]));
+        assert_eq!(picked.as_deref(), Some("main"));
+    }
+
+    #[test]
+    fn prefers_main_before_any_focus_is_observed() {
+        assert_eq!(
+            pick_delivery_label(&[], &labels(&["doc-1", "main"])).as_deref(),
+            Some("main")
+        );
+    }
+
+    #[test]
+    fn picks_deterministically_without_main() {
+        assert_eq!(
+            pick_delivery_label(&[], &labels(&["doc-2", "doc-1"])).as_deref(),
+            Some("doc-1")
+        );
+        assert_eq!(
+            pick_delivery_label(&[], &labels(&["doc-1", "doc-2"])).as_deref(),
+            Some("doc-1")
+        );
+    }
+
+    #[test]
+    fn picks_nothing_without_a_live_window() {
+        assert_eq!(pick_delivery_label(&labels(&["main"]), &[]), None);
     }
 
     #[test]
