@@ -5,7 +5,7 @@
 //! 既存ファイルへ直接途中まで書かない。
 
 use crate::errors::{NativeError, Result};
-use crate::filesystem::{hash_bytes, DiskRevision};
+use crate::filesystem::{epoch_millis, hash_bytes, DiskRevision};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -54,12 +54,7 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<DiskRevision> {
 
     let meta = std::fs::metadata(path).map_err(|e| NativeError::from_io(&e, path))?;
     Ok(DiskRevision {
-        modified_at: meta
-            .modified()
-            .ok()
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0),
+        modified_at: epoch_millis(meta.modified()),
         size: meta.len(),
         content_hash: hash_bytes(bytes),
     })

@@ -46,12 +46,21 @@ pub fn hash_bytes(bytes: &[u8]) -> String {
     blake3::hash(bytes).to_hex().to_string()
 }
 
-fn modified_at(meta: &std::fs::Metadata) -> u64 {
-    meta.modified()
-        .ok()
+/// `SystemTime` を epoch ms へ。取れなければ 0。
+pub fn epoch_millis(time: std::io::Result<std::time::SystemTime>) -> u64 {
+    time.ok()
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
+}
+
+fn modified_at(meta: &std::fs::Metadata) -> u64 {
+    epoch_millis(meta.modified())
+}
+
+/// OS のファイル作成時刻。取れない環境（birthtime のない Linux）では更新時刻で代用する（ADR-019）。
+pub fn created_at(meta: &std::fs::Metadata) -> u64 {
+    epoch_millis(meta.created().or_else(|_| meta.modified()))
 }
 
 /// 改行コードを判定する。CRLF が 1 つでもあれば CRLF 扱い。
