@@ -126,6 +126,24 @@ export const CloseIcon = ({ className }: IconProps) => (
   </svg>
 );
 
+/*
+ * Copy / Check。Preview のコードブロックのコピーボタンは、React ではなく
+ * markdown.ts が同じ形を HTML として出す。形を変えるときは両方を揃えること。
+ */
+
+export const CopyIcon = ({ className }: IconProps) => (
+  <svg {...box} className={className}>
+    <rect x="5.5" y="5.5" width="8" height="8" rx="1" />
+    <path d="M3.5 10.5v-7h7" />
+  </svg>
+);
+
+export const CheckIcon = ({ className }: IconProps) => (
+  <svg {...box} className={className}>
+    <path d="m3.5 8.5 3 3 6-7" />
+  </svg>
+);
+
 export const ArrowUpIcon = ({ className }: IconProps) => (
   <svg {...box} className={className}>
     <path d="M8 12.5v-9M4.5 7 8 3.5 11.5 7" />
