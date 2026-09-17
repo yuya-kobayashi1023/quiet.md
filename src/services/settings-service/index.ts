@@ -37,6 +37,8 @@ export interface AppSettings {
   theme: ThemePreference;
   previewTypeface: PreviewTypeface;
   compactSidebar: boolean;
+  /** ADR-019: Sidebar のファイル行に作成日時を添えるか。 */
+  showCreatedAt: boolean;
 
   /* UI 状態（設定画面には出さない） */
   sidebarCollapsed: boolean;
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: "system",
   previewTypeface: "serif",
   compactSidebar: false,
+  showCreatedAt: false,
 
   sidebarCollapsed: false,
   viewMode: "write",

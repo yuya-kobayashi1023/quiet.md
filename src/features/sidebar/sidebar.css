@@ -186,6 +186,14 @@
   white-space: nowrap;
 }
 
+/* 作成日時（ADR-019）。Workspace 履歴の相対時刻と同じ扱い。 */
+.tree-time {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
 .tree-icon {
   flex: none;
   width: 14px;

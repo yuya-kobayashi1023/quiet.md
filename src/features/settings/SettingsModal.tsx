@@ -322,6 +322,13 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   onChange={(v) => update({ compactSidebar: v })}
                 />
               </Row>
+              <Row label="作成日時を表示" hint="ファイル行の右端に作成日時を添えます。">
+                <Switch
+                  checked={settings.showCreatedAt}
+                  label="作成日時を表示"
+                  onChange={(v) => update({ showCreatedAt: v })}
+                />
+              </Row>
               <p className="settings-note">
                 Dark は Light の反転ではなく、独立した配色です。Accent は小さな状態変化とリンクにだけ使います。
               </p>

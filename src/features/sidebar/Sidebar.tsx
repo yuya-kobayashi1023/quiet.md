@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentSummary, SaveState } from "@/domain/document/types";
 import { RECENT_COLLAPSED_COUNT, type RecentFile } from "@/domain/document/recents";
+import { formatCreatedAt } from "@/domain/document/timestamps";
 import {
   isSameWorkspace,
   relativeOpenedAt,
@@ -49,6 +50,8 @@ interface SidebarProps {
   saveState: SaveState;
   collapsed: boolean;
   compact: boolean;
+  /** ファイル行の右端に作成日時を添える（ADR-019 §4）。Recent には出さない。 */
+  showCreatedAt: boolean;
   onToggleCollapsed: () => void;
   onSelect: (doc: DocumentSummary) => void;
   onNewNote: () => void;
@@ -83,12 +86,14 @@ function FileRow({
   row,
   active,
   saveState,
+  showCreatedAt,
   onSelect,
   onContextMenu,
 }: {
   row: Extract<TreeRow, { kind: "file" }>;
   active: boolean;
   saveState: SaveState;
+  showCreatedAt: boolean;
   onSelect: (doc: DocumentSummary) => void;
   onContextMenu: SidebarProps["onContextMenu"];
 }) {
@@ -112,6 +117,9 @@ function FileRow({
         <span className="tree-label" ref={ref}>
           {row.document.filename}
         </span>
+        {showCreatedAt ? (
+          <span className="tree-time">{formatCreatedAt(row.document.createdAt)}</span>
+        ) : null}
         {active ? <SaveDot state={saveState} /> : null}
       </button>
       {tooltip}
@@ -322,6 +330,7 @@ function Section({
   rows,
   activePath,
   saveState,
+  showCreatedAt,
   onSelect,
   onToggleFolder,
   onContextMenu,
@@ -331,6 +340,7 @@ function Section({
   rows: TreeRow[];
   activePath: string | null;
   saveState: SaveState;
+  showCreatedAt: boolean;
   onSelect: (doc: DocumentSummary) => void;
   onToggleFolder: (path: string) => void;
   onContextMenu: SidebarProps["onContextMenu"];
@@ -377,6 +387,7 @@ function Section({
             row={row}
             active={row.document.path === activePath}
             saveState={saveState}
+            showCreatedAt={showCreatedAt}
             onSelect={onSelect}
             onContextMenu={onContextMenu}
           />
@@ -399,6 +410,7 @@ export function Sidebar(props: SidebarProps) {
     saveState,
     collapsed,
     compact,
+    showCreatedAt,
     onToggleCollapsed,
     onSelect,
     onNewNote,
@@ -559,6 +571,7 @@ export function Sidebar(props: SidebarProps) {
           rows={notes}
           activePath={activePath}
           saveState={saveState}
+          showCreatedAt={showCreatedAt}
           onSelect={onSelect}
           onToggleFolder={onToggleFolder}
           onContextMenu={onContextMenu}
@@ -569,6 +582,7 @@ export function Sidebar(props: SidebarProps) {
           rows={archiveRows}
           activePath={activePath}
           saveState={saveState}
+          showCreatedAt={showCreatedAt}
           onSelect={onSelect}
           onToggleFolder={onToggleFolder}
           onContextMenu={onContextMenu}
