@@ -498,7 +498,7 @@ export function App() {
             showToast("パスをコピーしました");
             break;
           case "reveal":
-            await native.revealFolder(entry.path);
+            await native.revealPath(entry.path);
             break;
           case "forget":
             settingsService.forgetWorkspace(entry.path);
@@ -758,10 +758,11 @@ export function App() {
         showToast(error instanceof NativeError ? error.message : "PDF を書き出せませんでした");
         return;
       }
-      const folder = parentOf(path);
       showToast("PDF を保存しました", {
         label: "フォルダを開く",
-        onClick: () => void native.revealFolder(folder).catch(() => {}),
+        // 保存先のフォルダを開き、書き出した PDF を選択状態にする。
+        onClick: () =>
+          void native.revealPath(path).catch(() => showToast("保存先を開けませんでした")),
       });
     },
     [showToast],
