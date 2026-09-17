@@ -130,6 +130,14 @@ describe("renderMarkdown — links と images", () => {
     expect(html).toContain('src="asset:///notes/images/a.png"');
   });
 
+  it("../ を含む相対画像は親を畳んだ絶対パスにする（asset protocol は .. を通さない）", () => {
+    const { html } = renderMarkdown("![a](../assets/a.png)\n", {
+      baseDir: "C:\\notes\\sub",
+      resolveAsset: (p) => `asset://${p}`,
+    });
+    expect(html).toContain('src="asset://C:\\notes\\assets\\a.png"');
+  });
+
   it("baseDir がなければ画像パスを触らない", () => {
     const { html } = renderMarkdown("![a](images/a.png)\n");
     expect(html).toContain('src="images/a.png"');

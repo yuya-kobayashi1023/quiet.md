@@ -37,6 +37,23 @@ export function isNative(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+/**
+ * ローカルファイルを Preview の `<img>` が読める asset protocol の URL にする。
+ *
+ * `@tauri-apps/api/core` の `convertFileSrc` は `__TAURI_INTERNALS__` へ委譲するだけなので、
+ * 描画中に同期で呼べるよう同じ global を直接使う（`withGlobalTauri` は有効にしていない）。
+ * ブラウザではパスをそのまま返す。
+ */
+export function assetUrl(absolutePath: string): string {
+  if (!isNative()) return absolutePath;
+  const internals = (
+    window as unknown as {
+      __TAURI_INTERNALS__: { convertFileSrc?: (path: string, protocol: string) => string };
+    }
+  ).__TAURI_INTERNALS__;
+  return internals.convertFileSrc ? internals.convertFileSrc(absolutePath, "asset") : absolutePath;
+}
+
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (!isNative()) {
     return browserFallback<T>(cmd, args);

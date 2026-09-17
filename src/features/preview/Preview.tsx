@@ -38,15 +38,7 @@ interface Copied {
   timer: number;
 }
 
-function resolveAsset(absolutePath: string): string {
-  if (!native.isNative()) return absolutePath;
-  // convertFileSrc は同期関数だが動的 import が必要なので、
-  // Tauri が注入する global を直接使う。
-  const convert = (
-    window as unknown as { __TAURI__?: { core?: { convertFileSrc?: (p: string) => string } } }
-  ).__TAURI__?.core?.convertFileSrc;
-  return convert ? convert(absolutePath) : absolutePath;
-}
+const resolveAsset = native.assetUrl;
 
 export function Preview({
   title,

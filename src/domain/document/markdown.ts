@@ -185,10 +185,23 @@ export function extractHeadings(body: string): Heading[] {
   return headings;
 }
 
+/**
+ * `baseDir` からの相対パスを絶対パスにする。
+ *
+ * `..` はここで畳む。asset protocol は `..` を含むパスをスコープ外として弾くので、
+ * サブフォルダのノートから `../assets/x.png` を参照したときに表示されなくなる。
+ */
 function joinPath(baseDir: string, relative: string): string {
   const sep = baseDir.includes("\\") ? "\\" : "/";
-  const normalized = relative.replace(/\//g, sep);
-  return `${baseDir.replace(/[\\/]$/, "")}${sep}${normalized}`;
+  const segments = baseDir.replace(/[\\/]$/, "").split(/[\\/]/);
+  for (const part of relative.split("/")) {
+    if (part === "..") {
+      if (segments.length > 1) segments.pop();
+    } else if (part !== "." && part !== "") {
+      segments.push(part);
+    }
+  }
+  return segments.join(sep);
 }
 
 /**
