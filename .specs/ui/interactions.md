@@ -266,7 +266,14 @@ Duplicate
 Copy Path
 Reveal in Explorer/Finder
 ──────────
+Pin
 Archive
+```
+
+Pin済み:
+
+```text
+Unpin
 ```
 
 Archive済み:
@@ -274,6 +281,8 @@ Archive済み:
 ```text
 Restore
 ```
+
+Pin と Archive は独立した flag（ADR-020）。Recent の Context Menu には Pin を出さない。
 
 破壊的DeleteはMVPでは出さない案を推奨。
 

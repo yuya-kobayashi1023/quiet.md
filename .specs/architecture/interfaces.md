@@ -99,6 +99,18 @@ setArchived(input: {
 }): Promise<void>
 ```
 
+### 5.1 Pin
+
+ピン止め（ADR-020）も同じ形。`archived` と同じく `.quiet/workspace.json` の相対パス一覧 `pinned` に持つ。`pinned` キーの無い既存ファイルは空の一覧として読む。
+
+```ts
+setPinned(input: {
+  workspaceId: string;
+  path: string;
+  pinned: boolean;
+}): Promise<void>
+```
+
 ---
 
 ## 6. File watcher event
