@@ -68,6 +68,7 @@ pub fn run() {
             commands::document::rename_document,
             commands::document::duplicate_document,
             commands::document::document_revision,
+            commands::document::save_pasted_image,
             commands::document::write_recovery_snapshot,
             commands::document::clear_recovery_snapshot,
             commands::document::list_recovery_snapshots,

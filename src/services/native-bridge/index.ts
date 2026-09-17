@@ -15,6 +15,7 @@ import type {
   LineEnding,
   RecoverySnapshot,
   RenameResult,
+  SavedImage,
   SearchQuery,
   SearchResults,
   WorkspaceMetadata,
@@ -190,6 +191,10 @@ export const duplicateDocument = (path: string) =>
 
 export const documentRevision = (path: string) =>
   invoke<DiskRevision>("document_revision", { path });
+
+/** クリップボードの画像をノートの `assets/` へ保存する（AUTO-050）。 */
+export const savePastedImage = (notePath: string, filename: string, dataBase64: string) =>
+  invoke<SavedImage>("save_pasted_image", { notePath, filename, dataBase64 });
 
 /* ------------------------------------------------------------------ *
  * Recovery（U-014）

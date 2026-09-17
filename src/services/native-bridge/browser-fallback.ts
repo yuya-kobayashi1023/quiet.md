@@ -364,6 +364,12 @@ export async function browserFallback<T>(
       return revisionOf(file) as T;
     }
 
+    // ブラウザには書けないので、Markdown に入る相対パスだけ返す。
+    case "save_pasted_image": {
+      const filename = arg("filename") as string;
+      return { path: `/assets/${filename}`, relativePath: `assets/${filename}` } as T;
+    }
+
     case "load_app_settings":
       return appSettings as T;
 

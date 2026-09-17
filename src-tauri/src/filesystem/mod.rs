@@ -3,6 +3,7 @@
 //! Frontend は任意 Path へ直接触らない（`architecture/architecture.md` §2）。
 //! 読み書き・改行コード・BOM・hash の扱いはすべてここに閉じる。
 
+pub mod assets;
 pub mod atomic;
 pub mod paths;
 pub mod scan;

@@ -29,6 +29,8 @@ notify-debouncer-full = "0.5"
 blake3 = "1"
 walkdir = "2"
 dunce = "1"
+# 貼り付けた画像は base64 で IPC を渡る（AUTO-050）。
+base64 = "0.22"
 
 [profile.release]
 codegen-units = 1
