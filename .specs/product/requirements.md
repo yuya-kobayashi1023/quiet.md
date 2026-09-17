@@ -216,7 +216,7 @@ DarkはLightの反転ではなく独立トークン。
 ### P2候補
 
 - Local history
-- Export HTML / PDF
+- Export HTML（PDF は ADR-021 で実装済み）
 - Custom keyboard shortcut editor
 - Plugin / extension mechanism
 - AI integration
