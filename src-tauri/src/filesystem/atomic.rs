@@ -30,6 +30,9 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<DiskRevision> {
         }
     }
 
+    // rename 後のファイルは一時ファイルの作成時刻を持つ（NTFS で確認済み）。
+    // 上書き前に控えておき、差し替え後に書き戻す（ADR-019 §3）。
+    let created = std::fs::metadata(path).and_then(|m| m.created()).ok();
     let tmp = temp_path_for(path);
 
     let write_result = (|| -> std::io::Result<()> {
@@ -52,6 +55,10 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<DiskRevision> {
         return Err(NativeError::from_io(&e, path));
     }
 
+    if let Some(created) = created {
+        restore_created(path, created);
+    }
+
     let meta = std::fs::metadata(path).map_err(|e| NativeError::from_io(&e, path))?;
     Ok(DiskRevision {
         modified_at: epoch_millis(meta.modified()),
@@ -59,6 +66,25 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<DiskRevision> {
         content_hash: hash_bytes(bytes),
     })
 }
+
+/// 作成時刻は並び順のための情報でしかないので、失敗しても保存は成功させる。
+#[cfg(any(windows, target_os = "macos"))]
+fn restore_created(path: &Path, created: std::time::SystemTime) {
+    #[cfg(target_os = "macos")]
+    use std::os::macos::fs::FileTimesExt;
+    #[cfg(windows)]
+    use std::os::windows::fs::FileTimesExt;
+
+    let times = std::fs::FileTimes::new().set_created(created);
+    let _ = std::fs::OpenOptions::new()
+        .write(true)
+        .open(path)
+        .and_then(|file| file.set_times(times));
+}
+
+/// birthtime を書き戻せない OS では何もしない。
+#[cfg(not(any(windows, target_os = "macos")))]
+fn restore_created(_path: &Path, _created: std::time::SystemTime) {}
 
 #[cfg(test)]
 mod tests {
@@ -87,6 +113,21 @@ mod tests {
         std::fs::write(&path, b"old content here").unwrap();
         write_atomic(&path, b"new").unwrap();
         assert_eq!(std::fs::read(&path).unwrap(), b"new");
+    }
+
+    #[cfg(any(windows, target_os = "macos"))]
+    #[test]
+    fn keeps_creation_time_across_overwrite() {
+        let dir = temp_dir("atomic-created");
+        let path = dir.join("a.md");
+        write_atomic(&path, b"first").unwrap();
+        let created = std::fs::metadata(&path).unwrap().created().unwrap();
+
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        write_atomic(&path, b"second").unwrap();
+
+        assert_eq!(std::fs::read(&path).unwrap(), b"second");
+        assert_eq!(std::fs::metadata(&path).unwrap().created().unwrap(), created);
     }
 
     #[test]
