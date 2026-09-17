@@ -5,8 +5,11 @@
 
 use crate::commands::AppState;
 use crate::errors::{NativeError, Result};
-use crate::filesystem::{self, atomic, paths, scan, DiskRevision, DocumentContent, LineEnding};
+use crate::filesystem::{
+    self, assets, atomic, paths, scan, DiskRevision, DocumentContent, LineEnding,
+};
 use crate::settings;
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, State};
@@ -217,6 +220,57 @@ pub fn document_revision(state: State<'_, AppState>, path: String) -> Result<Dis
     let path = paths::canonicalize(Path::new(&path))?;
     state.ensure_allowed(&path)?;
     filesystem::current_revision(&path)
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedImage {
+    pub path: String,
+    /// ノートのフォルダから見た `/` 区切りの相対パス。`![](...)` にそのまま入る。
+    pub relative_path: String,
+}
+
+/// クリップボードの画像をノートの `assets/` へ保存する（AUTO-050）。
+///
+/// 保存先はノートの許可（Workspace 内か明示的に開いたファイル）から導く。
+/// 名前の衝突はここで連番を付ける。
+#[tauri::command]
+pub fn save_pasted_image(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    note_path: String,
+    filename: String,
+    data_base64: String,
+) -> Result<SavedImage> {
+    let note = paths::canonicalize(Path::new(&note_path))?;
+    state.ensure_allowed(&note)?;
+    paths::validate_filename(&filename)?;
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(&data_base64)
+        .map_err(|e| NativeError::IoError {
+            message: format!("invalid image data: {e}"),
+        })?;
+
+    let root = state.root();
+    let target = assets::pasted_image_target(root.as_deref(), &note, &filename)?;
+    atomic::write_atomic(&target.path, &bytes)?;
+
+    // Workspace 外の単体ファイルは親フォルダだけ（非再帰）が asset protocol に許可されている。
+    // 新しく作った assets/ も Preview で読めるようにする。
+    let inside_workspace = root
+        .as_deref()
+        .is_some_and(|root| paths::is_inside(root, &target.path));
+    if !inside_workspace {
+        if let Some(dir) = target.path.parent() {
+            app.asset_protocol_scope().allow_directory(dir, false).ok();
+        }
+    }
+
+    Ok(SavedImage {
+        path: target.path.display().to_string(),
+        relative_path: target.relative_path,
+    })
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf> {

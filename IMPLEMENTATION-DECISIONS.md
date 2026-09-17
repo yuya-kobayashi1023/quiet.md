@@ -85,6 +85,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-049 | Preview のコードブロックに、ホバー時のみ表示するコピーボタンを設置する。`pre` は横スクロールするため、ボタンは `pre` を包む `div.code-block` 側に配置して右上に固定する。コピーする文字列は末尾の改行を 1 つ削除する。押下後はアイコンを 1.5 秒間 Check に変更し、Toast は表示しない。紙面（PDF）および書き出し HTML には含めない。 | Low |
 | AUTO-048 | Window へのドロップ時は、最後に focus した Window ではなくドロップ先の Window で開き、新規 Window は作成しない（ADR-018）。複数ドロップされた場合は、最初に分類できた 1 つのみを処理する。Markdown でもフォルダでもない場合は Toast で通知する。フォルダは `desktop-ux.md` §3（DRAFT）の確認を挟まず、CLI 引数と同様に Workspace として開く。 | Medium |
 | AUTO-047 | テキスト選択中に URL を貼り付けた際、`[選択文字](URL)` に変換する。単一行・非空の 1 選択に 1 本の http(s) URL を貼り付けた場合のみ適用し、選択なし・複数行・複数カーソル・URL 以外・IME 変換中は標準の貼り付けを行う。選択文字の `[` `]` はエスケープし、括弧を含む URL は `<...>` で囲む。 | Low |
+| AUTO-050 | クリップボードの画像を貼り付けた際、画像を保存し、ノートからの相対パスで `![](...)` を挿入する。保存先は、Workspace 内のノートなら `<root>/assets/`、Workspace 外の単体ファイルなら `<ノートのフォルダ>/assets/` とする。ファイル名は `image-YYYYMMDD-HHMMSS.<ext>`（ローカル時刻。タイトルは含めない。png / jpg / gif / webp のみ）とし、同名ファイルが存在する場合は Rust 側で `-2`、`-3` … を付与する。画像のバイト列は base64 で IPC 経由で渡す。`assets/` は `.md` のみを対象とするサイドバーには表示しない。 | Medium |
 
 ## 未実装リスト
 

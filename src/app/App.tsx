@@ -32,6 +32,7 @@ import {
   parseFrontmatter,
 } from "@/domain/document/frontmatter";
 import { extractHeadings, HEADING_ID_PREFIX } from "@/domain/document/markdown";
+import { pastedImageFilename } from "@/domain/document/pasted-image";
 import { toggleTaskLine } from "@/domain/document/task-list";
 import { filenameWithExtension, type DocumentSummary } from "@/domain/document/types";
 import {
@@ -73,6 +74,22 @@ function parentOf(path: string): string {
   const separator = path.includes("\\") ? "\\" : "/";
   const at = path.lastIndexOf(separator);
   return at <= 0 ? path : path.slice(0, at);
+}
+
+/**
+ * File を base64 にする。`btoa` に大きな文字列を組んで渡すと数 MB で stack を食うので、
+ * FileReader の data URL から本文だけを切り出す。
+ */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = typeof reader.result === "string" ? reader.result : "";
+      resolve(url.slice(url.indexOf(",") + 1));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 /** `target` の上端が pane の上端から `margin` px 下に来る scrollTop。 */
@@ -534,6 +551,27 @@ export function App() {
       showToast(error instanceof NativeError ? error.message : "作成できません");
     }
   }, [beginRename, openDocument, showToast, workspace.snapshot]);
+
+  /** エディタへ貼り付けた画像を保存し、Markdown に書く相対パスを返す（AUTO-050）。 */
+  const savePastedImage = useCallback(
+    async (file: File): Promise<string | null> => {
+      const path = documentService.session?.path;
+      if (!path) {
+        showToast("ノートを開いてから貼り付けてください");
+        return null;
+      }
+      const filename = pastedImageFilename(new Date(), file.type);
+      if (!filename) return null;
+      try {
+        const saved = await native.savePastedImage(path, filename, await fileToBase64(file));
+        return saved.relativePath;
+      } catch (error) {
+        showToast(error instanceof NativeError ? error.message : "画像を保存できません");
+        return null;
+      }
+    },
+    [showToast],
+  );
 
   const openWorkspace = useCallback(async () => {
     const path = await native.chooseWorkspace();
@@ -1126,6 +1164,7 @@ export function App() {
                         editorView.current = view;
                         restoreCursor(view, session.path);
                       }}
+                      onPasteImage={savePastedImage}
                     />
                   </div>
                 </section>

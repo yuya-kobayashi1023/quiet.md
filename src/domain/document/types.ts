@@ -107,6 +107,13 @@ export interface RenameResult {
   title: string;
 }
 
+/** 貼り付けた画像の保存結果（AUTO-050）。 */
+export interface SavedImage {
+  path: string;
+  /** ノートのフォルダから見た `/` 区切りの相対パス。 */
+  relativePath: string;
+}
+
 export interface RecoverySnapshot {
   path: string;
   content: string;
