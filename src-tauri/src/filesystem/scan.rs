@@ -3,10 +3,11 @@
 //! U-024 の決定に従う。
 //! - 入れ子フォルダをそのまま返す（ツリー表示は Frontend）
 //! - dotfolder と `.quiet/` は既定で非表示、`node_modules/` は ignore
-//! - 並び順は名前順
+//! - Native は名前順で返し、Sidebar が作成日時順に並べ直す（ADR-019）
 //! - 5000 ファイル程度で UI が固まらないこと
 
 use crate::errors::{NativeError, Result};
+use crate::filesystem::{created_at, epoch_millis};
 use serde::Serialize;
 use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
@@ -27,6 +28,8 @@ pub struct DocumentSummary {
     /// 拡張子を除いたファイル名。これが Title（U-006 / U-020）。
     pub title: String,
     pub modified_at: u64,
+    /// OS のファイル作成時刻（epoch ms）。Sidebar の並び順の根拠（ADR-019）。
+    pub created_at: u64,
     pub size: u64,
 }
 
@@ -120,17 +123,13 @@ pub fn scan_workspace(root: &Path) -> Result<WorkspaceSnapshot> {
             path: entry.path().display().to_string(),
             title: title_of(&filename),
             filename,
-            modified_at: meta
-                .modified()
-                .ok()
-                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|d| d.as_millis() as u64)
-                .unwrap_or(0),
+            modified_at: epoch_millis(meta.modified()),
+            created_at: created_at(&meta),
             size: meta.len(),
         });
     }
 
-    // 並び順は名前順（U-024）。フォルダ階層は relativePath の順序で表現する。
+    // 名前順で返す（U-024）。作成日時が同じファイルの tie-break にだけ効く（ADR-019）。
     documents.sort_by(|a, b| {
         a.relative_path
             .to_lowercase()
@@ -181,5 +180,19 @@ mod tests {
             .map(|d| d.relative_path.clone())
             .collect();
         assert_eq!(names, vec!["a.md", "docs/b.md"]);
+    }
+
+    #[cfg(any(windows, target_os = "macos"))]
+    #[test]
+    fn created_at_is_the_os_creation_time() {
+        let dir = std::env::temp_dir().join("quiet-md-test-scan-created");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.md"), "a").unwrap();
+        let expected = epoch_millis(std::fs::metadata(dir.join("a.md")).unwrap().created());
+        assert!(expected > 0);
+
+        let snapshot = scan_workspace(&dir).unwrap();
+        assert_eq!(snapshot.documents[0].created_at, expected);
     }
 }

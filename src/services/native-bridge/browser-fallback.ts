@@ -57,26 +57,23 @@ together they compete with the page.
 interface FakeFile {
   content: string;
   modifiedAt: number;
+  createdAt: number;
+}
+
+/** 作成日時を数日ずつずらし、Sidebar の並び順（ADR-019）を目視できるようにする。 */
+function seed(content: string, daysAgo: number): FakeFile {
+  return { content, modifiedAt: Date.now(), createdAt: Date.now() - daysAgo * 86_400_000 };
 }
 
 const files = new Map<string, FakeFile>([
-  ["/notes/designing-quieter-software.md", { content: SAMPLE, modifiedAt: Date.now() }],
-  [
-    "/notes/editor-principles.md",
-    { content: "# Editor principles\n\nQuiet by default.\n", modifiedAt: Date.now() },
-  ],
-  ["/notes/scratch.md", { content: "scratch\n", modifiedAt: Date.now() }],
-  [
-    "/notes/docs/design.md",
-    { content: "# Design\n\nNested folder sample.\n", modifiedAt: Date.now() },
-  ],
-  ["/notes/2026-archive-sample.md", { content: "# Old note\n", modifiedAt: Date.now() }],
+  ["/notes/designing-quieter-software.md", seed(SAMPLE, 3)],
+  ["/notes/editor-principles.md", seed("# Editor principles\n\nQuiet by default.\n", 12)],
+  ["/notes/scratch.md", seed("scratch\n", 0)],
+  ["/notes/docs/design.md", seed("# Design\n\nNested folder sample.\n", 5)],
+  ["/notes/2026-archive-sample.md", seed("# Old note\n", 40)],
   // Workspace の外。Recent セクション（ADR-013）の確認用。
-  [
-    "/downloads/meeting-notes.md",
-    { content: "# Meeting notes\n\nOutside the workspace.\n", modifiedAt: Date.now() },
-  ],
-  ["/repo/README.md", { content: "# README\n", modifiedAt: Date.now() }],
+  ["/downloads/meeting-notes.md", seed("# Meeting notes\n\nOutside the workspace.\n", 1)],
+  ["/repo/README.md", seed("# README\n", 90)],
 ]);
 
 let metadata: WorkspaceMetadata = {
@@ -150,6 +147,7 @@ function summaryOf(path: string): DocumentSummary {
     filename,
     title: dot > 0 ? filename.slice(0, dot) : filename,
     modifiedAt: file.modifiedAt,
+    createdAt: file.createdAt,
     size: file.content.length,
   };
 }
@@ -292,7 +290,11 @@ export async function browserFallback<T>(
           throw new NativeError("CONFLICT", { path: input.path });
         }
       }
-      const next: FakeFile = { content: input.content, modifiedAt: Date.now() };
+      const next: FakeFile = {
+        content: input.content,
+        modifiedAt: Date.now(),
+        createdAt: file?.createdAt ?? Date.now(),
+      };
       files.set(input.path, next);
       return revisionOf(next) as T;
     }
@@ -309,7 +311,7 @@ export async function browserFallback<T>(
         candidate = `/notes/${stem} ${n}${ext}`;
         n += 1;
       }
-      files.set(candidate, { content: "", modifiedAt: Date.now() });
+      files.set(candidate, { content: "", modifiedAt: Date.now(), createdAt: Date.now() });
       return summaryOf(candidate) as T;
     }
 
@@ -394,13 +396,17 @@ export async function browserFallback<T>(
 /** テスト用。フォールバックの状態を初期化する。 */
 export function resetFallback(): void {
   files.clear();
-  files.set("/notes/a.md", { content: "# A\n", modifiedAt: 1000 });
-  files.set("/notes/b.md", { content: "# B\n", modifiedAt: 1000 });
+  files.set("/notes/a.md", { content: "# A\n", modifiedAt: 1000, createdAt: 1000 });
+  files.set("/notes/b.md", { content: "# B\n", modifiedAt: 1000, createdAt: 1000 });
   metadata = { version: 1, archived: [], lastOpened: null, expandedFolders: [] };
   appSettings = null;
 }
 
 /** テスト用。外部プロセスによる書き換えを模す。 */
 export function externalWrite(path: string, content: string): void {
-  files.set(path, { content, modifiedAt: Date.now() + 1 });
+  files.set(path, {
+    content,
+    modifiedAt: Date.now() + 1,
+    createdAt: files.get(path)?.createdAt ?? Date.now(),
+  });
 }

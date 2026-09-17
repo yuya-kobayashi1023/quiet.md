@@ -861,6 +861,7 @@ export function App() {
           saveState={session?.saveState ?? "clean"}
           collapsed={settings.sidebarCollapsed}
           compact={settings.compactSidebar}
+          showCreatedAt={settings.showCreatedAt}
           onToggleCollapsed={() =>
             settingsService.update({ sidebarCollapsed: !settings.sidebarCollapsed })
           }

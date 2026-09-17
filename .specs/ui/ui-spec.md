@@ -129,8 +129,19 @@ Settings
 - 入れ子フォルダはツリー表示する。フォルダ行はDisclosureのみで、常設ボタンを増やさない
 - フォルダの展開状態は `.quiet/workspace.json` に保持する
 - dotfolderと `.quiet/` は既定で非表示。`node_modules/` はignore
-- 並び順は名前順
+- 並び順は、各階層でフォルダ行を名前順で先に配置し、ファイル行を作成日時の新しい順でその後に配置する（ADR-019）。
+  作成日時が同じファイルは名前順とする
 - `Archive` は論理Archiveなので、フォルダではなくファイル行だけを並べる
+
+### Created at
+
+[DECIDED: ADR-019]
+
+作成日時は既定では表示せず、Settings の Appearance「作成日時を表示」を on にした場合のみ表示する。
+
+- Notes / Archive のファイル行の右端に `yyyy-mm-dd hh:mm`（ローカル時刻）を表示し、Workspace 履歴の相対時刻と同じ字の大きさと色にする
+- Recent の行には表示しない。Recent の並び順は「開いた順」であり、作成日時は並び順の説明にならない
+- 作成日時は OS のファイル作成時刻であり、保存しても変わらない
 
 ### Long filename
 

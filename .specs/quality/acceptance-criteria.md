@@ -36,6 +36,11 @@
 - [ ] Collapse時Settingsは最下部
 - [ ] サブフォルダを持つWorkspaceでも全ての`.md`へ到達できる（U-024）
 - [ ] ignore対象（dotfolder / `node_modules` / `.quiet`）が一覧に出ない（U-024）
+- [ ] Notes / Archive の各階層で、フォルダ行が名前順に先に並び、ファイル行が作成日時の新しい順に続く（ADR-019）
+- [ ] 保存しても、そのファイルの並び位置が変わらない（ADR-019）
+- [ ] 既定では作成日時が出ない（ADR-019）
+- [ ] Appearance「作成日時を表示」を on にすると、ファイル行の右端に `yyyy-mm-dd hh:mm` が出る（ADR-019）
+- [ ] Recent の行には作成日時が出ない（ADR-019）
 
 ---
 

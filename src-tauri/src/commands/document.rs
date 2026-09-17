@@ -124,6 +124,9 @@ pub fn create_document(state: State<'_, AppState>, input: CreateInput) -> Result
         title: scan::title_of(&filename),
         filename,
         modified_at: revision.modified_at,
+        created_at: std::fs::metadata(&candidate)
+            .map(|m| filesystem::created_at(&m))
+            .unwrap_or(0),
         size: revision.size,
     })
 }

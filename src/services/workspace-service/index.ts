@@ -78,10 +78,26 @@ export class WorkspaceService {
   }
 }
 
+interface FolderNode {
+  folders: Map<string, FolderNode>;
+  files: DocumentSummary[];
+}
+
+const emptyFolder = (): FolderNode => ({ folders: new Map(), files: [] });
+
+/** Native と同じ比較（`to_lowercase().cmp()`）。locale に依らない。 */
+function compareName(a: string, b: string): number {
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  return x < y ? -1 : x > y ? 1 : 0;
+}
+
 /**
  * ファイル一覧から、サイドバーが描く行の並びを作る。
  *
  * - Notes と Archive を分ける（U-005）
+ * - 各階層でフォルダ行を名前順に置き、その後にファイル行を作成日時の新しい順に置く（ADR-019）。
+ *   作成日時が同じファイルは Native の並び（名前順）を保つ
  * - フォルダは折りたたみ可能。閉じているフォルダの中身は行にしない（U-024）
  */
 export function buildTree(
@@ -92,44 +108,38 @@ export function buildTree(
 ): TreeRow[] {
   const archivedSet = new Set(archived);
   const expanded = new Set(expandedFolders);
-  const target = documents.filter((doc) =>
-    section === "archive"
-      ? archivedSet.has(doc.relativePath)
-      : !archivedSet.has(doc.relativePath),
-  );
+
+  const root = emptyFolder();
+  for (const doc of documents) {
+    if (archivedSet.has(doc.relativePath) !== (section === "archive")) continue;
+    const segments = doc.relativePath.split("/");
+    let node = root;
+    for (const name of segments.slice(0, -1)) {
+      let child = node.folders.get(name);
+      if (!child) {
+        child = emptyFolder();
+        node.folders.set(name, child);
+      }
+      node = child;
+    }
+    node.files.push(doc);
+  }
 
   const rows: TreeRow[] = [];
-  const seenFolders = new Set<string>();
-
-  for (const doc of target) {
-    const segments = doc.relativePath.split("/");
-    const folders = segments.slice(0, -1);
-
-    let prefix = "";
-    let visible = true;
-    for (let depth = 0; depth < folders.length; depth++) {
-      const name = folders[depth]!;
-      prefix = prefix ? `${prefix}/${name}` : name;
-
-      if (visible && !seenFolders.has(prefix)) {
-        seenFolders.add(prefix);
-        rows.push({
-          kind: "folder",
-          path: prefix,
-          name,
-          depth,
-          expanded: expanded.has(prefix),
-        });
-      }
-      if (!expanded.has(prefix)) {
-        visible = false;
-      }
+  const emit = (node: FolderNode, prefix: string, depth: number) => {
+    const folders = [...node.folders].sort(([a], [b]) => compareName(a, b));
+    for (const [name, child] of folders) {
+      const path = prefix ? `${prefix}/${name}` : name;
+      const isExpanded = expanded.has(path);
+      rows.push({ kind: "folder", path, name, depth, expanded: isExpanded });
+      if (isExpanded) emit(child, path, depth + 1);
     }
-
-    if (visible) {
-      rows.push({ kind: "file", depth: folders.length, document: doc });
+    const files = [...node.files].sort((a, b) => b.createdAt - a.createdAt);
+    for (const document of files) {
+      rows.push({ kind: "file", depth, document });
     }
-  }
+  };
+  emit(root, "", 0);
 
   return rows;
 }
