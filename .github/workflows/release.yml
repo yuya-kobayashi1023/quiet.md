@@ -76,12 +76,13 @@ jobs:
       - name: インストーラをビルド
         run: npm run tauri:build
 
+      # キャッシュした target/ には前回のインストーラも残っているので、今回のバージョン名で選ぶ。
       - name: 成果物の場所を確認
         id: artifact
         run: |
-          installer=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe | head -1)
-          echo "path=$installer" >> "$GITHUB_OUTPUT"
+          installer="src-tauri/target/release/bundle/nsis/Quiet_${{ steps.bump.outputs.version }}_x64-setup.exe"
           ls -lh "$installer"
+          echo "path=$installer" >> "$GITHUB_OUTPUT"
 
       # --- ここから先は dry_run では動かさない ---
 
