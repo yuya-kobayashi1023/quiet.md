@@ -82,6 +82,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-043 | ピン止めは Archive と同様に相対パスで保持するため、Rename するとピンは外れる。Notes と Archive の両方で有効であり、Recent には表示しない | Low |
 | AUTO-046 | Preview のタスクリストのチェックボックスをクリックして `[ ]` ↔ `[x]` を切り替える（Preview で編集可能な操作はこれのみ）。書き換えはエディタの view へ dispatch し、変更される 1 文字のみを差し替える（行全体を差し替えると、その行のカーソルが行頭へ移動するため）。行の対応は `data-source-line` とは別に `data-task-line` で保持し、scroll 同期の対応表には含めない。 | Medium |
 | AUTO-045 | ノートごとのカーソル位置を Recent と同様に App settings で保持（Workspace 外ファイルにも適用、ユーザーフォルダへは書き込まない）。上限 200 件（古い順に破棄）、行と桁で保持し復元時に文書範囲へ丸める。設定項目としては非公開 | Low |
+| AUTO-048 | Window へのドロップ時は、最後に focus した Window ではなくドロップ先の Window で開き、新規 Window は作成しない（ADR-018）。複数ドロップされた場合は、最初に分類できた 1 つのみを処理する。Markdown でもフォルダでもない場合は Toast で通知する。フォルダは `desktop-ux.md` §3（DRAFT）の確認を挟まず、CLI 引数と同様に Workspace として開く。 | Medium |
 
 ## 未実装リスト
 
