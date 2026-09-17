@@ -622,6 +622,14 @@ export function App() {
             await workspaceService.setArchived(doc.relativePath, false);
             showToast(`${doc.filename} を戻しました`);
             break;
+          case "pin":
+            await workspaceService.setPinned(doc.relativePath, true);
+            showToast(`${doc.filename} をピン止めしました`);
+            break;
+          case "unpin":
+            await workspaceService.setPinned(doc.relativePath, false);
+            showToast(`${doc.filename} のピン止めを外しました`);
+            break;
         }
       } catch (error) {
         showToast(error instanceof NativeError ? error.message : "操作に失敗しました");
@@ -1049,6 +1057,7 @@ export function App() {
           document={contextMenu.document}
           position={contextMenu.position}
           archived={workspaceService.isArchived(contextMenu.document.relativePath)}
+          pinned={workspaceService.isPinned(contextMenu.document.relativePath)}
           onClose={() => setContextMenu(null)}
           onAction={(action, doc) => void onContextAction(action, doc)}
         />
