@@ -83,6 +83,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-046 | Preview のタスクリストのチェックボックスをクリックして `[ ]` ↔ `[x]` を切り替える（Preview で編集可能な操作はこれのみ）。書き換えはエディタの view へ dispatch し、変更される 1 文字のみを差し替える（行全体を差し替えると、その行のカーソルが行頭へ移動するため）。行の対応は `data-source-line` とは別に `data-task-line` で保持し、scroll 同期の対応表には含めない。 | Medium |
 | AUTO-045 | ノートごとのカーソル位置を Recent と同様に App settings で保持（Workspace 外ファイルにも適用、ユーザーフォルダへは書き込まない）。上限 200 件（古い順に破棄）、行と桁で保持し復元時に文書範囲へ丸める。設定項目としては非公開 | Low |
 | AUTO-048 | Window へのドロップ時は、最後に focus した Window ではなくドロップ先の Window で開き、新規 Window は作成しない（ADR-018）。複数ドロップされた場合は、最初に分類できた 1 つのみを処理する。Markdown でもフォルダでもない場合は Toast で通知する。フォルダは `desktop-ux.md` §3（DRAFT）の確認を挟まず、CLI 引数と同様に Workspace として開く。 | Medium |
+| AUTO-047 | テキスト選択中に URL を貼り付けた際、`[選択文字](URL)` に変換する。単一行・非空の 1 選択に 1 本の http(s) URL を貼り付けた場合のみ適用し、選択なし・複数行・複数カーソル・URL 以外・IME 変換中は標準の貼り付けを行う。選択文字の `[` `]` はエスケープし、括弧を含む URL は `<...>` で囲む。 | Low |
 
 ## 未実装リスト
 
