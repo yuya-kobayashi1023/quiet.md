@@ -90,6 +90,7 @@ GFMのTask List / StrikethroughもProductionでは有効にすることを推奨
 [DECIDED: U-023] Preview の外部リソース方針。
 
 - Image: 相対パスはWorkspace内に限り表示する
+- 画像の貼り付け: Workspace の assets/ に保存し、相対パスで挿入する（AUTO-050）
 - 外部link（http / https）: OS既定browserで開く。WebView内では遷移させない
 - 相対 `.md` link: アプリ内でそのノートを開く
 - Raw HTML: sanitizeして描画する（script と `on*` 属性を除去）
