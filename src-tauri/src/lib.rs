@@ -7,6 +7,7 @@ pub mod commands;
 pub mod errors;
 pub mod filesystem;
 pub mod launch;
+pub mod pdf;
 pub mod settings;
 pub mod shell_integration;
 pub mod watcher;
@@ -79,6 +80,7 @@ pub fn run() {
             commands::system::register_document_window,
             commands::system::context_menu_status,
             commands::system::set_context_menu,
+            commands::system::export_pdf,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

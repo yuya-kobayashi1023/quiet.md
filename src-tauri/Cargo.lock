@@ -2887,6 +2887,8 @@ dependencies = [
  "tauri-plugin-single-instance",
  "thiserror 2.0.20",
  "walkdir",
+ "webview2-com",
+ "windows",
  "winreg",
 ]
 
