@@ -1,6 +1,6 @@
 //! 起動経路の一本化（ADR-013）。
 //!
-//! `.md` の関連付け起動・CLI 引数・二重起動・macOS の Open with は、
+//! `.md` の関連付け起動・CLI 引数・二重起動・macOS の Open with・Window へのドロップは、
 //! すべてここで `OpenTarget` へ正規化してから Window へ配る。
 //! Frontend は入口の違いを知らず、`OpenTarget` だけを受け取る。
 
@@ -66,6 +66,14 @@ fn target_from_arg(arg: &str, cwd: &Path) -> Option<OpenTarget> {
     target_from_path(&absolute)
 }
 
+/// ドロップされたものから開く対象を 1 つ選ぶ。
+///
+/// 複数落とされても、最初に分類できた 1 つだけを使う。外から渡された対象で
+/// Window を増やさない（ADR-018）ので、残りは黙って捨てる。
+pub fn target_from_drop(paths: &[PathBuf]) -> Option<OpenTarget> {
+    paths.iter().find_map(|path| target_from_path(path))
+}
+
 /// 実在するパスを対象へ分類する。存在しなければ None。
 pub fn target_from_path(path: &Path) -> Option<OpenTarget> {
     let path = paths::canonicalize(path).ok()?;
@@ -96,6 +104,21 @@ pub fn remember_launch_target(app: &AppHandle, target: OpenTarget) {
 /// 外から渡された対象で Window を増やさない。複数 Window を並べるのは
 /// アプリ内の `Open in New Window` に集約する（ADR-018）。
 pub fn deliver(app: &AppHandle, target: OpenTarget) {
+    if let Some(window) = delivery_window(app) {
+        deliver_to(app, window.label(), target);
+        return;
+    }
+
+    if let Err(e) = crate::commands::system::open_window_for(app, &target) {
+        log::warn!("failed to open window for target: {e}");
+    }
+}
+
+/// 決まった Window へ対象を配る。ドロップは落とされた Window で開く。
+///
+/// 同じファイルを開いている Window があれば、宛先に関わらずそちらを前へ出す（U-021）。
+/// 宛先自身がそのファイルを開いているときも同じ分岐に落ちるので、開き直しは起きない。
+pub fn deliver_to(app: &AppHandle, label: &str, target: OpenTarget) {
     let state = app.state::<AppState>();
 
     if let OpenTarget::File { path } = &target {
@@ -109,21 +132,16 @@ pub fn deliver(app: &AppHandle, target: OpenTarget) {
         }
     }
 
-    if let Some(window) = delivery_window(app) {
-        let label = window.label().to_string();
-        focus(&window);
-        let payload = OpenTargetEvent {
-            window: label.clone(),
-            target,
-        };
-        if let Err(e) = app.emit_to(label, OPEN_TARGET_EVENT, payload) {
-            log::warn!("failed to deliver open target: {e}");
-        }
+    let Some(window) = app.get_webview_window(label) else {
         return;
-    }
-
-    if let Err(e) = crate::commands::system::open_window_for(app, &target) {
-        log::warn!("failed to open window for target: {e}");
+    };
+    focus(&window);
+    let payload = OpenTargetEvent {
+        window: label.to_string(),
+        target,
+    };
+    if let Err(e) = app.emit_to(label, OPEN_TARGET_EVENT, payload) {
+        log::warn!("failed to deliver open target: {e}");
     }
 }
 
@@ -238,6 +256,26 @@ mod tests {
             Path::new("."),
         );
         assert!(matches!(target, Some(OpenTarget::File { .. })));
+    }
+
+    #[test]
+    fn drop_uses_the_first_path_that_opens() {
+        let dir = temp_dir("quiet-md-test-launch-drop");
+        let note = dir.join("note.md");
+        let image = dir.join("image.png");
+        std::fs::write(&note, "# hi").unwrap();
+        std::fs::write(&image, "png").unwrap();
+
+        match target_from_drop(&[image.clone(), note.clone(), dir.clone()]) {
+            Some(OpenTarget::File { path }) => assert!(path.ends_with("note.md")),
+            other => panic!("unexpected target: {other:?}"),
+        }
+        assert!(matches!(
+            target_from_drop(&[dir.clone(), note]),
+            Some(OpenTarget::Workspace { .. })
+        ));
+        assert_eq!(target_from_drop(&[image, dir.join("missing.md")]), None);
+        assert_eq!(target_from_drop(&[]), None);
     }
 
     #[test]
