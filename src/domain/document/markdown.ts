@@ -251,6 +251,42 @@ function addSourceLines() {
 }
 
 /**
+ * タスクリストのチェックボックスへ、そのリスト項目の行番号を振り、`disabled` を外す。
+ *
+ * Preview のクリックで本文の `[ ]` を反転させるために、どの行を書き換えるかを DOM に持たせる。
+ * `data-source-line` と分けているのは、scroll 同期があの属性をトップレベルの対応表として
+ * 総なめするため（ADR-012）。入れ子の li にまで振ると対応表が汚れる。
+ * 書き出し HTML に残っても害はないので、sourceLines の指定に関わらず常に付ける。
+ */
+export const TASK_LINE_ATTR = "data-task-line";
+
+/**
+ * remark-gfm はチェックボックスを li の先頭か、li の先頭の p の先頭に置く。
+ * loose なリストでは p の前に改行の text が挟まるので、空白だけの text は読み飛ばす。
+ */
+function taskCheckboxOf(li: Element): Element | undefined {
+  const head = li.children.find(
+    (child) => !(child.type === "text" && child.value.trim() === ""),
+  );
+  if (head?.type !== "element") return undefined;
+  if (head.tagName === "p") return taskCheckboxOf(head);
+  return head.tagName === "input" && head.properties?.type === "checkbox" ? head : undefined;
+}
+
+function markTaskLines() {
+  return (tree: HastRoot) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "li") return;
+      const line = node.position?.start.line;
+      const input = taskCheckboxOf(node);
+      if (line == null || !input) return;
+      const { disabled: _drop, ...rest } = input.properties ?? {};
+      input.properties = { ...rest, dataTaskLine: String(line) };
+    });
+  };
+}
+
+/**
  * fence の言語を `<pre data-language>` に写す。
  *
  * 紙面（print.css）がコードブロックの隅に言語名を出すのに使う（ADR-021）。
@@ -310,7 +346,13 @@ const schema = {
     ],
     a: [...(defaultSchema.attributes?.a ?? []), "dataLink"],
     img: [...(defaultSchema.attributes?.img ?? []), "dataImage"],
-    input: [...(defaultSchema.attributes?.input ?? []), "checked", "disabled", "type"],
+    // dataTaskLine の値は数字だけ（markTaskLines が付ける）。
+    input: [...(defaultSchema.attributes?.input ?? []), "checked", "type", "dataTaskLine"],
+  },
+  required: {
+    ...defaultSchema.required,
+    // 既定は input へ disabled を必ず付け直す。Preview でクリックさせるので外す。
+    input: { type: "checkbox" },
   },
   protocols: {
     ...defaultSchema.protocols,
@@ -335,7 +377,8 @@ export function renderMarkdown(body: string, options: RenderOptions = {}): Rende
     .use(compactCjkLineBreaks)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(addHeadingIds)
-    .use(decorateLinksAndImages, options);
+    .use(decorateLinksAndImages, options)
+    .use(markTaskLines);
 
   if (options.sourceLines) processor.use(addSourceLines);
 
