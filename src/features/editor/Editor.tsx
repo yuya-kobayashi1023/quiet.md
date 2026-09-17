@@ -17,6 +17,7 @@ import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { indentUnit } from "@codemirror/language";
 import { baseTheme, coreExtensions } from "./extensions";
+import { imagePaste, type ImageSaver } from "./image-paste";
 import "./editor.css";
 
 interface EditorProps {
@@ -31,6 +32,8 @@ interface EditorProps {
   onChange: (text: string) => void;
   onCursorChange: (info: { line: number; column: number }) => void;
   onReady: (view: EditorView) => void;
+  /** クリップボードの画像を保存して相対パスを返す。無ければ画像の貼り付けは既定のまま。 */
+  onPasteImage?: ImageSaver;
 }
 
 export function Editor({
@@ -43,6 +46,7 @@ export function Editor({
   onChange,
   onCursorChange,
   onReady,
+  onPasteImage,
 }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -54,8 +58,8 @@ export function Editor({
 
   // 最新の callback を ref 経由で参照する。
   // これらの変化で Editor を作り直すと、そのたびにカーソルが飛ぶ（U-008）。
-  const callbacks = useRef({ onChange, onCursorChange, onReady });
-  callbacks.current = { onChange, onCursorChange, onReady };
+  const callbacks = useRef({ onChange, onCursorChange, onReady, onPasteImage });
+  callbacks.current = { onChange, onCursorChange, onReady, onPasteImage };
   const initial = useRef({ initialText, fontSize, tabWidth, lineWrap, spellCheck });
   initial.current = { initialText, fontSize, tabWidth, lineWrap, spellCheck };
 
@@ -66,6 +70,8 @@ export function Editor({
 
     const extensions: Extension[] = [
       ...coreExtensions(),
+      // アプリ側の saver が要るので coreExtensions には入れない。
+      imagePaste(() => callbacks.current.onPasteImage),
       baseTheme,
       wrapCompartment.current.of(settings.lineWrap ? EditorView.lineWrapping : []),
       tabCompartment.current.of([
