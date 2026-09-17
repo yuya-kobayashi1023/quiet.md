@@ -79,7 +79,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-040 | 全角で打たれた Markdown 記号を、入力時と変換確定後の 2 経路で半角へ直す | Medium |
 | AUTO-041 | `--font-mono` の末尾に日本語等幅フォントを足した | Low |
 | AUTO-042 | 新規ノート作成と Rename の直後はタイトル欄へフォーカスし、全文を選択した状態にする（打ち始めれば `Untitled` が置き換わる） | Low |
-| AUTO-043 | ピン止めは Archive と同様に相対パスで保持するため、Rename するとピンは外れる。Notes と Archive の両方で有効であり、Recent には表示しない | Low |
+| AUTO-043 | ピン止めは Notes と Archive の両方で有効であり、Recent には表示しない。Archive と同様に相対パスで保持し、Rename 時は新しい相対パスへ追従する。 | Low |
 | AUTO-046 | Preview のタスクリストのチェックボックスをクリックして `[ ]` ↔ `[x]` を切り替える（Preview で編集可能な操作はこれのみ）。書き換えはエディタの view へ dispatch し、変更される 1 文字のみを差し替える（行全体を差し替えると、その行のカーソルが行頭へ移動するため）。行の対応は `data-source-line` とは別に `data-task-line` で保持し、scroll 同期の対応表には含めない。 | Medium |
 | AUTO-045 | ノートごとのカーソル位置を Recent と同様に App settings で保持（Workspace 外ファイルにも適用、ユーザーフォルダへは書き込まない）。上限 200 件（古い順に破棄）、行と桁で保持し復元時に文書範囲へ丸める。設定項目としては非公開 | Low |
 | AUTO-049 | Preview のコードブロックに、ホバー時のみ表示するコピーボタンを設置する。`pre` は横スクロールするため、ボタンは `pre` を包む `div.code-block` 側に配置して右上に固定する。コピーする文字列は末尾の改行を 1 つ削除する。押下後はアイコンを 1.5 秒間 Check に変更し、Toast は表示しない。紙面（PDF）および書き出し HTML には含めない。 | Low |

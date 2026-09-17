@@ -38,7 +38,7 @@ Recent にはピン止めを適用しない。Recent は Workspace 外のファ�
 
 ### 6. Archive とは独立した flag とする
 
-ピン止めは Archive と独立した flag とする。ピン止めしたノートをアーカイブしてもピン止め状態は保持され、Archive 区分の先頭に表示される。アーカイブから元に戻した場合もピン止め状態は維持される。状態は Archive と同様に相対パスで保持するため、ファイル名を変更した場合はピン止めが外れる。Rename の追跡処理は追加しない。
+ピン止めは Archive と独立した flag とする。ピン止めしたノートをアーカイブしてもピン止め状態は保持され、Archive 区分の先頭に表示される。アーカイブから元に戻した場合もピン止め状態は維持される。Workspace metadata が保持する相対パス（pinned・archived・lastOpened）は、Rename に追従して書き換える（2026-09-18 決定）。
 
 ## Consequences
 

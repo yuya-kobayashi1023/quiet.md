@@ -127,6 +127,7 @@ Rename
 → inline filename edit
 → validate
 → filesystem rename
+→ update workspace metadata (archived / pinned / lastOpened)
 → update watcher
 → update breadcrumb
 ```

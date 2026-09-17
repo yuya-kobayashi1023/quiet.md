@@ -638,7 +638,9 @@ export function App() {
     }
     try {
       await documentService.rename(filenameWithExtension(next, session.filename));
-      await workspaceService.refresh();
+      // metadata を先に読み直す。そうしないと setActive が store に残った
+      // rename 前の metadata をそのまま保存し、Native 側の追従を上書きする。
+      await Promise.all([workspaceService.refresh(), workspaceService.reloadMetadata()]);
       workspaceService.setActive(documentService.session?.path ?? null);
       setTitleError(null);
     } catch (error) {

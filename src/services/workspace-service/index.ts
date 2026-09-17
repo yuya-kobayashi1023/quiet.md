@@ -42,6 +42,17 @@ export class WorkspaceService {
     this.store.set((prev) => ({ ...prev, snapshot: next }));
   }
 
+  /**
+   * Native 側で書き換わった metadata（Rename 後の archived / pinned / lastOpened 等）を読み直す。
+   *
+   * 呼ばずに `setActive` 等が動くと、store に残った古い metadata がそのまま
+   * 保存されて Native 側の更新を上書きしてしまう。
+   */
+  async reloadMetadata(): Promise<void> {
+    const metadata = await native.loadWorkspaceMetadata();
+    this.store.set((prev) => ({ ...prev, metadata }));
+  }
+
   setActive(path: string | null): void {
     this.store.set((prev) => ({ ...prev, activePath: path }));
     const { snapshot, metadata } = this.store.get();

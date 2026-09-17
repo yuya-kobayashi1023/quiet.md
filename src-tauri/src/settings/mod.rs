@@ -42,6 +42,28 @@ impl Default for WorkspaceMetadata {
     }
 }
 
+impl WorkspaceMetadata {
+    /// Rename に追随して、相対パスで持つ参照を書き換える（ADR-020 §6、2026-09-18 改訂）。
+    ///
+    /// `archived` / `pinned` は完全一致した要素だけを置き換え、順序は保つ。
+    /// `from` を含まない field はそのまま。
+    pub fn relocate(&mut self, from: &str, to: &str) {
+        for entry in self.archived.iter_mut() {
+            if entry == from {
+                *entry = to.to_string();
+            }
+        }
+        for entry in self.pinned.iter_mut() {
+            if entry == from {
+                *entry = to.to_string();
+            }
+        }
+        if self.last_opened.as_deref() == Some(from) {
+            self.last_opened = Some(to.to_string());
+        }
+    }
+}
+
 fn metadata_path(root: &Path) -> PathBuf {
     root.join(WORKSPACE_DIR).join(WORKSPACE_FILE)
 }
@@ -178,6 +200,64 @@ mod tests {
         assert_eq!(
             load_workspace_metadata(&root).pinned,
             vec!["notes/todo.md".to_string()]
+        );
+    }
+
+    #[test]
+    fn relocate_rewrites_archived_pinned_and_last_opened() {
+        let mut meta = WorkspaceMetadata {
+            archived: vec!["keep.md".to_string(), "old.md".to_string()],
+            pinned: vec!["old.md".to_string()],
+            last_opened: Some("old.md".to_string()),
+            ..WorkspaceMetadata::default()
+        };
+
+        meta.relocate("old.md", "new.md");
+
+        assert_eq!(
+            meta.archived,
+            vec!["keep.md".to_string(), "new.md".to_string()]
+        );
+        assert_eq!(meta.pinned, vec!["new.md".to_string()]);
+        assert_eq!(meta.last_opened, Some("new.md".to_string()));
+    }
+
+    #[test]
+    fn relocate_is_a_no_op_when_from_is_absent() {
+        let mut meta = WorkspaceMetadata {
+            archived: vec!["a.md".to_string()],
+            pinned: vec!["b.md".to_string()],
+            last_opened: Some("c.md".to_string()),
+            ..WorkspaceMetadata::default()
+        };
+
+        meta.relocate("missing.md", "new.md");
+
+        assert_eq!(meta.archived, vec!["a.md".to_string()]);
+        assert_eq!(meta.pinned, vec!["b.md".to_string()]);
+        assert_eq!(meta.last_opened, Some("c.md".to_string()));
+    }
+
+    #[test]
+    fn relocate_preserves_order_among_sibling_entries() {
+        let mut meta = WorkspaceMetadata {
+            pinned: vec![
+                "a.md".to_string(),
+                "sub/b.md".to_string(),
+                "c.md".to_string(),
+            ],
+            ..WorkspaceMetadata::default()
+        };
+
+        meta.relocate("sub/b.md", "sub/renamed.md");
+
+        assert_eq!(
+            meta.pinned,
+            vec![
+                "a.md".to_string(),
+                "sub/renamed.md".to_string(),
+                "c.md".to_string(),
+            ]
         );
     }
 }
