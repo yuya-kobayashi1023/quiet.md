@@ -102,6 +102,8 @@ export function App() {
    * token と path の両方を依存に入れて、view が入れ替わった後にもう一度 focus する。
    */
   const [bodyFocusToken, setBodyFocusToken] = useState(0);
+  // 新規ノートと Rename はクリックではなく外側からタイトル欄に入るので、focus も外側から要求する。
+  const [titleFocusToken, setTitleFocusToken] = useState(0);
   const [contextMenu, setContextMenu] = useState<{
     document: DocumentSummary;
     position: { x: number; y: number };
@@ -116,6 +118,7 @@ export function App() {
   } | null>(null);
 
   const editorView = useRef<EditorView | null>(null);
+  const titleInput = useRef<HTMLTextAreaElement | null>(null);
   const editorPane = useRef<HTMLDivElement>(null);
   const previewPane = useRef<HTMLDivElement>(null);
 
@@ -432,6 +435,11 @@ export function App() {
     }
   }, [openPath, showToast]);
 
+  const beginRename = useCallback((title: string) => {
+    setTitleDraft(title);
+    setTitleFocusToken((n) => n + 1);
+  }, []);
+
   const newNote = useCallback(async () => {
     if (!workspace.snapshot) {
       showToast("先に Workspace を開いてください");
@@ -442,11 +450,11 @@ export function App() {
       await workspaceService.refresh();
       await openDocument(doc);
       // 作成直後は Rename 状態に入る（interactions.md §4）。
-      setTitleDraft(doc.title);
+      beginRename(doc.title);
     } catch (error) {
       showToast(error instanceof NativeError ? error.message : "作成できません");
     }
-  }, [openDocument, showToast, workspace.snapshot]);
+  }, [beginRename, openDocument, showToast, workspace.snapshot]);
 
   const openWorkspace = useCallback(async () => {
     const path = await native.chooseWorkspace();
@@ -529,6 +537,12 @@ export function App() {
     editorView.current?.focus();
   }, [bodyFocusToken, session?.path]);
 
+  useEffect(() => {
+    if (titleFocusToken === 0) return;
+    titleInput.current?.focus();
+    titleInput.current?.select();
+  }, [titleFocusToken]);
+
   /* ---------------------------------------------------------------- *
    * Split の scroll 同期（ADR-012）
    * ---------------------------------------------------------------- */
@@ -600,7 +614,7 @@ export function App() {
             break;
           case "rename":
             await openDocument(doc);
-            setTitleDraft(doc.title);
+            beginRename(doc.title);
             break;
           case "duplicate":
             await native.duplicateDocument(doc.path);
@@ -638,7 +652,7 @@ export function App() {
         showToast(error instanceof NativeError ? error.message : "操作に失敗しました");
       }
     },
-    [openDocument, showToast],
+    [beginRename, openDocument, showToast],
   );
 
   const onRecentAction = useCallback(
@@ -989,6 +1003,7 @@ export function App() {
                         }
                       })}
                       ref={(el) => {
+                        titleInput.current = el;
                         if (!el) return;
                         el.style.height = "auto";
                         el.style.height = `${el.scrollHeight}px`;

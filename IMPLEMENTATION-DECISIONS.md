@@ -78,6 +78,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-039 | React の入力欄でも IME 変換中は Enter / Escape を横取りしない（AUTO-024 の適用先を広げた） | Medium |
 | AUTO-040 | 全角で打たれた Markdown 記号を、入力時と変換確定後の 2 経路で半角へ直す | Medium |
 | AUTO-041 | `--font-mono` の末尾に日本語等幅フォントを足した | Low |
+| AUTO-042 | 新規ノート作成と Rename の直後はタイトル欄へフォーカスし、全文を選択した状態にする（打ち始めれば `Untitled` が置き換わる） | Low |
 | AUTO-043 | ピン止めは Archive と同様に相対パスで保持するため、Rename するとピンは外れる。Notes と Archive の両方で有効であり、Recent には表示しない | Low |
 
 ## 未実装リスト
