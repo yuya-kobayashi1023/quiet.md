@@ -1137,6 +1137,7 @@ export function App() {
                     fields={fields}
                     baseDir={baseDir}
                     typeface={settings.previewTypeface}
+                    copyButtons
                     onOpenDocument={(href) => {
                       const target = workspace.snapshot?.documents.find((d) =>
                         d.relativePath.endsWith(href.replace(/^\.\//, "")),

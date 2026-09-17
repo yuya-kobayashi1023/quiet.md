@@ -194,6 +194,44 @@ describe("renderMarkdown — task list の行番号", () => {
   });
 });
 
+describe("renderMarkdown — code copy button", () => {
+  const fence = "```js\nconst a = 1;\n```\n";
+
+  it("既定では付けず、HTML は今までと同じ", () => {
+    const { html } = renderMarkdown(fence);
+    expect(html).toBe(
+      '<pre data-language="js"><code class="hljs language-js"><span class="hljs-keyword">const</span> a = <span class="hljs-number">1</span>;\n</code></pre>',
+    );
+  });
+
+  it("copyButtons で pre を包み、文字を持たないボタンを末尾に置く", () => {
+    const { html } = renderMarkdown(fence, { copyButtons: true });
+    expect(html).toBe(
+      '<div class="code-block">' +
+        '<pre data-language="js"><code class="hljs language-js"><span class="hljs-keyword">const</span> a = <span class="hljs-number">1</span>;\n</code></pre>' +
+        '<button type="button" class="code-copy" aria-label="コードをコピー">' +
+        '<svg viewBox="0 0 16 16" aria-hidden="true" data-icon="copy"><rect x="5.5" y="5.5" width="8" height="8" rx="1"></rect><path d="M3.5 10.5v-7h7"></path></svg>' +
+        '<svg viewBox="0 0 16 16" aria-hidden="true" data-icon="check"><path d="m3.5 8.5 3 3 6-7"></path></svg>' +
+        "</button></div>",
+    );
+  });
+
+  it("inline code には付けない", () => {
+    const { html } = renderMarkdown("say `x` here\n", { copyButtons: true });
+    expect(html).toBe("<p>say <code>x</code> here</p>");
+  });
+
+  it("data-source-line と data-language は包んだ後も pre に残る", () => {
+    const { html } = renderMarkdown("# T\n\n" + fence, { copyButtons: true, sourceLines: true });
+    expect(html).toContain('<div class="code-block"><pre data-source-line="3" data-language="js">');
+  });
+
+  it("書き手の HTML に同じ形があっても、ボタンになるのはここで作ったものだけ", () => {
+    const { html } = renderMarkdown('<button class="code-copy">x</button>\n', { copyButtons: true });
+    expect(html).toBe("<p>x</p>");
+  });
+});
+
 describe("renderMarkdown — CJK の改行（ADR-017）", () => {
   it("CJK 同士の改行は空白を残さず詰める", () => {
     const { html } = renderMarkdown("日本語の文で\n次の行です\n");

@@ -9,6 +9,7 @@
  * - Fenced code block は言語が明示されているときだけ highlight する（ADR-009）
  * - 外部リンクは WebView 内で遷移させない。クリックは UI 側で捌けるよう印を付ける
  * - 相対画像は asset URL へ変換する
+ * - 画面専用の印（`data-source-line`、コードのコピーボタン）は option で付け、既定では出さない
  */
 
 import { unified } from "unified";
@@ -18,7 +19,7 @@ import remarkRehype from "remark-rehype";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
 import rehypeStringify from "rehype-stringify";
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 import { toString as mdastToString } from "mdast-util-to-string";
 import type { Root as MdastRoot } from "mdast";
 import type { Root as HastRoot, Element } from "hast";
@@ -44,6 +45,12 @@ export interface RenderOptions {
    * 画面表示のためだけの印なので、書き出し HTML では付けない。既定は false。
    */
   sourceLines?: boolean;
+  /**
+   * コードブロックへコピーボタンを付ける。
+   *
+   * 画面で押すためだけの部品なので、紙面（PDF）と書き出し HTML では付けない。既定は false。
+   */
+  copyButtons?: boolean;
 }
 
 export interface RenderResult {
@@ -310,6 +317,75 @@ function markCodeLanguage() {
   };
 }
 
+/** コードブロックを包む要素の class。ボタンはこの中で絶対配置する。 */
+export const CODE_BLOCK_CLASS = "code-block";
+/** コピーボタンの class。Preview の click ハンドラがこれで拾う。 */
+export const COPY_BUTTON_CLASS = "code-copy";
+
+/** 16px 格子の線画。形は icons.tsx の CopyIcon / CheckIcon と同じ。 */
+function icon(name: "copy" | "check", shapes: Element[]): Element {
+  return {
+    type: "element",
+    tagName: "svg",
+    properties: { viewBox: "0 0 16 16", ariaHidden: "true", dataIcon: name },
+    children: shapes,
+  };
+}
+
+function copyIcon(): Element {
+  return icon("copy", [
+    {
+      type: "element",
+      tagName: "rect",
+      properties: { x: "5.5", y: "5.5", width: "8", height: "8", rx: "1" },
+      children: [],
+    },
+    { type: "element", tagName: "path", properties: { d: "M3.5 10.5v-7h7" }, children: [] },
+  ]);
+}
+
+function checkIcon(): Element {
+  return icon("check", [
+    { type: "element", tagName: "path", properties: { d: "m3.5 8.5 3 3 6-7" }, children: [] },
+  ]);
+}
+
+/**
+ * `<pre><code>` を `<div class="code-block">` で包み、末尾にコピーボタンを置く。
+ *
+ * ボタンを `pre` の中に置かないのは、`pre` が横スクロールする箱だから。
+ * 中に置くと絶対配置でも内容と一緒に流れて、長い行では右上から消える。
+ * 包む側に置けば、`pre` がどれだけスクロールしても隅に留まる。
+ *
+ * sanitize の**後**に走らせる。書き手の HTML に同じ形があっても、ここで作るものだけが
+ * ボタンになり、逆に sanitize がボタンを剥がすこともない。
+ */
+function addCopyButtons() {
+  return (tree: HastRoot) => {
+    visit(tree, "element", (node: Element, index, parent) => {
+      if (node.tagName !== "pre" || index == null || !parent) return;
+      const hasCode = node.children.some(
+        (child) => child.type === "element" && child.tagName === "code",
+      );
+      if (!hasCode) return;
+
+      const button: Element = {
+        type: "element",
+        tagName: "button",
+        properties: { type: "button", className: [COPY_BUTTON_CLASS], ariaLabel: "コードをコピー" },
+        children: [copyIcon(), checkIcon()],
+      };
+      parent.children[index] = {
+        type: "element",
+        tagName: "div",
+        properties: { className: [CODE_BLOCK_CLASS] },
+        children: [node, button],
+      };
+      return SKIP;
+    });
+  };
+}
+
 /** 見出しへ id を振る。TOC からの移動に使う。 */
 function addHeadingIds() {
   return (tree: HastRoot) => {
@@ -382,7 +458,7 @@ export function renderMarkdown(body: string, options: RenderOptions = {}): Rende
 
   if (options.sourceLines) processor.use(addSourceLines);
 
-  const file = processor
+  processor
     .use(rehypeSanitize, schema)
     // Sanitize の**後**に走らせる。highlight が読むのは sanitize 済みの text だけになり、
     // 生成される span も自前のものだけになる。
@@ -392,9 +468,11 @@ export function renderMarkdown(body: string, options: RenderOptions = {}): Rende
       // 未登録の言語は素のまま出す（例外にしない）。
       plainText: ["text", "plain", "txt"],
     })
-    .use(markCodeLanguage)
-    .use(rehypeStringify)
-    .processSync(body);
+    .use(markCodeLanguage);
+
+  if (options.copyButtons) processor.use(addCopyButtons);
+
+  const file = processor.use(rehypeStringify).processSync(body);
 
   return { html: String(file), headings: extractHeadings(body) };
 }

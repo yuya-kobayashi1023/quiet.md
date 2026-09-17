@@ -139,6 +139,64 @@
 }
 
 /*
+ * コードのコピーボタン（principles.md §3 / §4）。
+ *
+ * hover するまで見せない。`pre` は横スクロールする箱なので、ボタンは `pre` ではなく
+ * それを包む `.code-block` に対して置く。`pre` の余白は包んだ後も外へ抜ける。
+ */
+.preview-body .code-block {
+  position: relative;
+}
+
+.preview-body .code-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius);
+  background: var(--sidebar);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  color: var(--text-muted);
+  opacity: 0;
+  transition:
+    opacity var(--duration-hover) var(--ease),
+    color var(--duration-hover) var(--ease);
+}
+
+.preview-body .code-block:hover .code-copy,
+.preview-body .code-copy:focus-visible {
+  opacity: 1;
+}
+
+.preview-body .code-copy:hover {
+  color: var(--text-primary);
+}
+
+.preview-body .code-copy svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.preview-body .code-copy svg[data-icon="check"],
+.preview-body .code-copy[data-copied="true"] svg[data-icon="copy"] {
+  display: none;
+}
+
+.preview-body .code-copy[data-copied="true"] svg[data-icon="check"] {
+  display: block;
+  stroke: var(--accent);
+}
+
+/*
  * Code token colors（ADR-009）。
  *
  * highlight.js は 40 以上の class を出すが、Editor 側の 5 役に畳んで割り当てる。
