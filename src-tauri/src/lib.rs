@@ -117,6 +117,15 @@ pub fn run() {
         } => {
             app.state::<AppState>().forget_window(&label);
         }
+        // Window へのドロップも起動対象の入口の 1 つ。落とされた Window で開く。
+        tauri::RunEvent::WindowEvent {
+            label,
+            event: tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }),
+            ..
+        } => match launch::target_from_drop(&paths) {
+            Some(target) => launch::deliver_to(app, &label, target),
+            None => launch::reject_drop(app, &label),
+        },
         _ => {}
     });
 }
