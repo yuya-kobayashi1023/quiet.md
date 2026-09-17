@@ -63,6 +63,15 @@ export const ArchiveIcon = ({ className }: IconProps) => (
   </svg>
 );
 
+/** ピン止め（ADR-020）。押しピンの輪郭。 */
+export const PinIcon = ({ className }: IconProps) => (
+  <svg {...box} className={className}>
+    <path d="M5.5 2.5h5" />
+    <path d="M6.5 2.5v3.5l-2 2.5h7l-2-2.5V2.5" />
+    <path d="M8 8.5v5" />
+  </svg>
+);
+
 export const SidebarIcon = ({ className }: IconProps) => (
   <svg {...box} className={className}>
     <rect x="2" y="2.5" width="12" height="11" rx="1" />

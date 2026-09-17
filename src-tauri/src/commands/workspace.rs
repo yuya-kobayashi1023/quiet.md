@@ -125,6 +125,21 @@ pub fn set_archived(state: State<'_, AppState>, relative_path: String, archived:
     Ok(metadata)
 }
 
+/// ピン止め（ADR-020）。Archive とは独立した flag。
+#[tauri::command]
+pub fn set_pinned(state: State<'_, AppState>, relative_path: String, pinned: bool) -> Result<WorkspaceMetadata> {
+    let root = state.root().ok_or_else(|| NativeError::NotFound {
+        path: "<no workspace>".to_string(),
+    })?;
+    let mut metadata = settings::load_workspace_metadata(&root);
+    metadata.pinned.retain(|p| p != &relative_path);
+    if pinned {
+        metadata.pinned.push(relative_path);
+    }
+    settings::save_workspace_metadata(&root, &metadata)?;
+    Ok(metadata)
+}
+
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf> {
     app.path()
         .app_data_dir()

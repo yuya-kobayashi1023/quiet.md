@@ -21,7 +21,7 @@ export interface WorkspaceState {
 /** サイドバーが描くツリーの 1 行。 */
 export type TreeRow =
   | { kind: "folder"; path: string; name: string; depth: number; expanded: boolean }
-  | { kind: "file"; depth: number; document: DocumentSummary };
+  | { kind: "file"; depth: number; document: DocumentSummary; pinned: boolean };
 
 const EMPTY: WorkspaceState = { snapshot: null, metadata: null, activePath: null };
 
@@ -63,6 +63,16 @@ export class WorkspaceService {
     this.store.set((prev) => ({ ...prev, metadata }));
   }
 
+  isPinned(relativePath: string): boolean {
+    return this.store.get().metadata?.pinned.includes(relativePath) ?? false;
+  }
+
+  /** ピン止め（ADR-020）。Archive とは独立した flag。 */
+  async setPinned(relativePath: string, pinned: boolean): Promise<void> {
+    const metadata = await native.setPinned(relativePath, pinned);
+    this.store.set((prev) => ({ ...prev, metadata }));
+  }
+
   toggleFolder(folderPath: string): void {
     const { metadata } = this.store.get();
     if (!metadata) return;
@@ -96,7 +106,9 @@ function compareName(a: string, b: string): number {
  * ファイル一覧から、サイドバーが描く行の並びを作る。
  *
  * - Notes と Archive を分ける（U-005）
- * - 各階層でフォルダ行を名前順に置き、その後にファイル行を作成日時の新しい順に置く（ADR-019）。
+ * - ピン止めしたファイルは、サブフォルダにあっても区分の先頭に depth 0 で置く（ADR-020）。
+ *   フォルダ側には出さないが、所属フォルダの行は残す。ピン同士は作成日時の新しい順
+ * - 残りは各階層でフォルダ行を名前順に置き、その後にファイル行を作成日時の新しい順に置く（ADR-019）。
  *   作成日時が同じファイルは Native の並び（名前順）を保つ
  * - フォルダは折りたたみ可能。閉じているフォルダの中身は行にしない（U-024）
  */
@@ -105,11 +117,15 @@ export function buildTree(
   archived: string[],
   expandedFolders: string[],
   section: "notes" | "archive",
+  pinned: string[],
 ): TreeRow[] {
   const archivedSet = new Set(archived);
+  const pinnedSet = new Set(pinned);
   const expanded = new Set(expandedFolders);
 
+  const rows: TreeRow[] = [];
   const root = emptyFolder();
+  const pinnedDocs: DocumentSummary[] = [];
   for (const doc of documents) {
     if (archivedSet.has(doc.relativePath) !== (section === "archive")) continue;
     const segments = doc.relativePath.split("/");
@@ -122,10 +138,15 @@ export function buildTree(
       }
       node = child;
     }
-    node.files.push(doc);
+    // ピン止めは先頭の群へ移すが、所属フォルダの行は残す（中身が全部ピンでも消さない）
+    if (pinnedSet.has(doc.relativePath)) pinnedDocs.push(doc);
+    else node.files.push(doc);
   }
 
-  const rows: TreeRow[] = [];
+  for (const document of pinnedDocs.sort((a, b) => b.createdAt - a.createdAt)) {
+    rows.push({ kind: "file", depth: 0, document, pinned: true });
+  }
+
   const emit = (node: FolderNode, prefix: string, depth: number) => {
     const folders = [...node.folders].sort(([a], [b]) => compareName(a, b));
     for (const [name, child] of folders) {
@@ -136,7 +157,7 @@ export function buildTree(
     }
     const files = [...node.files].sort((a, b) => b.createdAt - a.createdAt);
     for (const document of files) {
-      rows.push({ kind: "file", depth, document });
+      rows.push({ kind: "file", depth, document, pinned: false });
     }
   };
   emit(root, "", 0);

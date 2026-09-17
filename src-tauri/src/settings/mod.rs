@@ -20,6 +20,9 @@ pub struct WorkspaceMetadata {
     pub version: u32,
     #[serde(default)]
     pub archived: Vec<String>,
+    /// ピン止め（ADR-020）。Archive と同じく相対パスで持つ。
+    #[serde(default)]
+    pub pinned: Vec<String>,
     #[serde(default)]
     pub last_opened: Option<String>,
     /// フォルダの展開状態（U-024）。
@@ -32,6 +35,7 @@ impl Default for WorkspaceMetadata {
         Self {
             version: 1,
             archived: Vec::new(),
+            pinned: Vec::new(),
             last_opened: None,
             expanded_folders: Vec::new(),
         }
@@ -132,4 +136,48 @@ pub fn list_recovery(dir: &Path) -> Vec<RecoverySnapshot> {
         .filter_map(|e| std::fs::read_to_string(e.path()).ok())
         .filter_map(|text| serde_json::from_str::<RecoverySnapshot>(&text).ok())
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("quiet-md-test-{name}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn loads_metadata_written_before_pinned_existed() {
+        let root = temp_dir("settings-no-pinned");
+        std::fs::create_dir_all(root.join(WORKSPACE_DIR)).unwrap();
+        std::fs::write(
+            metadata_path(&root),
+            r#"{"version":1,"archived":["old.md"],"lastOpened":null,"expandedFolders":["a"]}"#,
+        )
+        .unwrap();
+
+        let meta = load_workspace_metadata(&root);
+
+        assert_eq!(meta.archived, vec!["old.md".to_string()]);
+        assert_eq!(meta.pinned, Vec::<String>::new());
+        assert_eq!(meta.expanded_folders, vec!["a".to_string()]);
+    }
+
+    #[test]
+    fn round_trips_pinned() {
+        let root = temp_dir("settings-pinned");
+        let meta = WorkspaceMetadata {
+            pinned: vec!["notes/todo.md".to_string()],
+            ..WorkspaceMetadata::default()
+        };
+        save_workspace_metadata(&root, &meta).unwrap();
+
+        assert_eq!(
+            load_workspace_metadata(&root).pinned,
+            vec!["notes/todo.md".to_string()]
+        );
+    }
 }

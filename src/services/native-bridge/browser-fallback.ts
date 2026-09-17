@@ -79,6 +79,7 @@ const files = new Map<string, FakeFile>([
 let metadata: WorkspaceMetadata = {
   version: 1,
   archived: ["2026-archive-sample.md"],
+  pinned: [],
   lastOpened: "designing-quieter-software.md",
   expandedFolders: ["docs"],
 };
@@ -203,6 +204,18 @@ export async function browserFallback<T>(
         archived: archived
           ? [...metadata.archived.filter((p) => p !== relativePath), relativePath]
           : metadata.archived.filter((p) => p !== relativePath),
+      };
+      return metadata as T;
+    }
+
+    case "set_pinned": {
+      const relativePath = arg("relativePath") as string;
+      const pinned = arg("pinned") as boolean;
+      metadata = {
+        ...metadata,
+        pinned: pinned
+          ? [...metadata.pinned.filter((p) => p !== relativePath), relativePath]
+          : metadata.pinned.filter((p) => p !== relativePath),
       };
       return metadata as T;
     }
@@ -398,7 +411,7 @@ export function resetFallback(): void {
   files.clear();
   files.set("/notes/a.md", { content: "# A\n", modifiedAt: 1000, createdAt: 1000 });
   files.set("/notes/b.md", { content: "# B\n", modifiedAt: 1000, createdAt: 1000 });
-  metadata = { version: 1, archived: [], lastOpened: null, expandedFolders: [] };
+  metadata = { version: 1, archived: [], pinned: [], lastOpened: null, expandedFolders: [] };
   appSettings = null;
 }
 

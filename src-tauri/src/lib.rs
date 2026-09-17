@@ -57,6 +57,7 @@ pub fn run() {
             commands::workspace::load_workspace_metadata,
             commands::workspace::save_workspace_metadata,
             commands::workspace::set_archived,
+            commands::workspace::set_pinned,
             commands::workspace::search_workspace,
             commands::workspace::load_app_settings,
             commands::workspace::save_app_settings,

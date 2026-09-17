@@ -78,6 +78,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-040 | 全角で打たれた Markdown 記号を、入力時と変換確定後の 2 経路で半角へ直す | Medium |
 | AUTO-041 | `--font-mono` の末尾に日本語等幅フォントを足した | Low |
 | AUTO-042 | 新規ノート作成と Rename の直後はタイトル欄へフォーカスし、全文を選択した状態にする（打ち始めれば `Untitled` が置き換わる） | Low |
+| AUTO-043 | ピン止めは Archive と同様に相対パスで保持するため、Rename するとピンは外れる。Notes と Archive の両方で有効であり、Recent には表示しない | Low |
 
 ## 未実装リスト
 
@@ -96,8 +97,7 @@ MVP に含まれるが、まだ手を付けていないもの。
 
 最新の実行結果だけを置く。過去の回は git 履歴を見る。
 
-- 2026-09-10: `npm run check` 206 passed（15 files）
-- 2026-09-09: `cargo test` 32 passed（以降 Rust 側は未変更）
+- 2026-09-17: `npm run check` 240 passed（16 files）、`cargo test` 45 passed（AUTO-043 / ADR-020 のピン止めを含む）
 - **未検証**: デスクトップでの起動（`npm run tauri:dev` 未実行）、関連付けからのダブルクリック起動、
   二重起動時の argv 受け渡し、macOS の `RunEvent::Opened`
 - 2026-09-10: `npm run dev`（ブラウザ）で確認 — 全角記号の置き換え（`＃`＋空白 / `ー`＋全角空白 /

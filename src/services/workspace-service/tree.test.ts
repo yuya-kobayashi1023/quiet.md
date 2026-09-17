@@ -29,7 +29,7 @@ const paths = (rows: TreeRow[]) =>
 
 describe("buildTree", () => {
   it("Archive されたファイルを Notes から外す（U-005）", () => {
-    const rows = buildTree(documents, ["old.md"], [], "notes");
+    const rows = buildTree(documents, ["old.md"], [], "notes", []);
     const files = rows.filter((r) => r.kind === "file");
     expect(files.map((r) => (r.kind === "file" ? r.document.relativePath : ""))).not.toContain(
       "old.md",
@@ -37,13 +37,13 @@ describe("buildTree", () => {
   });
 
   it("Archive 区分には Archive されたものだけを出す", () => {
-    const rows = buildTree(documents, ["old.md"], [], "archive");
+    const rows = buildTree(documents, ["old.md"], [], "archive", []);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.kind === "file" && rows[0]!.document.relativePath).toBe("old.md");
   });
 
   it("閉じたフォルダの中身を行にしない（U-024）", () => {
-    const rows = buildTree(documents, [], [], "notes");
+    const rows = buildTree(documents, [], [], "notes", []);
     expect(rows.filter((r) => r.kind === "folder").map((r) => r.kind === "folder" && r.path)).toEqual(
       ["docs"],
     );
@@ -54,7 +54,7 @@ describe("buildTree", () => {
   });
 
   it("開いたフォルダの中身を出す。フォルダ行が先、ファイル行が後（ADR-019）", () => {
-    const rows = buildTree(documents, [], ["docs"], "notes");
+    const rows = buildTree(documents, [], ["docs"], "notes", []);
     expect(paths(rows)).toEqual(["[docs]", "[docs/deep]", "docs/design.md", "a.md", "old.md"]);
   });
 
@@ -64,6 +64,7 @@ describe("buildTree", () => {
       [],
       [],
       "notes",
+      [],
     );
     expect(paths(rows)).toEqual(["b.md", "c.md", "a.md"]);
   });
@@ -74,6 +75,7 @@ describe("buildTree", () => {
       [],
       [],
       "notes",
+      [],
     );
     expect(paths(rows)).toEqual(["a.md", "b.md", "c.md"]);
   });
@@ -84,6 +86,7 @@ describe("buildTree", () => {
       [],
       [],
       "notes",
+      [],
     );
     expect(paths(rows)).toEqual(["[alpha]", "[Beta]", "[Gamma]", "zeta.md"]);
   });
@@ -94,6 +97,7 @@ describe("buildTree", () => {
       [],
       ["docs"],
       "notes",
+      [],
     );
     expect(paths(rows)).toEqual(["[docs]", "[docs/sub]", "docs/new.md", "docs/old.md"]);
   });
@@ -104,20 +108,95 @@ describe("buildTree", () => {
       ["a.md", "b.md", "old/c.md"],
       ["old"],
       "archive",
+      [],
     );
     expect(paths(rows)).toEqual(["[old]", "old/c.md", "b.md", "a.md"]);
   });
 
   it("入れ子のフォルダを両方開くと深い階層まで出す", () => {
-    const rows = buildTree(documents, [], ["docs", "docs/deep"], "notes");
+    const rows = buildTree(documents, [], ["docs", "docs/deep"], "notes", []);
     expect(rows.some((r) => r.kind === "file" && r.document.relativePath === "docs/deep/nested.md")).toBe(
       true,
     );
   });
 
   it("フォルダの depth が階層を表す", () => {
-    const rows = buildTree(documents, [], ["docs", "docs/deep"], "notes");
+    const rows = buildTree(documents, [], ["docs", "docs/deep"], "notes", []);
     const deep = rows.find((r) => r.kind === "folder" && r.path === "docs/deep");
     expect(deep?.kind === "folder" && deep.depth).toBe(1);
+  });
+
+  describe("ピン止め（ADR-020）", () => {
+    it("ピン止めした行はフォルダ行より前に depth 0 で出る", () => {
+      const rows = buildTree(
+        [doc("a.md", 100), doc("docs/x.md", 900), doc("old.md", 1)],
+        [],
+        [],
+        "notes",
+        ["old.md"],
+      );
+      expect(paths(rows)).toEqual(["old.md", "[docs]", "a.md"]);
+      expect(rows[0]).toMatchObject({ kind: "file", depth: 0, pinned: true });
+      expect(rows[2]).toMatchObject({ kind: "file", depth: 0, pinned: false });
+    });
+
+    it("閉じたフォルダの中のファイルもピン止めすれば先頭に出て、フォルダ側には出ない", () => {
+      const rows = buildTree(documents, [], [], "notes", ["docs/deep/nested.md"]);
+      expect(paths(rows)).toEqual(["docs/deep/nested.md", "[docs]", "a.md", "old.md"]);
+    });
+
+    it("フォルダの中身がすべてピン止めでも、フォルダ行は残る", () => {
+      const rows = buildTree(
+        [doc("docs/only.md", 1), doc("a.md", 2)],
+        [],
+        ["docs"],
+        "notes",
+        ["docs/only.md"],
+      );
+      expect(paths(rows)).toEqual(["docs/only.md", "[docs]", "a.md"]);
+    });
+
+    it("開いたフォルダの中にもピン止めしたファイルは重複して出ない", () => {
+      const rows = buildTree(documents, [], ["docs"], "notes", ["docs/design.md"]);
+      expect(paths(rows)).toEqual(["docs/design.md", "[docs]", "[docs/deep]", "a.md", "old.md"]);
+    });
+
+    it("ピン同士は作成日時の新しい順。同じなら Native の名前順", () => {
+      const rows = buildTree(
+        [doc("a.md", 100), doc("b.md", 300), doc("c.md", 100), doc("d.md", 200)],
+        [],
+        [],
+        "notes",
+        ["a.md", "b.md", "c.md"],
+      );
+      expect(paths(rows)).toEqual(["b.md", "a.md", "c.md", "d.md"]);
+    });
+
+    it("ピン止め以外の並びは変わらない", () => {
+      const rows = buildTree(
+        [doc("zeta.md", 999), doc("Beta/x.md", 1), doc("alpha/y.md", 1), doc("pin.md", 5)],
+        [],
+        ["Beta"],
+        "notes",
+        ["pin.md"],
+      );
+      expect(paths(rows)).toEqual(["pin.md", "[alpha]", "[Beta]", "Beta/x.md", "zeta.md"]);
+    });
+
+    it("Archive 区分でも効く。Notes 側のピンは Archive に出ない", () => {
+      const rows = buildTree(
+        [doc("a.md", 100), doc("old/b.md", 300), doc("old/c.md", 200), doc("keep.md", 999)],
+        ["a.md", "old/b.md", "old/c.md"],
+        [],
+        "archive",
+        ["old/c.md", "keep.md"],
+      );
+      expect(paths(rows)).toEqual(["old/c.md", "[old]", "a.md"]);
+    });
+
+    it("Archive したファイルのピンは Notes に出ない", () => {
+      const rows = buildTree(documents, ["old.md"], [], "notes", ["old.md"]);
+      expect(paths(rows)).toEqual(["[docs]", "a.md"]);
+    });
   });
 });

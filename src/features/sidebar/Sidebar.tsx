@@ -23,6 +23,7 @@ import {
   ChevronIcon,
   FileIcon,
   FolderIcon,
+  PinIcon,
   PlusIcon,
   SettingsIcon,
   SidebarIcon,
@@ -45,6 +46,8 @@ interface SidebarProps {
   /** 今開いている Workspace の表示名。未選択なら null。 */
   workspaceName: string | null;
   archived: string[];
+  /** ピン止め（ADR-020）。区分の先頭へ寄せる。Recent には効かない。 */
+  pinned: string[];
   expandedFolders: string[];
   activePath: string | null;
   saveState: SaveState;
@@ -113,7 +116,7 @@ function FileRow({
         }}
         {...handlers}
       >
-        <FileIcon className="tree-icon" />
+        {row.pinned ? <PinIcon className="tree-icon" /> : <FileIcon className="tree-icon" />}
         <span className="tree-label" ref={ref}>
           {row.document.filename}
         </span>
@@ -405,6 +408,7 @@ export function Sidebar(props: SidebarProps) {
     workspaceRoot,
     workspaceName,
     archived,
+    pinned,
     expandedFolders,
     activePath,
     saveState,
@@ -424,8 +428,8 @@ export function Sidebar(props: SidebarProps) {
     onWorkspaceContextMenu,
   } = props;
 
-  const notes = buildTree(documents, archived, expandedFolders, "notes");
-  const archiveRows = buildTree(documents, archived, expandedFolders, "archive");
+  const notes = buildTree(documents, archived, expandedFolders, "notes", pinned);
+  const archiveRows = buildTree(documents, archived, expandedFolders, "archive", pinned);
   const hasDirty = saveState !== "clean";
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -689,12 +693,14 @@ export function FileContextMenu({
   document: doc,
   position,
   archived,
+  pinned,
   onClose,
   onAction,
 }: {
   document: DocumentSummary;
   position: { x: number; y: number };
   archived: boolean;
+  pinned: boolean;
   onClose: () => void;
   onAction: (action: string, doc: DocumentSummary) => void;
 }) {
@@ -736,6 +742,9 @@ export function FileContextMenu({
         エクスプローラーで表示
       </button>
       <hr />
+      <button type="button" role="menuitem" onClick={() => run(pinned ? "unpin" : "pin")}>
+        {pinned ? "ピン止めを外す" : "ピン止め"}
+      </button>
       <button type="button" role="menuitem" onClick={() => run(archived ? "restore" : "archive")}>
         {archived ? "アーカイブから戻す" : "アーカイブ"}
       </button>
