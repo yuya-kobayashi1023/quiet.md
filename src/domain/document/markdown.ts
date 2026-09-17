@@ -250,6 +250,30 @@ function addSourceLines() {
   };
 }
 
+/**
+ * fence の言語を `<pre data-language>` に写す。
+ *
+ * 紙面（print.css）がコードブロックの隅に言語名を出すのに使う（ADR-021）。
+ * 値は sanitize が通した `language-*` クラスから取るので、書き手の入力そのままではない。
+ */
+function markCodeLanguage() {
+  return (tree: HastRoot) => {
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "pre") return;
+      const code = node.children.find(
+        (child): child is Element => child.type === "element" && child.tagName === "code",
+      );
+      const classes = code?.properties?.className;
+      const language = (Array.isArray(classes) ? classes : [])
+        .map(String)
+        .find((name) => name.startsWith("language-"))
+        ?.slice("language-".length);
+      if (!language) return;
+      node.properties = { ...node.properties, dataLanguage: language };
+    });
+  };
+}
+
 /** 見出しへ id を振る。TOC からの移動に使う。 */
 function addHeadingIds() {
   return (tree: HastRoot) => {
@@ -325,6 +349,7 @@ export function renderMarkdown(body: string, options: RenderOptions = {}): Rende
       // 未登録の言語は素のまま出す（例外にしない）。
       plainText: ["text", "plain", "txt"],
     })
+    .use(markCodeLanguage)
     .use(rehypeStringify)
     .processSync(body);
 

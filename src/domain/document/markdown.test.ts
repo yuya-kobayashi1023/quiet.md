@@ -37,7 +37,7 @@ describe("renderMarkdown — GFM", () => {
 
   it("コードフェンスを描画する", () => {
     const { html } = renderMarkdown("```js\nconst a = 1;\n```\n");
-    expect(html).toContain("<pre>");
+    expect(html).toContain('<pre data-language="js">');
     // highlight で span に割れるため、素の文字列としては残らない。
     expect(html).toContain("const");
     expect(html).toContain("a = ");
@@ -148,7 +148,7 @@ describe("renderMarkdown — source lines（ADR-012）", () => {
     const { html } = renderMarkdown(body, { sourceLines: true });
     expect(html).toContain('<h1 id="user-content-title" data-source-line="1">');
     expect(html).toContain('<p data-source-line="3">');
-    expect(html).toContain('<pre data-source-line="5">');
+    expect(html).toContain('<pre data-source-line="5" data-language="js">');
     expect(html).toContain('<p data-source-line="9">');
   });
 
