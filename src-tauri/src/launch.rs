@@ -13,6 +13,8 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// 起動対象を Window へ配るときのイベント名。
 pub const OPEN_TARGET_EVENT: &str = "quiet://open-target";
+/// ドロップされたものが Markdown でもフォルダでもなかったことを知らせるイベント名。
+pub const DROP_REJECTED_EVENT: &str = "quiet://drop-rejected";
 
 /// 外から「これを開け」と言われた対象。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -40,6 +42,13 @@ pub struct OpenTargetEvent {
     pub window: String,
     #[serde(flatten)]
     pub target: OpenTarget,
+}
+
+/// 宛先の規則は `OpenTargetEvent` と同じ。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DropRejectedEvent {
+    pub window: String,
 }
 
 /// コマンドライン引数から開く対象を 1 つ選ぶ。
@@ -142,6 +151,16 @@ pub fn deliver_to(app: &AppHandle, label: &str, target: OpenTarget) {
     };
     if let Err(e) = app.emit_to(label, OPEN_TARGET_EVENT, payload) {
         log::warn!("failed to deliver open target: {e}");
+    }
+}
+
+/// 開けないものを落とされた Window へ、そのことだけを知らせる。Frontend が Toast にする。
+pub fn reject_drop(app: &AppHandle, label: &str) {
+    let payload = DropRejectedEvent {
+        window: label.to_string(),
+    };
+    if let Err(e) = app.emit_to(label, DROP_REJECTED_EVENT, payload) {
+        log::warn!("failed to report rejected drop: {e}");
     }
 }
 
