@@ -75,6 +75,24 @@ function parentOf(path: string): string {
   return at <= 0 ? path : path.slice(0, at);
 }
 
+/** `target` の上端が pane の上端から `margin` px 下に来る scrollTop。 */
+function scrollTopFor(pane: HTMLElement, target: HTMLElement, margin: number): number {
+  return (
+    pane.scrollTop + target.getBoundingClientRect().top - pane.getBoundingClientRect().top - margin
+  );
+}
+
+/** Preview で、本文の `line` 行目以前に始まる最後の要素（ADR-012 の data-source-line）。 */
+function previewElementAtLine(pane: HTMLElement, line: number): HTMLElement | null {
+  let found: { line: number; el: HTMLElement } | null = null;
+  for (const el of pane.querySelectorAll<HTMLElement>("[data-source-line]")) {
+    const at = Number(el.dataset.sourceLine);
+    if (!Number.isFinite(at) || at > line) continue;
+    if (!found || at >= found.line) found = { line: at, el };
+  }
+  return found?.el ?? null;
+}
+
 export function App() {
   const settings = useStore(settingsService.store);
   const workspace = useStore(workspaceService.store);
@@ -93,6 +111,8 @@ export function App() {
   const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
+  // 文書を離れる瞬間に読むための写し。state は render 待ちで遅れる。
+  const cursorRef = useRef(cursor);
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
   /**
@@ -332,15 +352,62 @@ export function App() {
    * ---------------------------------------------------------------- */
 
   useEffect(() => {
-    const onBlur = () => void documentService.flush();
-    const onBeforeUnload = () => void documentService.flush();
-    window.addEventListener("blur", onBlur);
+    const flush = () => {
+      void documentService.flush();
+      const path = documentService.session?.path;
+      if (path) settingsService.rememberPosition(path, cursorRef.current);
+    };
+    const onBeforeUnload = () => {
+      flush();
+      settingsService.flush();
+    };
+    window.addEventListener("blur", flush);
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => {
-      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("blur", flush);
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
   }, []);
+
+  /* ---------------------------------------------------------------- *
+   * カーソル位置の記憶
+   * ---------------------------------------------------------------- */
+
+  // 文書が切り替わる（または閉じる）ときに、離れる側の位置を記録する。
+  // cleanup が古い path を握っているので、切替後の値を読む心配がない。
+  useEffect(() => {
+    const path = session?.path;
+    if (!path) return;
+    return () => settingsService.rememberPosition(path, cursorRef.current);
+  }, [session?.path]);
+
+  /**
+   * 開いた文書の Editor が立ち上がった直後に、前回の位置へ戻す。
+   *
+   * 記録が無くても選択を dispatch するのは、updateListener 経由で cursor と
+   * cursorRef を新しい文書の値に揃えるため。これが無いと、触らずに次の文書へ
+   * 移ったときに前の文書の位置が記録される。
+   *
+   * 行と桁は文書の範囲へ丸める。記録してから外で書き換わっていても近くに落ちる。
+   * Read では Editor が隠れているので Preview も動かす。Split は Editor の
+   * scroll に Preview が追従するので Editor だけでよい。
+   */
+  const restoreCursor = (view: EditorView, path: string) => {
+    const remembered = settingsService.positionOf(path);
+    const doc = view.state.doc;
+    const lineNumber = Math.min(Math.max(1, remembered?.line ?? 1), doc.lines);
+    const line = doc.line(lineNumber);
+    const pos = Math.min(line.from + Math.max(1, remembered?.column ?? 1) - 1, line.to);
+    view.dispatch({
+      selection: { anchor: pos },
+      effects: EditorView.scrollIntoView(pos, { y: "center" }),
+    });
+
+    const pane = previewPane.current;
+    if (!remembered || settings.viewMode !== "read" || !pane) return;
+    const target = previewElementAtLine(pane, lineNumber);
+    if (target) pane.scrollTo({ top: scrollTopFor(pane, target, 40) });
+  };
 
   /* ---------------------------------------------------------------- *
    * 派生値
@@ -719,14 +786,7 @@ export function App() {
         const target = document.getElementById(`${HEADING_ID_PREFIX}${heading.id}`);
         const pane = previewPane.current;
         if (target && pane) {
-          pane.scrollTo({
-            top:
-              pane.scrollTop +
-              target.getBoundingClientRect().top -
-              pane.getBoundingClientRect().top -
-              40,
-            behavior: "smooth",
-          });
+          pane.scrollTo({ top: scrollTopFor(pane, target, 40), behavior: "smooth" });
         }
       }
       setTocOpen(false);
@@ -1047,9 +1107,13 @@ export function App() {
                       onChange={(body) =>
                         documentService.edit(frontmatterPrefix.current + body)
                       }
-                      onCursorChange={setCursor}
+                      onCursorChange={(info) => {
+                        cursorRef.current = info;
+                        setCursor(info);
+                      }}
                       onReady={(view) => {
                         editorView.current = view;
+                        restoreCursor(view, session.path);
                       }}
                     />
                   </div>
