@@ -256,4 +256,5 @@
 .preview-body input[type="checkbox"] {
   margin-right: 6px;
   accent-color: var(--accent);
+  cursor: pointer;
 }

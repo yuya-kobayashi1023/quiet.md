@@ -70,6 +70,7 @@ export function PrintSheet({ path, title, body, fields, baseDir, onDone }: Print
         baseDir={baseDir}
         typeface="sans"
         onOpenDocument={() => {}}
+        onToggleTask={() => {}}
       />
     </div>,
     document.body,
