@@ -51,9 +51,19 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
   }
 }
 
+async function listen(): Promise<ListenFn> {
+  if (!listenImpl) {
+    const evt = await import("@tauri-apps/api/event");
+    listenImpl = evt.listen as unknown as ListenFn;
+  }
+  return listenImpl;
+}
+
 export const FILE_CHANGE_EVENT = "quiet://file-change";
 /** 実行中のアプリへ「これを開け」と指示するイベント（ADR-013）。 */
 export const OPEN_TARGET_EVENT = "quiet://open-target";
+/** Window へ落とされたものが Markdown でもフォルダでもなかったことを知らせるイベント。 */
+export const DROP_REJECTED_EVENT = "quiet://drop-rejected";
 
 export type FileWatchEvent =
   | { type: "changed"; path: string; revision: DiskRevision }
@@ -64,11 +74,7 @@ export async function onFileChange(
   handler: (event: FileWatchEvent) => void,
 ): Promise<() => void> {
   if (!isNative()) return () => {};
-  if (!listenImpl) {
-    const evt = await import("@tauri-apps/api/event");
-    listenImpl = evt.listen as unknown as ListenFn;
-  }
-  return listenImpl(FILE_CHANGE_EVENT, (e) => handler(e.payload as FileWatchEvent));
+  return (await listen())(FILE_CHANGE_EVENT, (e) => handler(e.payload as FileWatchEvent));
 }
 
 /* ------------------------------------------------------------------ *
@@ -103,14 +109,21 @@ export async function onOpenTarget(
 ): Promise<() => void> {
   if (!isNative()) return () => {};
   const label = await currentWindowLabel();
-  if (!listenImpl) {
-    const evt = await import("@tauri-apps/api/event");
-    listenImpl = evt.listen as unknown as ListenFn;
-  }
-  return listenImpl(OPEN_TARGET_EVENT, (e) => {
+  return (await listen())(OPEN_TARGET_EVENT, (e) => {
     const payload = e.payload as (OpenTarget & { window: string }) | undefined;
     if (!payload || payload.window !== label) return;
     handler({ kind: payload.kind, path: payload.path } as OpenTarget);
+  });
+}
+
+/** Window へ落とされたものを開けなかったことを受け取る。自分の Window 宛だけを通す。 */
+export async function onDropRejected(handler: () => void): Promise<() => void> {
+  if (!isNative()) return () => {};
+  const label = await currentWindowLabel();
+  return (await listen())(DROP_REJECTED_EVENT, (e) => {
+    const payload = e.payload as { window: string } | undefined;
+    if (!payload || payload.window !== label) return;
+    handler();
   });
 }
 

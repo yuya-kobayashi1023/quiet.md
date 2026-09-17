@@ -314,6 +314,17 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ドロップされたものが開けなかったときだけ Native が知らせてくる。開けたときは上の経路で届く。
+  useEffect(() => {
+    let dispose: (() => void) | undefined;
+    void native
+      .onDropRejected(() => showToast("Markdown ファイルかフォルダをドロップしてください"))
+      .then((fn) => {
+        dispose = fn;
+      });
+    return () => dispose?.();
+  }, [showToast]);
+
   /* ---------------------------------------------------------------- *
    * この Window が開いている文書を Native へ知らせる（U-021）
    * ---------------------------------------------------------------- */

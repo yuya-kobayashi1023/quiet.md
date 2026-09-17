@@ -193,7 +193,7 @@ DarkはLightの反転ではなく独立トークン。
 - Save failure handling
 - OS File Dialog
 - Window close safety
-- Drag & Drop `.md`
+- `.md` の Drag & Drop（実装済み。フォルダは Workspace として開く）
 - `Ctrl/Cmd + S`
 - `Ctrl/Cmd + F`
 - `Ctrl/Cmd + P`
