@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildTree } from "./index";
 import type { DocumentSummary } from "@/domain/document/types";
 
-const doc = (relativePath: string): DocumentSummary => {
+const doc = (relativePath: string, createdAt = 0): DocumentSummary => {
   const filename = relativePath.slice(relativePath.lastIndexOf("/") + 1);
   return {
     relativePath,
@@ -10,6 +10,7 @@ const doc = (relativePath: string): DocumentSummary => {
     filename,
     title: filename.replace(/\.md$/, ""),
     modifiedAt: 0,
+    createdAt,
     size: 0,
   };
 };

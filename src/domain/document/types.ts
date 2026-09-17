@@ -38,6 +38,8 @@ export interface DocumentSummary {
   /** 拡張子を除いたファイル名。これが Title（U-006 / U-020）。 */
   title: string;
   modifiedAt: number;
+  /** OS のファイル作成時刻（epoch ms）。Sidebar の並び順の根拠（ADR-019）。 */
+  createdAt: number;
   size: number;
 }
 
