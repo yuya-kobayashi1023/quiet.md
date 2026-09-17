@@ -45,6 +45,8 @@ interface SidebarProps {
   /** 今開いている Workspace の表示名。未選択なら null。 */
   workspaceName: string | null;
   archived: string[];
+  /** ピン止め（ADR-020）。区分の先頭へ寄せる。Recent には効かない。 */
+  pinned: string[];
   expandedFolders: string[];
   activePath: string | null;
   saveState: SaveState;
@@ -405,6 +407,7 @@ export function Sidebar(props: SidebarProps) {
     workspaceRoot,
     workspaceName,
     archived,
+    pinned,
     expandedFolders,
     activePath,
     saveState,
@@ -424,8 +427,8 @@ export function Sidebar(props: SidebarProps) {
     onWorkspaceContextMenu,
   } = props;
 
-  const notes = buildTree(documents, archived, expandedFolders, "notes");
-  const archiveRows = buildTree(documents, archived, expandedFolders, "archive");
+  const notes = buildTree(documents, archived, expandedFolders, "notes", pinned);
+  const archiveRows = buildTree(documents, archived, expandedFolders, "archive", pinned);
   const hasDirty = saveState !== "clean";
 
   const [pickerOpen, setPickerOpen] = useState(false);

@@ -856,6 +856,7 @@ export function App() {
           workspaceRoot={workspace.snapshot?.rootPath ?? null}
           workspaceName={workspace.snapshot?.name ?? null}
           archived={workspace.metadata?.archived ?? []}
+          pinned={workspace.metadata?.pinned ?? []}
           expandedFolders={workspace.metadata?.expandedFolders ?? []}
           activePath={workspace.activePath}
           saveState={session?.saveState ?? "clean"}

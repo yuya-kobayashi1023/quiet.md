@@ -53,6 +53,8 @@ export interface WorkspaceSnapshot {
 export interface WorkspaceMetadata {
   version: number;
   archived: string[];
+  /** ピン止め（ADR-020）。Archive と同じく相対パス。 */
+  pinned: string[];
   lastOpened: string | null;
   expandedFolders: string[];
 }

@@ -139,6 +139,9 @@ export const saveWorkspaceMetadata = (metadata: WorkspaceMetadata) =>
 export const setArchived = (relativePath: string, archived: boolean) =>
   invoke<WorkspaceMetadata>("set_archived", { relativePath, archived });
 
+export const setPinned = (relativePath: string, pinned: boolean) =>
+  invoke<WorkspaceMetadata>("set_pinned", { relativePath, pinned });
+
 /** Workspace 全体の全文検索（U-013 / ADR-011）。 */
 export const searchWorkspace = (query: SearchQuery) =>
   invoke<SearchResults>("search_workspace", { query });
