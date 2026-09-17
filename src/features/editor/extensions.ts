@@ -17,6 +17,7 @@ import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search
 import { listKeymap } from "./list-keymap";
 import { fenceInput } from "./fence-input";
 import { fullWidthInput } from "./fullwidth-input";
+import { linkPaste } from "./link-paste";
 
 /**
  * Markdown の「意味を持つ記号」だけを色付ける。
@@ -141,6 +142,8 @@ export function coreExtensions(): Extension[] {
     fenceInput,
     // 全角で打たれた Markdown 記号を半角へ直す。
     fullWidthInput,
+    // 選択して URL を貼ると `[選択文字](URL)` にする。paste イベントなので keymap の順序とは干渉しない。
+    linkPaste,
     history(),
     drawSelection(),
     highlightSpecialChars(),
