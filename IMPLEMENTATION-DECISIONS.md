@@ -96,7 +96,7 @@ MVP に含まれるが、まだ手を付けていないもの。
 
 最新の実行結果だけを置く。過去の回は git 履歴を見る。
 
-- 2026-09-17: `npm run check` 239 passed（16 files）、`cargo test` 45 passed（AUTO-043 / ADR-020 のピン止めを含む）
+- 2026-09-17: `npm run check` 240 passed（16 files）、`cargo test` 45 passed（AUTO-043 / ADR-020 のピン止めを含む）
 - **未検証**: デスクトップでの起動（`npm run tauri:dev` 未実行）、関連付けからのダブルクリック起動、
   二重起動時の argv 受け渡し、macOS の `RunEvent::Opened`
 - 2026-09-10: `npm run dev`（ブラウザ）で確認 — 全角記号の置き換え（`＃`＋空白 / `ー`＋全角空白 /

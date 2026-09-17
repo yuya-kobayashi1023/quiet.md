@@ -145,6 +145,17 @@ describe("buildTree", () => {
       expect(paths(rows)).toEqual(["docs/deep/nested.md", "[docs]", "a.md", "old.md"]);
     });
 
+    it("フォルダの中身がすべてピン止めでも、フォルダ行は残る", () => {
+      const rows = buildTree(
+        [doc("docs/only.md", 1), doc("a.md", 2)],
+        [],
+        ["docs"],
+        "notes",
+        ["docs/only.md"],
+      );
+      expect(paths(rows)).toEqual(["docs/only.md", "[docs]", "a.md"]);
+    });
+
     it("開いたフォルダの中にもピン止めしたファイルは重複して出ない", () => {
       const rows = buildTree(documents, [], ["docs"], "notes", ["docs/design.md"]);
       expect(paths(rows)).toEqual(["docs/design.md", "[docs]", "[docs/deep]", "a.md", "old.md"]);

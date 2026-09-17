@@ -107,7 +107,7 @@ function compareName(a: string, b: string): number {
  *
  * - Notes と Archive を分ける（U-005）
  * - ピン止めしたファイルは、サブフォルダにあっても区分の先頭に depth 0 で置く（ADR-020）。
- *   フォルダ側には出さない。ピン同士は作成日時の新しい順
+ *   フォルダ側には出さないが、所属フォルダの行は残す。ピン同士は作成日時の新しい順
  * - 残りは各階層でフォルダ行を名前順に置き、その後にファイル行を作成日時の新しい順に置く（ADR-019）。
  *   作成日時が同じファイルは Native の並び（名前順）を保つ
  * - フォルダは折りたたみ可能。閉じているフォルダの中身は行にしない（U-024）
@@ -128,10 +128,6 @@ export function buildTree(
   const pinnedDocs: DocumentSummary[] = [];
   for (const doc of documents) {
     if (archivedSet.has(doc.relativePath) !== (section === "archive")) continue;
-    if (pinnedSet.has(doc.relativePath)) {
-      pinnedDocs.push(doc);
-      continue;
-    }
     const segments = doc.relativePath.split("/");
     let node = root;
     for (const name of segments.slice(0, -1)) {
@@ -142,7 +138,9 @@ export function buildTree(
       }
       node = child;
     }
-    node.files.push(doc);
+    // ピン止めは先頭の群へ移すが、所属フォルダの行は残す（中身が全部ピンでも消さない）
+    if (pinnedSet.has(doc.relativePath)) pinnedDocs.push(doc);
+    else node.files.push(doc);
   }
 
   for (const document of pinnedDocs.sort((a, b) => b.createdAt - a.createdAt)) {
