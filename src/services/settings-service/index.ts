@@ -8,6 +8,12 @@
 import * as native from "@/services/native-bridge";
 import { pushRecent, removeRecent, type RecentFile } from "@/domain/document/recents";
 import {
+  positionOf,
+  rememberPosition,
+  type CursorPosition,
+  type RememberedPosition,
+} from "@/domain/document/positions";
+import {
   pushWorkspace,
   removeWorkspace,
   type WorkspaceEntry,
@@ -52,6 +58,10 @@ export interface AppSettings {
   /** Workspace 外で開いたファイルの履歴。新しい順。上限は RECENT_LIMIT。 */
   recentFiles: RecentFile[];
 
+  /* カーソル位置（設定画面には出さない） */
+  /** ノートごとに最後にいた位置。新しい順。上限は POSITION_LIMIT。 */
+  cursorPositions: RememberedPosition[];
+
   /* Workspace 履歴（ADR-016） */
   /** 過去に開いた Workspace。新しい順。上限は WORKSPACE_LIMIT。 */
   workspaces: WorkspaceEntry[];
@@ -80,6 +90,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   searchIncludeArchived: true,
 
   recentFiles: [],
+
+  cursorPositions: [],
 
   workspaces: [],
 };
@@ -124,6 +136,37 @@ export class SettingsService {
   /** 開けなくなったファイルを履歴から外す。 */
   forgetRecent(path: string): void {
     this.update({ recentFiles: removeRecent(this.get().recentFiles, path) });
+  }
+
+  /* ---------------------------------------------------------------- *
+   * カーソル位置
+   * ---------------------------------------------------------------- */
+
+  /**
+   * ノートを離れるときの位置を記録する。
+   *
+   * 同じ位置なら書かない。開き直して復元した直後に blur しても、
+   * 設定ファイルを書き直さずに済む。
+   */
+  rememberPosition(path: string, position: CursorPosition): void {
+    const current = positionOf(this.get().cursorPositions, path);
+    if (current && current.line === position.line && current.column === position.column) return;
+    this.update({
+      cursorPositions: rememberPosition(this.get().cursorPositions, path, position, Date.now()),
+    });
+  }
+
+  /** 記録した位置。開いたことがなければ null。 */
+  positionOf(path: string): CursorPosition | null {
+    return positionOf(this.get().cursorPositions, path);
+  }
+
+  /** 保留中の書き込みがあれば今すぐ走らせる。Window を閉じるときに呼ぶ。 */
+  flush(): void {
+    if (!this.saveTimer) return;
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    void native.saveAppSettings(this.store.get()).catch(() => {});
   }
 
   /* ---------------------------------------------------------------- *
