@@ -6,7 +6,7 @@
  * body 直下へ置き、`print.css` の `@media print` で他を隠す。
  *
  * 紙面は常に Light。`data-theme="light"` で tokens.css の Light 値を
- * この subtree に再適用する。
+ * この subtree に再適用する。書体は画面の設定によらずサンセリフ（ADR-021 §5）。
  */
 
 import { useEffect, useRef } from "react";
@@ -23,15 +23,24 @@ export interface PrintSheetProps {
   body: string;
   fields: FrontmatterFields;
   baseDir: string;
-  typeface: "serif" | "sans";
   /** 完了で呼ぶ。失敗なら error に例外が入り、成功なら null。 */
   onDone: (path: string, error: unknown) => void;
 }
 
-export function PrintSheet({ path, title, body, fields, baseDir, typeface, onDone }: PrintSheetProps) {
+export function PrintSheet({ path, title, body, fields, baseDir, onDone }: PrintSheetProps) {
   const sheet = useRef<HTMLDivElement>(null);
   // StrictMode は effect を 2 度走らせるが、印刷は 1 度でよい。
   const started = useRef(false);
+
+  // フッタのタイトルは `@page` の margin box が描く。`@page` は root の
+  // custom property しか見えないので、書き出しの間だけ root に置く。
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--print-title", JSON.stringify(title));
+    return () => {
+      root.style.removeProperty("--print-title");
+    };
+  }, [title]);
 
   useEffect(() => {
     if (started.current) return;
@@ -59,7 +68,7 @@ export function PrintSheet({ path, title, body, fields, baseDir, typeface, onDon
         body={body}
         fields={fields}
         baseDir={baseDir}
-        typeface={typeface}
+        typeface="sans"
         onOpenDocument={() => {}}
       />
     </div>,

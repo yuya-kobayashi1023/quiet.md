@@ -3,6 +3,10 @@
  *
  * `.print-sheet` は書き出しの間だけ body 直下に置かれる。画面では見せず、
  * 印刷時はこれだけを載せる。
+ *
+ * 紙面の設計は ADR-021 §5「構造で読ませる」。画面の Preview より構造を強く出す。
+ * アクセントの帯、見出しの縦バー、タグのチップ、コードの言語ラベル、表のヘッダ塗り。
+ * 色と書体は tokens.css から取り、紙面だけの値を増やさない。
  */
 
 .print-sheet {
@@ -10,6 +14,32 @@
 }
 
 @media print {
+  /*
+   * フッタは `@page` の margin box に描く。左にタイトル、右にページ番号。
+   * タイトルは PrintSheet が root に置く `--print-title` から取る。
+   * 用紙サイズと余白は Native 側（pdf.rs）の印刷設定が持つ。ここで `size` や
+   * `margin` を書いても PrintToPdf は読まない（実測）。
+   */
+  @page {
+    @bottom-left {
+      content: var(--print-title, "");
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--text-subtle);
+      vertical-align: top;
+      padding-top: 6mm;
+    }
+
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: var(--font-ui);
+      font-size: 9px;
+      color: var(--text-subtle);
+      vertical-align: top;
+      padding-top: 6mm;
+    }
+  }
+
   /*
    * 紙面が置かれている間だけ、画面用の固定高さと overflow を外して紙に流す。
    * `:has()` で選ぶのは、global.css より先に読み込まれても効かせるため。
@@ -30,18 +60,172 @@
     display: block;
   }
 
-  /* 画面用の余白と列幅は紙では要らない。余白は Native 側のページ設定が持つ。 */
+  /* 画面用の余白と列幅は紙では要らない。余白は Native の印刷設定が持つ。 */
   .print-sheet .preview {
     width: 100%;
     padding: 0;
+    font-family: var(--font-ui);
   }
 
-  /* 横スクロールは紙にないので折り返す。 */
+  /* --- ヘッダ ---------------------------------------------------- */
+
+  /* アクセントの帯。紙面の目印で、画面には無い。 */
+  .print-sheet .preview::before {
+    content: "";
+    display: block;
+    height: 6px;
+    background: var(--accent);
+    margin: 0 0 36px;
+  }
+
+  .print-sheet .preview-header {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 0 26px;
+    margin: 0 0 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .print-sheet .preview-title {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .print-sheet .preview-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+
+  /* タグはチップ。画面の「·」区切りは使わない。 */
+  .print-sheet .preview-meta-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .print-sheet .preview-meta-tags > span {
+    padding: 3px 9px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+
+  .print-sheet .preview-meta-dot {
+    display: none;
+  }
+
+  .print-sheet .preview-meta-status {
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--sidebar);
+    color: var(--text-editor);
+  }
+
+  .print-sheet .preview-meta-created {
+    margin-left: auto;
+    font-family: var(--font-mono);
+  }
+
+  /* --- 本文 ------------------------------------------------------ */
+
+  .print-sheet .preview-body {
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  .print-sheet .preview-body p {
+    margin: 0 0 14px;
+  }
+
+  .print-sheet .preview-body ul,
+  .print-sheet .preview-body ol {
+    margin: 0 0 14px;
+  }
+
+  .print-sheet .preview-body li {
+    margin: 0 0 4px;
+  }
+
+  .print-sheet .preview-body h1 {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    margin: 30px 0 10px;
+    padding-left: 14px;
+    border-left: 3px solid var(--accent);
+  }
+
+  .print-sheet .preview-body h2 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    margin: 24px 0 8px;
+  }
+
+  .print-sheet .preview-body h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 20px 0 6px;
+  }
+
+  .print-sheet .preview-body h4,
+  .print-sheet .preview-body h5,
+  .print-sheet .preview-body h6 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 16px 0 6px;
+  }
+
+  .print-sheet .preview-body blockquote {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-left: 0;
+    border-radius: var(--radius);
+    background: var(--canvas);
+    color: var(--text-secondary);
+  }
+
+  .print-sheet .preview-body th {
+    background: var(--sidebar);
+  }
+
+  .print-sheet .preview-body td {
+    font-size: 15px;
+  }
+
+  /* 横スクロールは紙にないので折り返す。言語名を右上に出す。 */
   .print-sheet .preview-body pre {
+    position: relative;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     overflow: visible;
   }
+
+  .print-sheet .preview-body pre[data-language]::after {
+    content: attr(data-language);
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-family: var(--font-ui);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-subtle);
+  }
+
+  /* --- 改ページ -------------------------------------------------- */
 
   .print-sheet .preview-body h1,
   .print-sheet .preview-body h2,

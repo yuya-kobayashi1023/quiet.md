@@ -86,24 +86,29 @@ export function Preview({
 
   return (
     <article className="preview" data-typeface={typeface} onClick={onClick}>
-      <h1 className="preview-title">{title || "Untitled"}</h1>
+      {/* 紙面（print.css）はこの header の下に罫を引く。画面では素の block。 */}
+      <header className="preview-header">
+        <h1 className="preview-title">{title || "Untitled"}</h1>
 
-      {hasMeta ? (
-        <div className="preview-meta">
-          {tags.length > 0 ? (
-            <span className="preview-meta-tags">
-              {tags.map((tag, i) => (
-                <span key={tag}>
-                  {i > 0 ? <span className="preview-meta-dot">·</span> : null}
-                  {tag}
-                </span>
-              ))}
-            </span>
-          ) : null}
-          {fields.status ? <span>{fields.status}</span> : null}
-          {fields.created ? <span>{fields.created}</span> : null}
-        </div>
-      ) : null}
+        {hasMeta ? (
+          <div className="preview-meta">
+            {tags.length > 0 ? (
+              <span className="preview-meta-tags">
+                {tags.map((tag, i) => (
+                  <span key={tag}>
+                    {i > 0 ? <span className="preview-meta-dot">·</span> : null}
+                    {tag}
+                  </span>
+                ))}
+              </span>
+            ) : null}
+            {fields.status ? <span className="preview-meta-status">{fields.status}</span> : null}
+            {fields.created ? (
+              <span className="preview-meta-created">{fields.created}</span>
+            ) : null}
+          </div>
+        ) : null}
+      </header>
 
       {/* html は rehype-sanitize を通した後のもの（U-023）。 */}
       <div className="preview-body" dangerouslySetInnerHTML={{ __html: html }} />

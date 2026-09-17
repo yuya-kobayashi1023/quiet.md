@@ -1201,7 +1201,6 @@ export function App() {
           body={slice.body}
           fields={fields}
           baseDir={baseDir}
-          typeface={settings.previewTypeface}
           onDone={onPdfDone}
         />
       ) : null}
