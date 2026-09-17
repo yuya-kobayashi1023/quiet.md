@@ -5,7 +5,12 @@
  * 値を直接コンポーネントへ書かない。ここにない色を足すときは design-system.md も更新する。
  */
 
-:root {
+/*
+ * Light は :root に加えて `[data-theme="light"]` の subtree にも効かせる。
+ * Dark の画面の中で紙面だけを Light にする（PDF 書き出し、ADR-021）。
+ */
+:root,
+[data-theme="light"] {
   /* --- Light（U-019 で AA 達成値へ調整済み） --- */
   --canvas: #f7f7f4;
   --sidebar: #f2f1ed;

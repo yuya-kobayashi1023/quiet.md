@@ -395,6 +395,9 @@ export async function browserFallback<T>(
     case "register_document_window":
       return undefined as T;
 
+    case "export_pdf":
+      throw new NativeError("IO_ERROR", { message: "ブラウザでは PDF を書き出せません" });
+
     case "open_external": {
       const url = arg("url") as string;
       window.open(url, "_blank", "noopener,noreferrer");

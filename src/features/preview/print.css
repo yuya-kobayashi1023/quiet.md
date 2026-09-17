@@ -1,0 +1,61 @@
+/*
+ * 紙面（PDF 書き出し、ADR-021）。
+ *
+ * `.print-sheet` は書き出しの間だけ body 直下に置かれる。画面では見せず、
+ * 印刷時はこれだけを載せる。
+ */
+
+.print-sheet {
+  display: none;
+}
+
+@media print {
+  /*
+   * 紙面が置かれている間だけ、画面用の固定高さと overflow を外して紙に流す。
+   * `:has()` で選ぶのは、global.css より先に読み込まれても効かせるため。
+   */
+  html:has(.print-sheet),
+  body:has(> .print-sheet) {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  /* app 本体も、body へ吊った Popover / Toast も載せない。 */
+  body > :not(.print-sheet) {
+    display: none !important;
+  }
+
+  .print-sheet {
+    display: block;
+  }
+
+  /* 画面用の余白と列幅は紙では要らない。余白は Native 側のページ設定が持つ。 */
+  .print-sheet .preview {
+    width: 100%;
+    padding: 0;
+  }
+
+  /* 横スクロールは紙にないので折り返す。 */
+  .print-sheet .preview-body pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: visible;
+  }
+
+  .print-sheet .preview-body h1,
+  .print-sheet .preview-body h2,
+  .print-sheet .preview-body h3,
+  .print-sheet .preview-body h4,
+  .print-sheet .preview-body h5,
+  .print-sheet .preview-body h6 {
+    break-after: avoid;
+  }
+
+  .print-sheet .preview-body pre,
+  .print-sheet .preview-body blockquote,
+  .print-sheet .preview-body img,
+  .print-sheet .preview-body tr {
+    break-inside: avoid;
+  }
+}

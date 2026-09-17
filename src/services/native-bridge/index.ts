@@ -237,6 +237,14 @@ export const contextMenuStatus = () => invoke<ContextMenuStatus>("context_menu_s
 export const setContextMenu = (enabled: boolean) =>
   invoke<ContextMenuStatus>("set_context_menu", { enabled });
 
+/**
+ * この Window の紙面を PDF として書き出す（ADR-021）。
+ *
+ * 何を紙面に載せるかは `@media print`（`print.css`）が決める。呼ぶ前に
+ * `PrintSheet` を mount しておく。
+ */
+export const exportPdf = (path: string) => invoke<void>("export_pdf", { path });
+
 /* ------------------------------------------------------------------ *
  * Window（ADR-010 / Custom title bar）
  *
@@ -308,6 +316,17 @@ export async function saveAsMarkdown(defaultName: string): Promise<string | null
   const result = await save({
     defaultPath: defaultName,
     filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
+  });
+  return result ?? null;
+}
+
+/** PDF の保存先を選ぶ（ADR-021）。キャンセルは null。 */
+export async function saveAsPdf(defaultName: string): Promise<string | null> {
+  if (!isNative()) return null;
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const result = await save({
+    defaultPath: defaultName,
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
   });
   return result ?? null;
 }
