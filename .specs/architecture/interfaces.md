@@ -142,6 +142,9 @@ type FileWatchEvent =
 chooseWorkspace(): Promise<string | null>
 chooseMarkdownFile(): Promise<string | null>
 saveAsMarkdown(defaultName: string): Promise<string | null>
+
+/** PDF の保存先を選ぶ（ADR-021）。キャンセルは null。 */
+saveAsPdf(defaultName: string): Promise<string | null>
 ```
 
 ---
@@ -250,3 +253,19 @@ Workspace規模次第で、
 [DECIDED: U-013] Quick OpenとFindはMVP。Search AllはP1。
 
 MVPではSearch Allを後回しにする推奨。
+
+---
+
+## 13. Export（ADR-021）
+
+```ts
+/**
+ * 呼び出し元の Window の紙面を PDF として書き出す。
+ * 何を紙面に載せるかは Frontend の `@media print` が決める。
+ * 保存先は Save dialog で決めた絶対パスで、Workspace の外でもよい。
+ */
+exportPdf(path: string): Promise<void>
+```
+
+- Windows: WebView2 の `PrintToPdf` を使用する（A4 縦、余白 15mm、背景色あり、ヘッダ / フッタなし）。
+- macOS / Linux: 未対応（`IO_ERROR` を返す）。

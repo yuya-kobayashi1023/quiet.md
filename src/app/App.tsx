@@ -17,6 +17,7 @@ import { StatusBar, TopBar } from "@/features/shell/TopBar";
 import { useSyncScroll } from "@/features/shell/use-sync-scroll";
 import { Editor } from "@/features/editor/Editor";
 import { Preview } from "@/features/preview/Preview";
+import { PrintSheet } from "@/features/preview/PrintSheet";
 import { Metadata } from "@/features/frontmatter/Metadata";
 import { TocPopover } from "@/features/toc/TocPopover";
 import { SettingsModal } from "@/features/settings/SettingsModal";
@@ -86,6 +87,8 @@ export function App() {
   const [searchAllOpen, setSearchAllOpen] = useState(false);
   /** Search All から飛んできた行き先。文書を開いた後に消費する。 */
   const [pendingHit, setPendingHit] = useState<SearchHit | null>(null);
+  /** PDF 書き出し中の保存先。紙面（PrintSheet）はこれが入っている間だけ mount する（ADR-021）。 */
+  const [pdfExport, setPdfExport] = useState<{ path: string } | null>(null);
   const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
@@ -730,6 +733,40 @@ export function App() {
     [settings.viewMode, slice.body.length],
   );
 
+  /**
+   * Preview を PDF に書き出す（ADR-021）。
+   *
+   * 保存先を先に決め、紙面を mount してから Native に印刷させる。
+   * 完了と失敗は PrintSheet の onDone で受ける。
+   */
+  const exportPdf = useCallback(async () => {
+    const current = documentService.session;
+    if (!current) {
+      showToast("先にノートを開いてください");
+      return;
+    }
+    const target = await native.saveAsPdf(`${current.title}.pdf`);
+    if (!target) return;
+    // 書き出し中にもう一度呼ばれても、走っている紙面はそのまま。
+    setPdfExport((job) => job ?? { path: target });
+  }, [showToast]);
+
+  const onPdfDone = useCallback(
+    (path: string, error: unknown) => {
+      setPdfExport(null);
+      if (error) {
+        showToast(error instanceof NativeError ? error.message : "PDF を書き出せませんでした");
+        return;
+      }
+      const folder = parentOf(path);
+      showToast("PDF を保存しました", {
+        label: "フォルダを開く",
+        onClick: () => void native.revealFolder(folder).catch(() => {}),
+      });
+    },
+    [showToast],
+  );
+
   /* ---------------------------------------------------------------- *
    * Commands / Shortcuts（U-029）
    * ---------------------------------------------------------------- */
@@ -767,9 +804,10 @@ export function App() {
         run: () => setSearchAllOpen(true),
       },
       { id: "toc", label: "目次", run: () => setTocOpen(true) },
+      { id: "export-pdf", label: "PDFを生成", run: () => void exportPdf() },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [newNote, openFile, openWorkspace, settings.sidebarCollapsed],
+    [exportPdf, newNote, openFile, openWorkspace, settings.sidebarCollapsed],
   );
 
   const setView = (mode: ViewMode) => settingsService.update({ viewMode: mode });
@@ -1154,6 +1192,18 @@ export function App() {
       ) : null}
 
       {settingsOpen ? <SettingsModal onClose={() => setSettingsOpen(false)} /> : null}
+
+      {pdfExport && session ? (
+        <PrintSheet
+          path={pdfExport.path}
+          title={session.title}
+          body={slice.body}
+          fields={fields}
+          baseDir={baseDir}
+          typeface={settings.previewTypeface}
+          onDone={onPdfDone}
+        />
+      ) : null}
 
       {paletteOpen ? (
         <CommandPalette

@@ -199,6 +199,15 @@ fn urlencode(s: &str) -> String {
         .collect()
 }
 
+/// Preview を PDF として書き出す（ADR-021）。
+///
+/// 保存先は Frontend が Save dialog で決めている。Workspace 外でも書ける。
+/// 紙面に載せる内容は呼び出し元の Window が `@media print` で用意している。
+#[tauri::command]
+pub async fn export_pdf(window: tauri::WebviewWindow, path: String) -> Result<()> {
+    crate::pdf::print_to_pdf(&window, Path::new(&path)).await
+}
+
 /// Explorer の右クリック「Quiet で開く」の状態を返す（ADR-014）。
 ///
 /// `supported` が false の OS では、設定画面に項目自体を出さない。

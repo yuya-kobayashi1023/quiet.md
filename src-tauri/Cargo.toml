@@ -42,3 +42,6 @@ tauri-plugin-single-instance = "2.4.4"
 # Explorer の右クリック登録（ADR-014）。HKCU だけを触る。
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55"
+# PDF 書き出し（ADR-021）。wry が使う webview2-com / windows と同じ版に揃える。
+webview2-com = "0.38"
+windows = { version = "0.61", features = ["Win32_Foundation"] }
