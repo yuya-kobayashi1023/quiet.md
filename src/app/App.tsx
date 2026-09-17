@@ -32,6 +32,7 @@ import {
   parseFrontmatter,
 } from "@/domain/document/frontmatter";
 import { extractHeadings, HEADING_ID_PREFIX } from "@/domain/document/markdown";
+import { toggleTaskLine } from "@/domain/document/task-list";
 import { filenameWithExtension, type DocumentSummary } from "@/domain/document/types";
 import {
   filenameOf,
@@ -794,6 +795,30 @@ export function App() {
   );
 
   /**
+   * Preview のチェックボックスから本文の `[ ]` を反転させる。
+   *
+   * Preview は Editor と同じ本文（Front Matter を除いた文字列）を描画しているので、
+   * 行番号はそのまま Editor の行に対応する。エディタの view に dispatch することで、
+   * 通常の入力と同じ経路（updateListener → documentService.edit）を通り、Undo も効く。
+   */
+  const toggleTask = useCallback((line: number) => {
+    const view = editorView.current;
+    if (!view) return;
+    const doc = view.state.doc;
+    const target = doc.line(Math.min(Math.max(line, 1), doc.lines));
+    const toggled = toggleTaskLine(target.text);
+    if (toggled == null) return;
+    // 行ごと差し替えると、その行に置いてあるカーソルが行頭へ飛ぶ。
+    // 変わるのは `[ ]` の中の 1 文字だけなので、その 1 文字だけを書き換える。
+    let at = 0;
+    while (at < toggled.length && toggled[at] === target.text[at]) at++;
+    if (at === toggled.length) return;
+    view.dispatch({
+      changes: { from: target.from + at, to: target.from + at + 1, insert: toggled[at] },
+    });
+  }, []);
+
+  /**
    * Preview を PDF に書き出す（ADR-021）。
    *
    * 保存先を先に決め、紙面を mount してから Native に印刷させる。
@@ -1107,6 +1132,7 @@ export function App() {
                       );
                       if (target) void openDocument(target);
                     }}
+                    onToggleTask={toggleTask}
                   />
                 </section>
               </>

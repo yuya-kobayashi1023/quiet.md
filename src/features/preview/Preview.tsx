@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { renderMarkdown } from "@/domain/document/markdown";
+import { renderMarkdown, TASK_LINE_ATTR } from "@/domain/document/markdown";
 import type { FrontmatterFields } from "@/domain/document/frontmatter";
 import * as native from "@/services/native-bridge";
 import "./preview.css";
@@ -23,6 +23,8 @@ interface PreviewProps {
   baseDir: string;
   typeface: "serif" | "sans";
   onOpenDocument: (relativeHref: string) => void;
+  /** タスクのチェックボックスがクリックされた。line は本文の行番号（1 始まり）。 */
+  onToggleTask: (line: number) => void;
 }
 
 function resolveAsset(absolutePath: string): string {
@@ -42,6 +44,7 @@ export function Preview({
   baseDir,
   typeface,
   onOpenDocument,
+  onToggleTask,
 }: PreviewProps) {
   const { html } = useMemo(
     // sourceLines は Split の scroll 同期が使う行の対応表（ADR-012）。
@@ -51,12 +54,22 @@ export function Preview({
   );
 
   /**
-   * リンクのクリックを捌く（U-023）。
-   * WebView 内で遷移させない。
+   * クリックを捌く。
+   *
+   * - タスクのチェックボックスは本文の `[ ]` を反転させる。preventDefault はしない。
+   *   本文が変わると Preview が描き直されるので、DOM の checked は本文と一致する
+   * - リンクは WebView 内で遷移させない（U-023）
    */
   const onClick = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
-      const anchor = (event.target as HTMLElement).closest("a");
+      const target = event.target as HTMLElement;
+      if (target instanceof HTMLInputElement && target.type === "checkbox") {
+        const line = target.getAttribute(TASK_LINE_ATTR);
+        if (line) onToggleTask(Number(line));
+        return;
+      }
+
+      const anchor = target.closest("a");
       if (!anchor) return;
       event.preventDefault();
 
@@ -78,7 +91,7 @@ export function Preview({
       }
       // blocked は何もしない。
     },
-    [onOpenDocument],
+    [onOpenDocument, onToggleTask],
   );
 
   const tags = fields.tags?.filter(Boolean) ?? [];

@@ -172,6 +172,28 @@ describe("renderMarkdown — source lines（ADR-012）", () => {
   });
 });
 
+describe("renderMarkdown — task list の行番号", () => {
+  it("チェックボックスへ li の行番号を振り、disabled を外す", () => {
+    const { html } = renderMarkdown("- [ ] a\n- [x] b\n");
+    expect(html).toContain('<input type="checkbox" data-task-line="1"> a');
+    expect(html).toContain('<input type="checkbox" checked data-task-line="2"> b');
+    expect(html).not.toContain("disabled");
+  });
+
+  it("入れ子のタスクには自分の li の行番号を振る", () => {
+    const { html } = renderMarkdown("para\n\n- item\n\n  - [ ] nested\n\n- [x] top\n");
+    expect(html).toContain('<input type="checkbox" data-task-line="5"> nested');
+    // loose なリストでは p に包まれる。
+    expect(html).toContain('<p><input type="checkbox" checked data-task-line="7"> top</p>');
+  });
+
+  it("scroll 同期の対応表（data-source-line）には混ざらない", () => {
+    const { html } = renderMarkdown("- [ ] a\n", { sourceLines: true });
+    expect(html).toContain('<ul class="contains-task-list" data-source-line="1">');
+    expect(html).toContain('<li class="task-list-item"><input type="checkbox" data-task-line="1">');
+  });
+});
+
 describe("renderMarkdown — CJK の改行（ADR-017）", () => {
   it("CJK 同士の改行は空白を残さず詰める", () => {
     const { html } = renderMarkdown("日本語の文で\n次の行です\n");
