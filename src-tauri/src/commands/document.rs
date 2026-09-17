@@ -169,15 +169,28 @@ pub fn rename_document(
     state.watcher.self_writes.forget(&from);
 
     let root = state.root();
+    let relative_path = match &root {
+        Some(root) => scan::to_relative(root, &to),
+        None => to.display().to_string(),
+    };
+
+    // archived / pinned / lastOpened は相対パスで持つため、Rename 後もそのまま
+    // 参照が保つよう追従させる（ADR-020 §6、2026-09-18 改訂）。失敗してもファイルは
+    // 既に rename 済みなので、ここでコマンド自体を失敗させない（タイトルが戻ると
+    // ファイル名と表示が食い違う）。
+    if let Some(root) = &root {
+        if paths::is_inside(root, &from) {
+            let from_relative = scan::to_relative(root, &from);
+            let mut metadata = settings::load_workspace_metadata(root);
+            metadata.relocate(&from_relative, &relative_path);
+            if let Err(e) = settings::save_workspace_metadata(root, &metadata) {
+                log::warn!("rename 後の workspace metadata 更新に失敗: {e}");
+            }
+        }
+    }
+
     Ok(RenameResult {
-        relative_path: match &root {
-            Some(root) => to
-                .strip_prefix(root)
-                .unwrap_or(&to)
-                .to_string_lossy()
-                .replace('\\', "/"),
-            None => to.display().to_string(),
-        },
+        relative_path,
         path: to.display().to_string(),
         title: scan::title_of(&to_filename),
         filename: to_filename,

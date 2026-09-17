@@ -43,8 +43,25 @@ impl Default for WorkspaceMetadata {
 }
 
 impl WorkspaceMetadata {
-    /// TODO: Rename に追随して archived / pinned / lastOpened の相対パスを書き換える。
-    pub fn relocate(&mut self, _from: &str, _to: &str) {}
+    /// Rename に追随して、相対パスで持つ参照を書き換える（ADR-020 §6、2026-09-18 改訂）。
+    ///
+    /// `archived` / `pinned` は完全一致した要素だけを置き換え、順序は保つ。
+    /// `from` を含まない field はそのまま。
+    pub fn relocate(&mut self, from: &str, to: &str) {
+        for entry in self.archived.iter_mut() {
+            if entry == from {
+                *entry = to.to_string();
+            }
+        }
+        for entry in self.pinned.iter_mut() {
+            if entry == from {
+                *entry = to.to_string();
+            }
+        }
+        if self.last_opened.as_deref() == Some(from) {
+            self.last_opened = Some(to.to_string());
+        }
+    }
 }
 
 fn metadata_path(root: &Path) -> PathBuf {

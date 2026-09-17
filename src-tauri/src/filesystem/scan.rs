@@ -76,7 +76,7 @@ pub fn title_of(filename: &str) -> String {
     }
 }
 
-fn to_relative(root: &Path, path: &Path) -> String {
+pub fn to_relative(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
         .unwrap_or(path)
         .to_string_lossy()
