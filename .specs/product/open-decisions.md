@@ -33,7 +33,7 @@
 | U-021 | Multi-window時の同一ファイル・同一Workspace | 同一ファイルは1Windowのみ。既存をfocus |
 | U-022 | Conflict / Save error / External deleteのUI | Editor上部のInline banner |
 | U-023 | Previewのlink / image / raw HTML | 推奨のlink / image / raw HTMLポリシーを採用 |
-| U-024 | Workspaceのフォルダツリーとignore規則 | 推奨のtree / ignore / sortルールを採用 |
+| U-024 | Workspaceのフォルダツリーとignore規則 | 推奨のtree / ignore / sortルールを採用（並び順は作成日時の新しい順へ変更。ADR-019） |
 | U-025 | Find in documentのUI | Editor右上のInline find bar |
 | U-026 | Toastの採否と定義 | Status bar上にToast 1種類 |
 | U-027 | Split時のscroll同期 | ~~MVPでは同期しない~~ → 行の対応表で同期（ADR-012） |
@@ -262,7 +262,7 @@ Editor上部のInline bannerで表示する。ModalにもToastにもしない。
 
 - 入れ子フォルダをツリー表示する。フォルダ行はDisclosureのみで、常設ボタンを増やさない
 - dotfolderと `.quiet/` は既定で非表示。`node_modules/` はignoreする
-- 既定の並びは名前順
+- ~~既定の並びは名前順~~ → フォルダ行を名前順に置き、ファイル行は作成日時の新しい順（ADR-019）
 - 5000ファイル程度までUIが固まらないことをNFRへ追加する
 - `Archive` はU-005の論理Archiveなので、フォルダではなくファイル行だけを並べる
   （Prototypeの `2026` 行は誤り）
