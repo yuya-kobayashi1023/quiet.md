@@ -154,8 +154,8 @@ saveAsPdf(defaultName: string): Promise<string | null>
 ```ts
 revealInFileManager(path: string): Promise<void>
 
-/** フォルダを表示する。中身に触れないため Workspace scope の判定は行わない（ADR-016）。 */
-revealFolder(path: string): Promise<void>
+/** Workspace の外にあるフォルダやファイルを選択状態で表示する。中身に触れないため Workspace scope の判定は行わない（ADR-016 / ADR-021）。 */
+revealPath(path: string): Promise<void>
 ```
 
 Windows:

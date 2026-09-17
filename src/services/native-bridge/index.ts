@@ -208,11 +208,11 @@ export const revealInFileManager = (path: string) =>
   invoke<void>("reveal_in_file_manager", { path });
 
 /**
- * フォルダを Explorer / Finder で表示する（ADR-016）。
+ * Workspace の外にあるパスを Explorer / Finder で選択状態で表示する（ADR-016 / ADR-021）。
  *
  * 中身へは触れないので Workspace scope の判定は要らない。実在確認だけ Native が行う。
  */
-export const revealFolder = (path: string) => invoke<void>("reveal_folder", { path });
+export const revealPath = (path: string) => invoke<void>("reveal_path", { path });
 
 export const openExternal = (url: string) =>
   invoke<void>("open_external", { url });

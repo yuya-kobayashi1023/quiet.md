@@ -72,7 +72,7 @@ pub fn run() {
             commands::document::clear_recovery_snapshot,
             commands::document::list_recovery_snapshots,
             commands::system::reveal_in_file_manager,
-            commands::system::reveal_folder,
+            commands::system::reveal_path,
             commands::system::open_external,
             commands::system::open_in_new_window,
             commands::system::open_workspace_in_new_window,

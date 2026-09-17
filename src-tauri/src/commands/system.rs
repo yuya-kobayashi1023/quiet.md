@@ -17,14 +17,15 @@ pub fn reveal_in_file_manager(state: State<'_, AppState>, path: String) -> Resul
     reveal(&path)
 }
 
-/// フォルダを Explorer / Finder で表示する（ADR-016、Workspace 履歴の行）。
+/// Workspace の外にあるパスを Explorer / Finder で選択状態で表示する。
 ///
+/// Workspace 履歴のフォルダ（ADR-016）と、書き出した PDF（ADR-021）が使う。
 /// `ensure_allowed` は「中身を読み書きしてよいか」の判定。ここは OS のファイルマネージャへ
-/// 渡すだけで中身に触れないため、実在するディレクトリであることだけを確かめる。
+/// 渡すだけで中身に触れないため、実在することだけを確かめる。
 #[tauri::command]
-pub fn reveal_folder(path: String) -> Result<()> {
+pub fn reveal_path(path: String) -> Result<()> {
     let path = paths::canonicalize(Path::new(&path))?;
-    if !path.is_dir() {
+    if !path.exists() {
         return Err(NativeError::NotFound {
             path: path.display().to_string(),
         });
