@@ -17,6 +17,7 @@ import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { indentUnit } from "@codemirror/language";
 import { baseTheme, coreExtensions } from "./extensions";
+import { fullWidthInput } from "./fullwidth-input";
 import { imagePaste, type ImageSaver } from "./image-paste";
 import "./editor.css";
 
@@ -29,6 +30,10 @@ interface EditorProps {
   tabWidth: number;
   lineWrap: boolean;
   spellCheck: boolean;
+  /** 全角の英数字と記号を IME 確定時に半角へ直す（ADR-022）。 */
+  halfWidthAscii: boolean;
+  /** 区切り記号（： ； ， ． ～）も半角にする。halfWidthAscii が false なら効かない。 */
+  halfWidthSeparators: boolean;
   onChange: (text: string) => void;
   onCursorChange: (info: { line: number; column: number }) => void;
   onReady: (view: EditorView) => void;
@@ -43,6 +48,8 @@ export function Editor({
   tabWidth,
   lineWrap,
   spellCheck,
+  halfWidthAscii,
+  halfWidthSeparators,
   onChange,
   onCursorChange,
   onReady,
@@ -55,13 +62,30 @@ export function Editor({
   const wrapCompartment = useRef(new Compartment());
   const tabCompartment = useRef(new Compartment());
   const fontCompartment = useRef(new Compartment());
+  const halfWidthCompartment = useRef(new Compartment());
 
   // 最新の callback を ref 経由で参照する。
   // これらの変化で Editor を作り直すと、そのたびにカーソルが飛ぶ（U-008）。
   const callbacks = useRef({ onChange, onCursorChange, onReady, onPasteImage });
   callbacks.current = { onChange, onCursorChange, onReady, onPasteImage };
-  const initial = useRef({ initialText, fontSize, tabWidth, lineWrap, spellCheck });
-  initial.current = { initialText, fontSize, tabWidth, lineWrap, spellCheck };
+  const initial = useRef({
+    initialText,
+    fontSize,
+    tabWidth,
+    lineWrap,
+    spellCheck,
+    halfWidthAscii,
+    halfWidthSeparators,
+  });
+  initial.current = {
+    initialText,
+    fontSize,
+    tabWidth,
+    lineWrap,
+    spellCheck,
+    halfWidthAscii,
+    halfWidthSeparators,
+  };
 
   useEffect(() => {
     const parent = host.current;
@@ -70,6 +94,13 @@ export function Editor({
 
     const extensions: Extension[] = [
       ...coreExtensions(),
+      // 全角記号の置き換え。設定で差し替わるので coreExtensions には入れない。
+      halfWidthCompartment.current.of(
+        fullWidthInput({
+          ascii: settings.halfWidthAscii,
+          separators: settings.halfWidthSeparators,
+        }),
+      ),
       // アプリ側の saver が要るので coreExtensions には入れない。
       imagePaste(() => callbacks.current.onPasteImage),
       baseTheme,
@@ -142,6 +173,14 @@ export function Editor({
     const content = view.current?.contentDOM;
     if (content) content.spellcheck = spellCheck;
   }, [spellCheck]);
+
+  useEffect(() => {
+    view.current?.dispatch({
+      effects: halfWidthCompartment.current.reconfigure(
+        fullWidthInput({ ascii: halfWidthAscii, separators: halfWidthSeparators }),
+      ),
+    });
+  }, [halfWidthAscii, halfWidthSeparators]);
 
   return <div className="editor-host" ref={host} />;
 }

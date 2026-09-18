@@ -135,6 +135,14 @@
   color: var(--text-primary);
 }
 
+/* 1 ページの中で関連する設定をまとめる小見出し。heading より小さく、上に余白。 */
+.settings-subheading {
+  margin: 26px 0 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
 .setting-row {
   display: flex;
   align-items: center;
@@ -200,6 +208,12 @@
 
 .switch.is-on {
   background: var(--accent);
+}
+
+/* 親の設定が off で効かないとき。値は見せたまま薄くする。 */
+.switch:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .switch.is-on::after {
