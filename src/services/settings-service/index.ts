@@ -38,6 +38,10 @@ export interface AppSettings {
   tabWidth: 2 | 4;
   /** ADR-012: Split で Editor と Preview のスクロールを合わせるか。 */
   syncScroll: boolean;
+  /** ADR-022: 全角の英数字と記号を IME 確定時に半角へ直すか。 */
+  halfWidthAscii: boolean;
+  /** ADR-022: 区切り記号（： ； ， ． ～）も半角にするか。halfWidthAscii が false なら効かない。 */
+  halfWidthSeparators: boolean;
 
   /* Appearance */
   theme: ThemePreference;
@@ -78,6 +82,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   spellCheck: false,
   tabWidth: 2,
   syncScroll: true,
+  halfWidthAscii: true,
+  halfWidthSeparators: false,
 
   theme: "system",
   previewTypeface: "serif",

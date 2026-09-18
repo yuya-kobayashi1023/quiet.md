@@ -16,7 +16,6 @@ import { tags } from "@lezer/highlight";
 import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search";
 import { listKeymap } from "./list-keymap";
 import { fenceInput } from "./fence-input";
-import { fullWidthInput } from "./fullwidth-input";
 import { linkPaste } from "./link-paste";
 
 /**
@@ -135,13 +134,12 @@ export function coreExtensions(): Extension[] {
     Prec.highest(listKeymap),
     /*
      * 入力ハンドラなので keymap の順序とは干渉しない。
-     * 2 つの間でも、反応する文字が半角の `` ` `` と全角の `｀` で分かれているため
-     * 並び順は結果を変えない。
+     * 全角記号の置き換え（`fullWidthInput`）は設定で差し替わるので、ここではなく
+     * Editor 側の Compartment にある。反応する文字が半角の `` ` `` と全角の `｀` で
+     * 分かれているため、並び順は結果を変えない。
      */
     // ``` の閉じ補完。
     fenceInput,
-    // 全角で打たれた Markdown 記号を半角へ直す。
-    fullWidthInput,
     // 選択して URL を貼ると `[選択文字](URL)` にする。paste イベントなので keymap の順序とは干渉しない。
     linkPaste,
     history(),

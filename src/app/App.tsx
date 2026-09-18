@@ -1155,6 +1155,8 @@ export function App() {
                       tabWidth={settings.tabWidth}
                       lineWrap={settings.lineWrap}
                       spellCheck={settings.spellCheck}
+                      halfWidthAscii={settings.halfWidthAscii}
+                      halfWidthSeparators={settings.halfWidthSeparators}
                       onChange={(body) =>
                         documentService.edit(frontmatterPrefix.current + body)
                       }
