@@ -116,7 +116,7 @@ function FileRow({
         }}
         {...handlers}
       >
-        {row.pinned ? <PinIcon className="tree-icon" /> : <FileIcon className="tree-icon" />}
+        {row.pinned ? <PinIcon className="tree-icon tree-pin" /> : <FileIcon className="tree-icon" />}
         <span className="tree-label" ref={ref}>
           {row.document.filename}
         </span>

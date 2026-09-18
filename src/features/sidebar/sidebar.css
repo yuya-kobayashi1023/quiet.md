@@ -210,6 +210,12 @@
   color: var(--text-muted);
 }
 
+/* ピン止めは accent で示す。Workspace 一覧の現在地と同じ扱い（非文字要素）。 */
+.tree-pin,
+.tree-row.is-active .tree-pin {
+  color: var(--accent);
+}
+
 .tree-chevron {
   flex: none;
   width: 11px;
