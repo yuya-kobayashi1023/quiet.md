@@ -233,4 +233,22 @@ describe("全角の英数字・記号の半角化", () => {
     await compose(editor, "＃");
     expect(snapshot(editor)).toBe("# ‸");
   });
+
+  it("確定の直後に次の composition が始まっても、前の確定範囲を直す", async () => {
+    // MS-IME は空白キーの全角空白を composition として入れ、続けて文字を打つと
+    // それを確定して次の composition を tick を待たずに始める。
+    const editor = editorWith("あ‸");
+    const dom = editor.contentDOM;
+    dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.dispatch({ changes: { from: 1, insert: "　" }, selection: { anchor: 2 } });
+    dom.dispatchEvent(new CompositionEvent("compositionend"));
+    dom.dispatchEvent(new CompositionEvent("compositionstart"));
+    editor.dispatch({ changes: { from: 2, insert: "い" }, selection: { anchor: 3 } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(snapshot(editor)).toBe("あ い‸");
+
+    dom.dispatchEvent(new CompositionEvent("compositionend"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(snapshot(editor)).toBe("あ い‸");
+  });
 });

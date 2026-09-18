@@ -127,10 +127,16 @@ function compositionTracker(options: HalfWidthOptions): Extension {
            * CodeMirror は確定内容を microtask で flush する。
            * ここで即座に doc を見ても古いままなので、1 tick 待ってから直す。
            * 直したぶんは composition とは別の transaction になるので、Undo は 2 回要る。
+           *
+           * 開始位置は**ここで**取り出す。MS-IME は空白キーの全角空白を composition として
+           * 入れ、続けて文字を打つとそれを確定して次の composition をすぐ始める。
+           * tick を待ってから読むと、次の compositionstart が上書きした位置を見てしまい、
+           * 全角空白が残る（実機で確認）。
            */
+          const from = this.from;
+          this.from = null;
           setTimeout(() => {
-            if (view.dom.isConnected) handleCompositionEnded(view, this.from, options);
-            this.from = null;
+            if (view.dom.isConnected) handleCompositionEnded(view, from, options);
           }, 0);
           // 既定の処理は止めない。ここは観測だけ。
           return false;
