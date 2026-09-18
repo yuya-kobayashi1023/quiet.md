@@ -87,6 +87,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-047 | テキスト選択中に URL を貼り付けた際、`[選択文字](URL)` に変換する。単一行・非空の 1 選択に 1 本の http(s) URL を貼り付けた場合のみ適用し、選択なし・複数行・複数カーソル・URL 以外・IME 変換中は標準の貼り付けを行う。選択文字の `[` `]` はエスケープし、括弧を含む URL は `<...>` で囲む。 | Low |
 | AUTO-050 | クリップボードの画像を貼り付けた際、画像を保存し、ノートからの相対パスで `![](...)` を挿入する。保存先は、Workspace 内のノートなら `<root>/assets/`、Workspace 外の単体ファイルなら `<ノートのフォルダ>/assets/` とする。ファイル名は `image-YYYYMMDD-HHMMSS.<ext>`（ローカル時刻。タイトルは含めない。png / jpg / gif / webp のみ）とし、同名ファイルが存在する場合は Rust 側で `-2`、`-3` … を付与する。画像のバイト列は base64 で IPC 経由で渡す。`assets/` は `.md` のみを対象とするサイドバーには表示しない。 | Medium |
 | AUTO-052 | サイドバーのピン止めアイコンには `--accent` を適用する。design-system の Accent 限定リストにはないが、Workspace 一覧の現在地アイコン（ADR-016）と同じ非文字の小要素であるため、`--accent-text` は使用しない。 | Low |
+| AUTO-053 | IME 確定時の半角化は、その composition で確定した範囲 `[compositionFrom, head)` に限定する。開始位置は ViewPlugin が `compositionstart` で記録し、変換中の変更に沿って移動させる。行頭の Markdown 記号（AUTO-040）の判定を先に行い、そちらで修正された場合は半角化を実行しない。直接入力（inputHandler）も同じ表で変換する。 | Medium |
 
 ## 未実装リスト
 
