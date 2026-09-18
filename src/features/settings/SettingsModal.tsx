@@ -44,10 +44,13 @@ function Row({
 function Switch({
   checked,
   label,
+  disabled = false,
   onChange,
 }: {
   checked: boolean;
   label: string;
+  /** 親の設定が off で効かないとき。値は保ったまま操作だけ止める。 */
+  disabled?: boolean;
   onChange: (next: boolean) => void;
 }) {
   return (
@@ -56,6 +59,7 @@ function Switch({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       className={`switch${checked ? " is-on" : ""}`}
       onClick={() => onChange(!checked)}
     />
@@ -279,6 +283,29 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   checked={settings.syncScroll}
                   label="スクロールを同期"
                   onChange={(v) => update({ syncScroll: v })}
+                />
+              </Row>
+
+              <h4 className="settings-subheading">入力の自動修正</h4>
+              <Row
+                label="全角の英数字と記号を半角にする"
+                hint="日本語入力で確定した Ａ〜Ｚ・０〜９・！？（）＂＋－ などを半角にします。"
+              >
+                <Switch
+                  checked={settings.halfWidthAscii}
+                  label="全角の英数字と記号を半角にする"
+                  onChange={(v) => update({ halfWidthAscii: v })}
+                />
+              </Row>
+              <Row
+                label="区切り記号も半角にする"
+                hint="： ； ， ． ～ も半角にします。文中で全角のまま使うなら off に。"
+              >
+                <Switch
+                  checked={settings.halfWidthSeparators}
+                  label="区切り記号も半角にする"
+                  disabled={!settings.halfWidthAscii}
+                  onChange={(v) => update({ halfWidthSeparators: v })}
                 />
               </Row>
             </>
