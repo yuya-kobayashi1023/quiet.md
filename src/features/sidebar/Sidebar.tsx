@@ -339,6 +339,7 @@ function Section({
   onToggleFolder,
   onContextMenu,
   action,
+  disclosure,
 }: {
   label: string;
   rows: TreeRow[];
@@ -349,27 +350,43 @@ function Section({
   onToggleFolder: (path: string) => void;
   onContextMenu: SidebarProps["onContextMenu"];
   action?: { label: string; onClick: () => void };
+  /** 見出しごと畳めるようにする（ADR-023）。渡さない区分は常に開いたまま。 */
+  disclosure?: { open: boolean; onToggle: () => void };
 }) {
   if (rows.length === 0 && !action) return null;
 
+  const visibleRows = disclosure && !disclosure.open ? [] : rows;
+
   return (
     <section className="tree-section">
-      <div className="section-head">
-        <h2 className="section-label">{label}</h2>
-        {action ? (
-          <button
-            type="button"
-            className="section-action"
-            aria-label={action.label}
-            title={action.label}
-            onClick={action.onClick}
-          >
-            <PlusIcon />
-          </button>
-        ) : null}
-      </div>
+      {disclosure ? (
+        <button
+          type="button"
+          className="section-head section-head--toggle"
+          aria-expanded={disclosure.open}
+          onClick={disclosure.onToggle}
+        >
+          <span className="section-label">{label}</span>
+          <ChevronDownIcon className="recent-caret" />
+        </button>
+      ) : (
+        <div className="section-head">
+          <h2 className="section-label">{label}</h2>
+          {action ? (
+            <button
+              type="button"
+              className="section-action"
+              aria-label={action.label}
+              title={action.label}
+              onClick={action.onClick}
+            >
+              <PlusIcon />
+            </button>
+          ) : null}
+        </div>
+      )}
 
-      {rows.map((row) =>
+      {visibleRows.map((row) =>
         row.kind === "folder" ? (
           <button
             key={`folder:${row.path}`}
@@ -440,11 +457,25 @@ export function Sidebar(props: SidebarProps) {
    */
   const [recentOpen, setRecentOpen] = useState(false);
   const [recentExpanded, setRecentExpanded] = useState(false);
+  // Archive も同じ理由で畳んだ状態から始める（ADR-023）。開閉は metadata に保存しない。
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const closePicker = useCallback(() => setPickerOpen(false), []);
 
   // Workspace が変わったら閉じる。Context menu の「開く」から切り替えたときもここで閉じる。
   useEffect(() => setPickerOpen(false), [workspaceRoot]);
+
+  const activeInArchive = archiveRows.some(
+    (row) => row.kind === "file" && row.document.path === activePath,
+  );
+
+  /*
+   * 開いているノートが Archive 側にあるなら開く（ADR-023 §3）。行が見えないと Active 表示が出ない。
+   * activePath も依存に入れているので、自分で閉じた状態は次のノートを開くまで保たれる。
+   */
+  useEffect(() => {
+    if (activeInArchive) setArchiveOpen(true);
+  }, [activePath, activeInArchive]);
 
   const picker = pickerOpen ? (
     <WorkspacePicker
@@ -591,6 +622,7 @@ export function Sidebar(props: SidebarProps) {
           onSelect={onSelect}
           onToggleFolder={onToggleFolder}
           onContextMenu={onContextMenu}
+          disclosure={{ open: archiveOpen, onToggle: () => setArchiveOpen((open) => !open) }}
         />
 
       </nav>
