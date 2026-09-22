@@ -276,6 +276,14 @@ IME で確定された全角の英数字・記号（`Ａ` `１２` `！` `（）
 
 - `： ； ， ． ～` は「区切り記号も半角にする」（既定 off）で個別に切り替える。`。` `、` `「」` `・` `ー` は変換しない。
 
+### 右クリックメニュー
+
+[DECIDED: ADR-025]
+
+本文領域の右クリックでは、WebView の既定メニューではなく Quiet の Context menu を表示する（`interactions.md` §13）。対象は Write と Split の編集面のみとし、Preview・Metadata・Status bar・Find bar は変更しない。
+
+既定メニューを抑止するため、スペルチェックの修正候補は表示されない。ただし、`spellCheck` 設定による赤波線は従来どおり表示する。
+
 ---
 
 ## 8. Markdown syntax highlight

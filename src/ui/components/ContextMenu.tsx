@@ -72,16 +72,26 @@ export function ContextMenu({
 /** メニューの 1 項目。`disabled` は押せない行の見た目も兼ねる。 */
 export function ContextMenuItem({
   disabled = false,
+  shortcut,
   onClick,
   children,
 }: {
   disabled?: boolean;
+  /** 既にあるショートカットの控え。ここで新しく割り当てはしない（ADR-025 §5）。 */
+  shortcut?: string;
   onClick: () => void;
   children: ReactNode;
 }) {
   return (
-    <button type="button" role="menuitem" disabled={disabled} onClick={onClick}>
+    <button
+      type="button"
+      role="menuitem"
+      className={shortcut ? "has-shortcut" : undefined}
+      disabled={disabled}
+      onClick={onClick}
+    >
       {children}
+      {shortcut ? <kbd>{shortcut}</kbd> : null}
     </button>
   );
 }

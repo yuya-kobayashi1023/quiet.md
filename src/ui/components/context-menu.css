@@ -21,6 +21,19 @@
   text-align: left;
 }
 
+.context-menu button.has-shortcut {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+}
+
+.context-menu kbd {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-subtle);
+}
+
 .context-menu button:not(:disabled):hover {
   background: var(--selected);
   color: var(--text-primary);
