@@ -161,7 +161,7 @@ describe("EditorContextMenu", () => {
     expect(buttonWith(host, "リンク").disabled).toBe(false);
   });
 
-  it("選択が無いと切り取りと書式を押せず、検索の項目も出ない", () => {
+  it("選択が無いと切り取りを押せず、検索の項目も出ない", () => {
     const view = viewWith("hello world", 3, 3);
     const host = mount(
       <EditorContextMenu
@@ -173,8 +173,26 @@ describe("EditorContextMenu", () => {
       />,
     );
     expect(buttonWith(host, "切り取り").disabled).toBe(true);
-    expect(buttonWith(host, "太字").disabled).toBe(true);
+    expect(buttonWith(host, "コピー").disabled).toBe(true);
     expect(host.textContent).not.toContain("を検索");
+  });
+
+  it("選択が無くても太字を押すと記号だけ入り、カーソルが内側へ来る", () => {
+    const view = viewWith("hello world", 3, 3);
+    const host = mount(
+      <EditorContextMenu
+        target={{ position: { x: 1, y: 1 }, selected: "", canUndo: true, canRedo: false }}
+        view={view}
+        onSearch={() => {}}
+        onError={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(buttonWith(host, "太字").disabled).toBe(false);
+    act(() => buttonWith(host, "太字").click());
+    expect(view.state.doc.toString()).toBe("hel****lo world");
+    expect(view.state.selection.main.from).toBe(5);
+    expect(view.state.selection.main.to).toBe(5);
   });
 
   it("検索は選択文字列を渡す", () => {

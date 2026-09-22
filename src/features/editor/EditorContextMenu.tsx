@@ -153,14 +153,11 @@ export function EditorContextMenu({
         貼り付け
       </ContextMenuItem>
       <hr />
-      <ContextMenuItem disabled={!hasSelection} onClick={() => run(inlineFormat("**"))}>
-        太字
+      <ContextMenuItem onClick={() => run(inlineFormat("**"))}>太字
       </ContextMenuItem>
-      <ContextMenuItem disabled={!hasSelection} onClick={() => run(inlineFormat("*"))}>
-        斜体
+      <ContextMenuItem onClick={() => run(inlineFormat("*"))}>斜体
       </ContextMenuItem>
-      <ContextMenuItem disabled={!hasSelection} onClick={() => run(inlineFormat("`"))}>
-        インラインコード
+      <ContextMenuItem onClick={() => run(inlineFormat("`"))}>インラインコード
       </ContextMenuItem>
       <ContextMenuItem onClick={() => run(insertLinkAt)}>リンク</ContextMenuItem>
       <hr />
