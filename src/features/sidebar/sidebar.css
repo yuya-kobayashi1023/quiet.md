@@ -171,6 +171,15 @@
   height: 22px;
 }
 
+/*
+ * まとめて選択中の行（ADR-024 §5）。accent は左の罫線だけに使い、背景は淡く敷く。
+ * Hover と Active より前に置いて、重なったときは背景をそちらへ譲る。罫線だけが残る。
+ */
+.tree-row.is-selected {
+  background: color-mix(in srgb, var(--selected) 55%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
 .tree-row:hover {
   background: var(--selected);
   color: var(--text-primary);

@@ -167,11 +167,12 @@ export const loadWorkspaceMetadata = () =>
 export const saveWorkspaceMetadata = (metadata: WorkspaceMetadata) =>
   invoke<void>("save_workspace_metadata", { metadata });
 
-export const setArchived = (relativePath: string, archived: boolean) =>
-  invoke<WorkspaceMetadata>("set_archived", { relativePath, archived });
+// まとめて渡し、metadata の書き込みを 1 回にまとめる（ADR-024 §10）。
+export const setArchived = (relativePaths: string[], archived: boolean) =>
+  invoke<WorkspaceMetadata>("set_archived", { relativePaths, archived });
 
-export const setPinned = (relativePath: string, pinned: boolean) =>
-  invoke<WorkspaceMetadata>("set_pinned", { relativePath, pinned });
+export const setPinned = (relativePaths: string[], pinned: boolean) =>
+  invoke<WorkspaceMetadata>("set_pinned", { relativePaths, pinned });
 
 /** Workspace 全体の全文検索（U-013 / ADR-011）。 */
 export const searchWorkspace = (query: SearchQuery) =>

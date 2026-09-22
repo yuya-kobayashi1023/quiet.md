@@ -10,6 +10,7 @@ import { EditorSelection } from "@codemirror/state";
 import {
   Sidebar,
   FileContextMenu,
+  MultiFileContextMenu,
   RecentContextMenu,
   WorkspaceContextMenu,
 } from "@/features/sidebar/Sidebar";
@@ -47,6 +48,7 @@ import {
   type RecentFile,
 } from "@/domain/document/recents";
 import { workspaceForPath, type WorkspaceEntry } from "@/domain/document/workspaces";
+import { EMPTY_SELECTION, type SidebarSelection } from "@/domain/document/selection";
 import { documentService } from "@/services/document-service";
 import { settingsService, type ViewMode } from "@/services/settings-service";
 import { workspaceService } from "@/services/workspace-service";
@@ -147,8 +149,14 @@ export function App() {
   const [bodyFocusToken, setBodyFocusToken] = useState(0);
   // 新規ノートと Rename はクリックではなく外側からタイトル欄に入るので、focus も外側から要求する。
   const [titleFocusToken, setTitleFocusToken] = useState(0);
+  /** Sidebar のまとめて選択（ADR-024）。相対パスで持つので、行が消えても破綻しない。 */
+  const [selection, setSelection] = useState<SidebarSelection>(EMPTY_SELECTION);
   const [contextMenu, setContextMenu] = useState<{
     document: DocumentSummary;
+    position: { x: number; y: number };
+  } | null>(null);
+  const [multiMenu, setMultiMenu] = useState<{
+    paths: string[];
     position: { x: number; y: number };
   } | null>(null);
   const [recentMenu, setRecentMenu] = useState<{
@@ -756,22 +764,22 @@ export function App() {
             await native.revealInFileManager(doc.path);
             break;
           case "archive":
-            await workspaceService.setArchived(doc.relativePath, true);
+            await workspaceService.setArchived([doc.relativePath], true);
             showToast(`${doc.filename} をアーカイブしました`, {
               label: "元に戻す",
-              onClick: () => void workspaceService.setArchived(doc.relativePath, false),
+              onClick: () => void workspaceService.setArchived([doc.relativePath], false),
             });
             break;
           case "restore":
-            await workspaceService.setArchived(doc.relativePath, false);
+            await workspaceService.setArchived([doc.relativePath], false);
             showToast(`${doc.filename} を戻しました`);
             break;
           case "pin":
-            await workspaceService.setPinned(doc.relativePath, true);
+            await workspaceService.setPinned([doc.relativePath], true);
             showToast(`${doc.filename} をピン止めしました`);
             break;
           case "unpin":
-            await workspaceService.setPinned(doc.relativePath, false);
+            await workspaceService.setPinned([doc.relativePath], false);
             showToast(`${doc.filename} のピン止めを外しました`);
             break;
         }
@@ -781,6 +789,66 @@ export function App() {
     },
     [beginRename, openDocument, showToast],
   );
+
+  /**
+   * まとめて選択した行への操作（ADR-024 §7）。
+   *
+   * 対象はその操作で実際に変わる行だけに絞る。アーカイブ済みと未アーカイブが混ざった
+   * 選択でも、Undo が触っていない行まで戻してしまうことがない。
+   */
+  const onMultiAction = useCallback(
+    async (action: string, paths: string[]) => {
+      try {
+        switch (action) {
+          case "archive": {
+            const targets = paths.filter((path) => !workspaceService.isArchived(path));
+            await workspaceService.setArchived(targets, true);
+            showToast(`${targets.length} 件をアーカイブしました`, {
+              label: "元に戻す",
+              onClick: () => void workspaceService.setArchived(targets, false),
+            });
+            break;
+          }
+          case "restore": {
+            const targets = paths.filter((path) => workspaceService.isArchived(path));
+            await workspaceService.setArchived(targets, false);
+            showToast(`${targets.length} 件を戻しました`);
+            break;
+          }
+          case "pin": {
+            const targets = paths.filter((path) => !workspaceService.isPinned(path));
+            await workspaceService.setPinned(targets, true);
+            showToast(`${targets.length} 件をピン止めしました`);
+            break;
+          }
+          case "unpin": {
+            const targets = paths.filter((path) => workspaceService.isPinned(path));
+            await workspaceService.setPinned(targets, false);
+            showToast(`${targets.length} 件のピン止めを外しました`);
+            break;
+          }
+          case "copy-path": {
+            const documents = workspaceService.store.get().snapshot?.documents ?? [];
+            const full = paths.flatMap((path) => {
+              const doc = documents.find((d) => d.relativePath === path);
+              return doc ? [doc.path] : [];
+            });
+            await navigator.clipboard.writeText(full.join("\n"));
+            showToast("パスをコピーしました");
+            break;
+          }
+        }
+        // どの操作でも選択は解除する（ADR-024 §4）。「選択を解除」はこれだけを行う。
+        setSelection(EMPTY_SELECTION);
+      } catch (error) {
+        showToast(error instanceof NativeError ? error.message : "操作に失敗しました");
+      }
+    },
+    [showToast],
+  );
+
+  // Workspace を切り替えたら選択を捨てる（ADR-024 §4）。相対パスの指す先が変わる。
+  useEffect(() => setSelection(EMPTY_SELECTION), [workspace.snapshot?.rootPath]);
 
   const onRecentAction = useCallback(
     async (action: string, file: RecentFile) => {
@@ -957,8 +1025,27 @@ export function App() {
 
   const setView = (mode: ViewMode) => settingsService.update({ viewMode: mode });
 
+  // Escape を先に使うもの。開いている間は、まとめて選択の解除を横取りしない（ADR-024 §4）。
+  const overlayOpen =
+    paletteOpen ||
+    find != null ||
+    searchAllOpen ||
+    settingsOpen ||
+    tocOpen ||
+    contextMenu != null ||
+    multiMenu != null ||
+    recentMenu != null ||
+    workspaceMenu != null ||
+    moreMenu != null;
+  const hasSelection = selection.paths.length > 0;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (overlayOpen || !hasSelection) return;
+        setSelection(EMPTY_SELECTION);
+        return;
+      }
       const mod = e.ctrlKey || e.metaKey;
       if (!mod) return;
       const key = e.key.toLowerCase();
@@ -993,7 +1080,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [newNote, openFile, openFind]);
+  }, [hasSelection, newNote, openFile, openFind, overlayOpen]);
 
   /* ---------------------------------------------------------------- *
    * Render
@@ -1064,6 +1151,7 @@ export function App() {
           pinned={workspace.metadata?.pinned ?? []}
           expandedFolders={workspace.metadata?.expandedFolders ?? []}
           activePath={workspace.activePath}
+          selection={selection}
           saveState={session?.saveState ?? "clean"}
           collapsed={settings.sidebarCollapsed}
           compact={settings.compactSidebar}
@@ -1072,10 +1160,13 @@ export function App() {
             settingsService.update({ sidebarCollapsed: !settings.sidebarCollapsed })
           }
           onSelect={(doc) => void openDocument(doc)}
+          onSelectionChange={setSelection}
           onNewNote={() => void newNote()}
           onToggleFolder={(path) => workspaceService.toggleFolder(path)}
           onOpenSettings={() => setSettingsOpen(true)}
-          onContextMenu={(document, position) => setContextMenu({ document, position })}
+          onContextMenu={(document, position, paths) =>
+            paths ? setMultiMenu({ paths, position }) : setContextMenu({ document, position })
+          }
           onSelectRecent={(file) => void openRecent(file)}
           onRecentContextMenu={(file, position) => setRecentMenu({ file, position })}
           onSelectWorkspace={(entry) => void openWorkspaceEntry(entry)}
@@ -1284,6 +1375,17 @@ export function App() {
           onSearch={openFind}
           onError={showToast}
           onClose={() => setEditorMenu(null)}
+        />
+      ) : null}
+
+      {multiMenu ? (
+        <MultiFileContextMenu
+          paths={multiMenu.paths}
+          position={multiMenu.position}
+          archived={workspace.metadata?.archived ?? []}
+          pinned={workspace.metadata?.pinned ?? []}
+          onClose={() => setMultiMenu(null)}
+          onAction={(action, paths) => void onMultiAction(action, paths)}
         />
       ) : null}
 

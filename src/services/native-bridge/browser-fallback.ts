@@ -197,26 +197,18 @@ export async function browserFallback<T>(
       return undefined as T;
 
     case "set_archived": {
-      const relativePath = arg("relativePath") as string;
+      const relativePaths = arg("relativePaths") as string[];
       const archived = arg("archived") as boolean;
-      metadata = {
-        ...metadata,
-        archived: archived
-          ? [...metadata.archived.filter((p) => p !== relativePath), relativePath]
-          : metadata.archived.filter((p) => p !== relativePath),
-      };
+      const rest = metadata.archived.filter((p) => !relativePaths.includes(p));
+      metadata = { ...metadata, archived: archived ? [...rest, ...relativePaths] : rest };
       return metadata as T;
     }
 
     case "set_pinned": {
-      const relativePath = arg("relativePath") as string;
+      const relativePaths = arg("relativePaths") as string[];
       const pinned = arg("pinned") as boolean;
-      metadata = {
-        ...metadata,
-        pinned: pinned
-          ? [...metadata.pinned.filter((p) => p !== relativePath), relativePath]
-          : metadata.pinned.filter((p) => p !== relativePath),
-      };
+      const rest = metadata.pinned.filter((p) => !relativePaths.includes(p));
+      metadata = { ...metadata, pinned: pinned ? [...rest, ...relativePaths] : rest };
       return metadata as T;
     }
 
