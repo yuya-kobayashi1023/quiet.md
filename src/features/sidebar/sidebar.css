@@ -45,6 +45,14 @@
 }
 
 /*
+ * Archive の下にも、Recent と Settings の間（.sidebar-bottom の上の余白）と同じだけ空ける。
+ * 2 つの見出しの上下の余白を揃え、同じ高さの帯が 2 本並んで見えるようにする。
+ */
+.sidebar-dock + .sidebar-recent {
+  margin-top: 12px;
+}
+
+/*
  * 見出しごと disclosure にする。既定は畳んだ状態。
  * Recent（ADR-013 Amendment）と Archive（ADR-023）が共有する。
  *
