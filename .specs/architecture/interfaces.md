@@ -94,10 +94,12 @@ Archiveが論理方式の場合:
 ```ts
 setArchived(input: {
   workspaceId: string;
-  path: string;
+  paths: string[];
   archived: boolean;
 }): Promise<void>
 ```
+
+metadata の書き込みを 1 回にまとめるため、相対パスは一覧で受け取る（ADR-024）。1 件のみの操作も、要素 1 つの一覧として渡す。
 
 ### 5.1 Pin
 
@@ -106,7 +108,7 @@ setArchived(input: {
 ```ts
 setPinned(input: {
   workspaceId: string;
-  path: string;
+  paths: string[];
   pinned: boolean;
 }): Promise<void>
 ```

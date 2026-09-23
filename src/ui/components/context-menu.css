@@ -50,3 +50,11 @@
   border: 0;
   border-top: 1px solid var(--border);
 }
+
+/* まとめて選択したときの件数見出し（ADR-024 §7）。押せないので項目より薄く出す。 */
+.context-menu-head {
+  margin: 0;
+  padding: 5px 9px;
+  color: var(--text-muted);
+  font-size: var(--size-ui);
+}

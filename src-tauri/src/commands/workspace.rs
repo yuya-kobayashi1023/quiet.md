@@ -111,15 +111,21 @@ pub fn search_workspace(
 }
 
 /// 論理 Archive（U-005）。ファイルは移動しない。
+///
+/// 相対パスは一覧で受け取り、`workspace.json` の書き込みは 1 回にまとめる（ADR-024 §10）。
 #[tauri::command]
-pub fn set_archived(state: State<'_, AppState>, relative_path: String, archived: bool) -> Result<WorkspaceMetadata> {
+pub fn set_archived(
+    state: State<'_, AppState>,
+    relative_paths: Vec<String>,
+    archived: bool,
+) -> Result<WorkspaceMetadata> {
     let root = state.root().ok_or_else(|| NativeError::NotFound {
         path: "<no workspace>".to_string(),
     })?;
     let mut metadata = settings::load_workspace_metadata(&root);
-    metadata.archived.retain(|p| p != &relative_path);
+    metadata.archived.retain(|p| !relative_paths.contains(p));
     if archived {
-        metadata.archived.push(relative_path);
+        metadata.archived.extend(relative_paths);
     }
     settings::save_workspace_metadata(&root, &metadata)?;
     Ok(metadata)
@@ -127,14 +133,18 @@ pub fn set_archived(state: State<'_, AppState>, relative_path: String, archived:
 
 /// ピン止め（ADR-020）。Archive とは独立した flag。
 #[tauri::command]
-pub fn set_pinned(state: State<'_, AppState>, relative_path: String, pinned: bool) -> Result<WorkspaceMetadata> {
+pub fn set_pinned(
+    state: State<'_, AppState>,
+    relative_paths: Vec<String>,
+    pinned: bool,
+) -> Result<WorkspaceMetadata> {
     let root = state.root().ok_or_else(|| NativeError::NotFound {
         path: "<no workspace>".to_string(),
     })?;
     let mut metadata = settings::load_workspace_metadata(&root);
-    metadata.pinned.retain(|p| p != &relative_path);
+    metadata.pinned.retain(|p| !relative_paths.contains(p));
     if pinned {
-        metadata.pinned.push(relative_path);
+        metadata.pinned.extend(relative_paths);
     }
     settings::save_workspace_metadata(&root, &metadata)?;
     Ok(metadata)
