@@ -38,7 +38,11 @@ import {
 import { extractHeadings, HEADING_ID_PREFIX } from "@/domain/document/markdown";
 import { pastedImageFilename } from "@/domain/document/pasted-image";
 import { toggleTaskLine } from "@/domain/document/task-list";
-import { filenameWithExtension, type DocumentSummary } from "@/domain/document/types";
+import {
+  filenameWithExtension,
+  type DocumentSession,
+  type DocumentSummary,
+} from "@/domain/document/types";
 import {
   filenameOf,
   isInsideWorkspace,
@@ -52,6 +56,7 @@ import { settingsService, type ViewMode } from "@/services/settings-service";
 import { workspaceService } from "@/services/workspace-service";
 import * as native from "@/services/native-bridge";
 import { NativeError } from "@/domain/document/errors";
+import { resolveShortcut } from "@/features/shell/shortcuts";
 import "@/ui/global.css";
 
 function useStore<T>(store: { get: () => T; subscribe: (fn: () => void) => () => void }): T {
@@ -959,36 +964,44 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod) return;
-      const key = e.key.toLowerCase();
-
-      if (key === "s") {
-        e.preventDefault();
-        void documentService.save();
-      } else if (key === "b") {
-        e.preventDefault();
-        settingsService.update({ sidebarCollapsed: !settingsService.get().sidebarCollapsed });
-      } else if (key === "k" || (key === "p" && !e.shiftKey)) {
-        e.preventDefault();
-        setPaletteOpen(true);
-      } else if (key === "f") {
-        e.preventDefault();
-        // Shift 付きは Workspace 全体（ADR-011）、無しは現在の文書（U-025）。
-        if (e.shiftKey) setSearchAllOpen(true);
-        else openFind();
-      } else if (key === "n") {
-        e.preventDefault();
-        void newNote();
-      } else if (key === "o") {
-        e.preventDefault();
-        void openFile();
-      } else if (key === ",") {
-        e.preventDefault();
-        setSettingsOpen(true);
-      } else if (key === "1" || key === "2" || key === "3") {
-        e.preventDefault();
-        setView(key === "1" ? "write" : key === "2" ? "split" : "read");
+      const resolved = resolveShortcut(e);
+      if (!resolved) return;
+      e.preventDefault();
+      if (!resolved.run) return;
+      switch (resolved.shortcut) {
+        case "save":
+          void documentService.save();
+          break;
+        case "toggle-sidebar":
+          settingsService.update({ sidebarCollapsed: !settingsService.get().sidebarCollapsed });
+          break;
+        case "palette":
+          setPaletteOpen(true);
+          break;
+        case "find":
+          openFind();
+          break;
+        case "search-all":
+          setSearchAllOpen(true);
+          break;
+        case "new-note":
+          void newNote();
+          break;
+        case "open-file":
+          void openFile();
+          break;
+        case "settings":
+          setSettingsOpen(true);
+          break;
+        case "view-write":
+          setView("write");
+          break;
+        case "view-split":
+          setView("split");
+          break;
+        case "view-read":
+          setView("read");
+          break;
       }
     };
     window.addEventListener("keydown", onKey);
@@ -998,6 +1011,31 @@ export function App() {
   /* ---------------------------------------------------------------- *
    * Render
    * ---------------------------------------------------------------- */
+
+  /**
+   * 保存できなかった文書を、別の場所へ書き出す（Inline banner の操作）。
+   *
+   * ここでも失敗しうる。黙って終わると、ユーザーは退避できたと思い込む。
+   */
+  const saveCopy = useCallback(
+    async (current: DocumentSession, done: string) => {
+      try {
+        const target = await native.saveAsMarkdown(current.filename);
+        if (!target) return;
+        await native.saveDocument({
+          path: target,
+          content: current.text,
+          lineEnding: current.lineEnding,
+          hasBom: current.hasBom,
+          expectedRevision: null,
+        });
+        showToast(done);
+      } catch (error) {
+        showToast(error instanceof NativeError ? error.message : "保存できませんでした");
+      }
+    },
+    [showToast],
+  );
 
   const problemActions = useMemo(() => {
     if (!session?.problem) return [];
@@ -1010,46 +1048,14 @@ export function App() {
       case "save_error":
         return [
           { label: "再試行", onClick: () => void documentService.retry() },
-          {
-            label: "名前を付けて保存…",
-            onClick: () => {
-              void (async () => {
-                const target = await native.saveAsMarkdown(session.filename);
-                if (!target) return;
-                await native.saveDocument({
-                  path: target,
-                  content: session.text,
-                  lineEnding: session.lineEnding,
-                  hasBom: session.hasBom,
-                  expectedRevision: null,
-                });
-                showToast("別の場所へ保存しました");
-              })();
-            },
-          },
+          { label: "名前を付けて保存…", onClick: () => void saveCopy(session, "別の場所へ保存しました") },
         ];
       case "missing":
         return [
-          {
-            label: "コピーを保存…",
-            onClick: () => {
-              void (async () => {
-                const target = await native.saveAsMarkdown(session.filename);
-                if (!target) return;
-                await native.saveDocument({
-                  path: target,
-                  content: session.text,
-                  lineEnding: session.lineEnding,
-                  hasBom: session.hasBom,
-                  expectedRevision: null,
-                });
-                showToast("コピーを保存しました");
-              })();
-            },
-          },
+          { label: "コピーを保存…", onClick: () => void saveCopy(session, "コピーを保存しました") },
         ];
     }
-  }, [session, showToast]);
+  }, [session, saveCopy]);
 
   return (
     <>
