@@ -10,6 +10,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentSummary, SaveState } from "@/domain/document/types";
 import { RECENT_COLLAPSED_COUNT, type RecentFile } from "@/domain/document/recents";
+import {
+  EMPTY_SELECTION,
+  nextSelection,
+  type SelectionClick,
+  type SidebarSelection,
+} from "@/domain/document/selection";
 import { formatCreatedAt } from "@/domain/document/timestamps";
 import {
   isSameWorkspace,
@@ -51,6 +57,8 @@ interface SidebarProps {
   pinned: string[];
   expandedFolders: string[];
   activePath: string | null;
+  /** まとめて選択（ADR-024）。Notes と Archive のファイル行だけが対象。 */
+  selection: SidebarSelection;
   saveState: SaveState;
   collapsed: boolean;
   compact: boolean;
@@ -58,10 +66,16 @@ interface SidebarProps {
   showCreatedAt: boolean;
   onToggleCollapsed: () => void;
   onSelect: (doc: DocumentSummary) => void;
+  onSelectionChange: (selection: SidebarSelection) => void;
   onNewNote: () => void;
   onToggleFolder: (path: string) => void;
   onOpenSettings: () => void;
-  onContextMenu: (doc: DocumentSummary, position: { x: number; y: number }) => void;
+  /** 選択の中を右クリックしたときは、対象の相対パス一覧も渡す（ADR-024 §6）。 */
+  onContextMenu: (
+    doc: DocumentSummary,
+    position: { x: number; y: number },
+    selectedPaths?: string[],
+  ) => void;
   onSelectRecent: (file: RecentFile) => void;
   onRecentContextMenu: (file: RecentFile, position: { x: number; y: number }) => void;
   onSelectWorkspace: (entry: WorkspaceEntry) => void;
@@ -86,20 +100,29 @@ function SaveDot({ state }: { state: SaveState }) {
   );
 }
 
+/** 修飾キーからクリックの意味を決める（ADR-024 §2）。macOS の Meta は Ctrl と同じ扱い。 */
+function clickKind(e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }): SelectionClick {
+  if (e.shiftKey) return "range";
+  if (e.ctrlKey || e.metaKey) return "toggle";
+  return "plain";
+}
+
 function FileRow({
   row,
   active,
+  selected,
   saveState,
   showCreatedAt,
-  onSelect,
+  onFileClick,
   onContextMenu,
 }: {
   row: Extract<TreeRow, { kind: "file" }>;
   active: boolean;
+  selected: boolean;
   saveState: SaveState;
   showCreatedAt: boolean;
-  onSelect: (doc: DocumentSummary) => void;
-  onContextMenu: SidebarProps["onContextMenu"];
+  onFileClick: (doc: DocumentSummary, click: SelectionClick) => void;
+  onContextMenu: (doc: DocumentSummary, position: { x: number; y: number }) => void;
 }) {
   const { ref, tooltip, handlers } = useTruncationTooltip(row.document.filename);
 
@@ -107,10 +130,16 @@ function FileRow({
     <>
       <button
         type="button"
-        className={`tree-row tree-row--file${active ? " is-active" : ""}`}
+        className={`tree-row tree-row--file${active ? " is-active" : ""}${
+          selected ? " is-selected" : ""
+        }`}
         style={{ paddingLeft: `${8 + row.depth * 13}px` }}
         aria-current={active ? "true" : undefined}
-        onClick={() => onSelect(row.document)}
+        // Shift+クリックの前に、行をまたぐ文字選択が始まらないようにする。
+        onMouseDown={(e) => {
+          if (e.shiftKey) e.preventDefault();
+        }}
+        onClick={(e) => onFileClick(row.document, clickKind(e))}
         onContextMenu={(e) => {
           e.preventDefault();
           onContextMenu(row.document, { x: e.clientX, y: e.clientY });
@@ -333,43 +362,62 @@ function Section({
   label,
   rows,
   activePath,
+  selectedPaths,
   saveState,
   showCreatedAt,
-  onSelect,
+  onFileClick,
   onToggleFolder,
   onContextMenu,
   action,
+  disclosure,
 }: {
   label: string;
   rows: TreeRow[];
   activePath: string | null;
+  selectedPaths: ReadonlySet<string>;
   saveState: SaveState;
   showCreatedAt: boolean;
-  onSelect: (doc: DocumentSummary) => void;
+  onFileClick: (doc: DocumentSummary, click: SelectionClick) => void;
   onToggleFolder: (path: string) => void;
-  onContextMenu: SidebarProps["onContextMenu"];
+  onContextMenu: (doc: DocumentSummary, position: { x: number; y: number }) => void;
   action?: { label: string; onClick: () => void };
+  /** 見出しごと畳めるようにする（ADR-023）。渡さない区分は常に開いたまま。 */
+  disclosure?: { open: boolean; onToggle: () => void };
 }) {
   if (rows.length === 0 && !action) return null;
 
+  const visibleRows = disclosure && !disclosure.open ? [] : rows;
+
   return (
     <section className="tree-section">
-      <div className="section-head">
-        <h2 className="section-label">{label}</h2>
-        {action ? (
-          <button
-            type="button"
-            className="section-action"
-            aria-label={action.label}
-            title={action.label}
-            onClick={action.onClick}
-          >
-            <PlusIcon />
-          </button>
-        ) : null}
-      </div>
+      {disclosure ? (
+        <button
+          type="button"
+          className="section-head section-head--toggle"
+          aria-expanded={disclosure.open}
+          onClick={disclosure.onToggle}
+        >
+          <span className="section-label">{label}</span>
+          <ChevronDownIcon className="recent-caret" />
+        </button>
+      ) : (
+        <div className="section-head">
+          <h2 className="section-label">{label}</h2>
+          {action ? (
+            <button
+              type="button"
+              className="section-action"
+              aria-label={action.label}
+              title={action.label}
+              onClick={action.onClick}
+            >
+              <PlusIcon />
+            </button>
+          ) : null}
+        </div>
+      )}
 
-      {rows.map((row) =>
+      {visibleRows.map((row) =>
         row.kind === "folder" ? (
           <button
             key={`folder:${row.path}`}
@@ -390,9 +438,10 @@ function Section({
             key={row.document.path}
             row={row}
             active={row.document.path === activePath}
+            selected={selectedPaths.has(row.document.relativePath)}
             saveState={saveState}
             showCreatedAt={showCreatedAt}
-            onSelect={onSelect}
+            onFileClick={onFileClick}
             onContextMenu={onContextMenu}
           />
         ),
@@ -412,12 +461,14 @@ export function Sidebar(props: SidebarProps) {
     pinned,
     expandedFolders,
     activePath,
+    selection,
     saveState,
     collapsed,
     compact,
     showCreatedAt,
     onToggleCollapsed,
     onSelect,
+    onSelectionChange,
     onNewNote,
     onToggleFolder,
     onOpenSettings,
@@ -440,11 +491,53 @@ export function Sidebar(props: SidebarProps) {
    */
   const [recentOpen, setRecentOpen] = useState(false);
   const [recentExpanded, setRecentExpanded] = useState(false);
+  // Archive も同じ理由で畳んだ状態から始める（ADR-023）。開閉は metadata に保存しない。
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const closePicker = useCallback(() => setPickerOpen(false), []);
 
   // Workspace が変わったら閉じる。Context menu の「開く」から切り替えたときもここで閉じる。
   useEffect(() => setPickerOpen(false), [workspaceRoot]);
+
+  const activeInArchive = archiveRows.some(
+    (row) => row.kind === "file" && row.document.path === activePath,
+  );
+
+  /*
+   * 開いているノートが Archive 側にあるなら開く（ADR-023 §3）。行が見えないと Active 表示が出ない。
+   * activePath も依存に入れているので、自分で閉じた状態は次のノートを開くまで保たれる。
+   */
+  useEffect(() => {
+    if (activeInArchive) setArchiveOpen(true);
+  }, [activePath, activeInArchive]);
+
+  /*
+   * 選択と Shift の範囲が乗る並び（ADR-024 §3）。
+   * いま見えているファイル行だけを Notes → Archive の順に置く。畳んだフォルダの中と、
+   * 閉じている Archive の行は入らないので、見えない行へ操作が及ばない。
+   */
+  const fileOrder = [...notes, ...(archiveOpen ? archiveRows : [])].flatMap((row) =>
+    row.kind === "file" ? [row.document.relativePath] : [],
+  );
+  const visible = new Set(fileOrder);
+  const selected = selection.paths.filter((path) => visible.has(path));
+  const selectedSet = new Set(selected);
+
+  const onFileClick = (doc: DocumentSummary, click: SelectionClick) => {
+    if (click !== "plain") {
+      onSelectionChange(nextSelection(selection, fileOrder, doc.relativePath, click));
+      return;
+    }
+    if (selection.paths.length > 0) onSelectionChange(EMPTY_SELECTION);
+    onSelect(doc);
+  };
+
+  const onFileContextMenu = (doc: DocumentSummary, position: { x: number; y: number }) => {
+    const inside = selectedSet.has(doc.relativePath);
+    // 選択の外を押したら選択を捨てて、従来どおり 1 件のメニューへ戻す（ADR-024 §6）。
+    if (!inside && selection.paths.length > 0) onSelectionChange(EMPTY_SELECTION);
+    onContextMenu(doc, position, inside && selected.length > 1 ? selected : undefined);
+  };
 
   const picker = pickerOpen ? (
     <WorkspacePicker
@@ -575,22 +668,25 @@ export function Sidebar(props: SidebarProps) {
           label="Notes"
           rows={notes}
           activePath={activePath}
+          selectedPaths={selectedSet}
           saveState={saveState}
           showCreatedAt={showCreatedAt}
-          onSelect={onSelect}
+          onFileClick={onFileClick}
           onToggleFolder={onToggleFolder}
-          onContextMenu={onContextMenu}
+          onContextMenu={onFileContextMenu}
           action={{ label: "新規ノート", onClick: onNewNote }}
         />
         <Section
           label="Archive"
           rows={archiveRows}
           activePath={activePath}
+          selectedPaths={selectedSet}
           saveState={saveState}
           showCreatedAt={showCreatedAt}
-          onSelect={onSelect}
+          onFileClick={onFileClick}
           onToggleFolder={onToggleFolder}
-          onContextMenu={onContextMenu}
+          onContextMenu={onFileContextMenu}
+          disclosure={{ open: archiveOpen, onToggle: () => setArchiveOpen((open) => !open) }}
         />
 
       </nav>
@@ -696,6 +792,65 @@ export function FileContextMenu({
       <ContextMenuItem onClick={() => run(archived ? "restore" : "archive")}>
         {archived ? "アーカイブから戻す" : "アーカイブ"}
       </ContextMenuItem>
+    </ContextMenu>
+  );
+}
+
+/**
+ * まとめて選択した行の Context menu（ADR-024 §7）。
+ *
+ * 1 件にしか意味を持たない操作（開く・名前を変更）と、実行のたびにウィンドウや
+ * ファイルが増える操作（新しいウィンドウで開く・複製）は出さない。
+ * Archive とピン止めの項目は、選択の中に変えられる行があるときだけ出す。
+ */
+export function MultiFileContextMenu({
+  paths,
+  position,
+  archived,
+  pinned,
+  onClose,
+  onAction,
+}: {
+  paths: string[];
+  position: { x: number; y: number };
+  archived: string[];
+  pinned: string[];
+  onClose: () => void;
+  onAction: (action: string, paths: string[]) => void;
+}) {
+  const run = (action: string) => {
+    onAction(action, paths);
+    onClose();
+  };
+
+  const archivedSet = new Set(archived);
+  const pinnedSet = new Set(pinned);
+  const hasArchived = paths.some((path) => archivedSet.has(path));
+  const hasUnarchived = paths.some((path) => !archivedSet.has(path));
+  const hasPinned = paths.some((path) => pinnedSet.has(path));
+  const hasUnpinned = paths.some((path) => !pinnedSet.has(path));
+
+  return (
+    <ContextMenu position={position} onClose={onClose}>
+      <p className="context-menu-head">{paths.length} 件を選択中</p>
+      <hr />
+      {hasUnarchived ? (
+        <ContextMenuItem onClick={() => run("archive")}>アーカイブ</ContextMenuItem>
+      ) : null}
+      {hasArchived ? (
+        <ContextMenuItem onClick={() => run("restore")}>アーカイブから戻す</ContextMenuItem>
+      ) : null}
+      <hr />
+      {hasUnpinned ? (
+        <ContextMenuItem onClick={() => run("pin")}>ピン止め</ContextMenuItem>
+      ) : null}
+      {hasPinned ? (
+        <ContextMenuItem onClick={() => run("unpin")}>ピン止めを外す</ContextMenuItem>
+      ) : null}
+      <hr />
+      <ContextMenuItem onClick={() => run("copy-path")}>パスをコピー</ContextMenuItem>
+      <hr />
+      <ContextMenuItem onClick={() => run("clear-selection")}>選択を解除</ContextMenuItem>
     </ContextMenu>
   );
 }

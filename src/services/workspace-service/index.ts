@@ -68,9 +68,13 @@ export class WorkspaceService {
     return this.store.get().metadata?.archived.includes(relativePath) ?? false;
   }
 
-  /** 論理 Archive。ファイルは移動しない（U-005）。 */
-  async setArchived(relativePath: string, archived: boolean): Promise<void> {
-    const metadata = await native.setArchived(relativePath, archived);
+  /**
+   * 論理 Archive。ファイルは移動しない（U-005）。
+   *
+   * まとめて選択した行にも同じ経路を使うので、1 件でも一覧で渡す（ADR-024 §10）。
+   */
+  async setArchived(relativePaths: string[], archived: boolean): Promise<void> {
+    const metadata = await native.setArchived(relativePaths, archived);
     this.store.set((prev) => ({ ...prev, metadata }));
   }
 
@@ -79,8 +83,8 @@ export class WorkspaceService {
   }
 
   /** ピン止め（ADR-020）。Archive とは独立した flag。 */
-  async setPinned(relativePath: string, pinned: boolean): Promise<void> {
-    const metadata = await native.setPinned(relativePath, pinned);
+  async setPinned(relativePaths: string[], pinned: boolean): Promise<void> {
+    const metadata = await native.setPinned(relativePaths, pinned);
     this.store.set((prev) => ({ ...prev, metadata }));
   }
 
