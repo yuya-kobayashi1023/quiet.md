@@ -24,7 +24,12 @@ import { SettingsModal } from "@/features/settings/SettingsModal";
 import { CommandPalette, type Command } from "@/features/command-palette/CommandPalette";
 import { FindBar } from "@/features/search/FindBar";
 import { SearchAllPanel, type SearchHit } from "@/features/search/SearchAllPanel";
-import { ProblemBanner, Toast, type ToastState } from "@/ui/components/Banner";
+import {
+  ProblemBanner,
+  Toast,
+  type BannerAction,
+  type ToastState,
+} from "@/ui/components/Banner";
 import { whenNotComposing } from "@/ui/ime";
 import {
   addFrontmatter,
@@ -160,8 +165,8 @@ export function App() {
   const editorPane = useRef<HTMLDivElement>(null);
   const previewPane = useRef<HTMLDivElement>(null);
 
-  const showToast = useCallback((message: string, action?: ToastState["action"]) => {
-    setToast({ id: Date.now(), message, action });
+  const showToast = useCallback((message: string, ...actions: BannerAction[]) => {
+    setToast({ id: Date.now(), message, actions });
   }, []);
 
   /**
@@ -894,12 +899,20 @@ export function App() {
         showToast(error instanceof NativeError ? error.message : "PDF を書き出せませんでした");
         return;
       }
-      showToast("PDF を保存しました", {
-        label: "フォルダを開く",
-        // 保存先のフォルダを開き、書き出した PDF を選択状態にする。
-        onClick: () =>
-          void native.revealPath(path).catch(() => showToast("保存先を開けませんでした")),
-      });
+      showToast(
+        "PDF を保存しました",
+        {
+          label: "開く",
+          // OS の既定のアプリで PDF そのものを開く。
+          onClick: () => void native.openPdf(path).catch(() => showToast("PDF を開けませんでした")),
+        },
+        {
+          label: "フォルダを開く",
+          // 保存先のフォルダを開き、書き出した PDF を選択状態にする。
+          onClick: () =>
+            void native.revealPath(path).catch(() => showToast("保存先を開けませんでした")),
+        },
+      );
     },
     [showToast],
   );

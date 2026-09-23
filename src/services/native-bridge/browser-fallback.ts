@@ -396,6 +396,7 @@ export async function browserFallback<T>(
 
     case "reveal_in_file_manager":
     case "reveal_path":
+    case "open_pdf":
     case "open_in_new_window":
     case "open_workspace_in_new_window":
     case "register_document_window":
