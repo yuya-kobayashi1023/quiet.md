@@ -51,10 +51,10 @@ notes
 NOTES                         +
 document.md                 ●
 long-document-name-that-...
-
-ARCHIVE                       ⌄   ← 既定は閉じている
-old.md                            （開いたときだけ出る）
                               ← ここまでがスクロール領域
+─────────────────────────
+ARCHIVE                       ⌄   ← 既定は閉じている。開くと上へ伸びる
+old.md                            （開いたときだけ出る）
 ─────────────────────────
 RECENT                        ⌄   ← 既定は閉じている
 outside-the-workspace.md          （開いたときだけ出る）
@@ -73,6 +73,7 @@ Settings
 - 件数は表示しない。Recent と同様に、見出し行を情報の置き場としないため。
 - 1 件もない場合はセクションごと表示しない。
 - Notes は折りたたまない。常に作業対象であり、畳みたいときは Sidebar ごと畳む導線があるため（ADR-006）。
+- 位置は Sidebar の下端（Recent の直上）に固定し、Notes と一緒にスクロールさせない。開いた一覧は上方向へ伸ばし、高さは 10 行分を上限とする。未アーカイブのノートをできるだけ多く表示するためである（ADR-023 §7）。
 
 ### Multi select
 
@@ -95,11 +96,9 @@ Settings
 - Workspace 外で開いたファイルのうち、いずれの既知 Workspace にも属さないファイルのみを
   開いた新しい順に並べる。Workspace 履歴のいずれかに属するファイルは、その Workspace へ
   切り替えて開くためここには表示されない（ADR-018）
-- 位置は Sidebar の下端に固定する。Notes / Archive と一緒にスクロールさせない。
+- 位置は Sidebar の下端に固定する。Notes と一緒にスクロールさせない。
   Notes が増減しても Recent の位置が動かないようにするため
-- 見出しの上に薄い区切り線を置く。Notes / Archive は Workspace の中身、Recent はその外で、
-  出所が違うため。禁止事項の「Settings上の強いdivider」とは別物で、行と同じ左右インセット・
-  border 色を落とした 1px に留める
+- 見出しの上に薄い区切り線を置く。スクロールする Notes と、下端に固定した区分（Archive / Recent）の境目を示すためである。禁止事項の「Settings上の強いdivider」とは異なり、行と同じ左右インセットとし、border 色を落とした 1px に留める。
 - Settings との間には余白を取る。線は引かない
 - 現在の Workspace の中にあるファイルは出さない（Notes 側に出ている）
 - 見出しごと disclosure にする。既定は閉じた状態で、見出しの行だけを出す。

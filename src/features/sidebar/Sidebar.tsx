@@ -7,7 +7,14 @@
  * Settings 上の強い divider / `Saved` 文字列。
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { DocumentSummary, SaveState } from "@/domain/document/types";
 import { RECENT_COLLAPSED_COUNT, type RecentFile } from "@/domain/document/recents";
 import {
@@ -358,6 +365,11 @@ function WorkspacePicker({
   );
 }
 
+/** 下端に固定した区分は、行が増えても Sidebar を押し上げないよう一覧だけをスクロールさせる。 */
+function SectionRows({ docked, children }: { docked: boolean; children: ReactNode }) {
+  return docked ? <div className="dock-list">{children}</div> : <>{children}</>;
+}
+
 function Section({
   label,
   rows,
@@ -381,7 +393,10 @@ function Section({
   onToggleFolder: (path: string) => void;
   onContextMenu: (doc: DocumentSummary, position: { x: number; y: number }) => void;
   action?: { label: string; onClick: () => void };
-  /** 見出しごと畳めるようにする（ADR-023）。渡さない区分は常に開いたまま。 */
+  /**
+   * 見出しごと畳めるようにし、Sidebar の下端へ固定する（ADR-023）。渡さない区分は常に開いたまま。
+   * 開くと一覧は見出しの下に出るが、区分ごと下端に据わっているので、見た目は上へ伸びる。
+   */
   disclosure?: { open: boolean; onToggle: () => void };
 }) {
   if (rows.length === 0 && !action) return null;
@@ -389,7 +404,7 @@ function Section({
   const visibleRows = disclosure && !disclosure.open ? [] : rows;
 
   return (
-    <section className="tree-section">
+    <section className={disclosure ? "sidebar-dock" : "tree-section"}>
       {disclosure ? (
         <button
           type="button"
@@ -417,35 +432,37 @@ function Section({
         </div>
       )}
 
-      {visibleRows.map((row) =>
-        row.kind === "folder" ? (
-          <button
-            key={`folder:${row.path}`}
-            type="button"
-            className="tree-row tree-row--folder"
-            style={{ paddingLeft: `${8 + row.depth * 13}px` }}
-            aria-expanded={row.expanded}
-            onClick={() => onToggleFolder(row.path)}
-          >
-            <ChevronIcon
-              className={`tree-chevron${row.expanded ? " is-expanded" : ""}`}
+      <SectionRows docked={disclosure !== undefined}>
+        {visibleRows.map((row) =>
+          row.kind === "folder" ? (
+            <button
+              key={`folder:${row.path}`}
+              type="button"
+              className="tree-row tree-row--folder"
+              style={{ paddingLeft: `${8 + row.depth * 13}px` }}
+              aria-expanded={row.expanded}
+              onClick={() => onToggleFolder(row.path)}
+            >
+              <ChevronIcon
+                className={`tree-chevron${row.expanded ? " is-expanded" : ""}`}
+              />
+              <FolderIcon className="tree-icon" />
+              <span className="tree-label">{row.name}</span>
+            </button>
+          ) : (
+            <FileRow
+              key={row.document.path}
+              row={row}
+              active={row.document.path === activePath}
+              selected={selectedPaths.has(row.document.relativePath)}
+              saveState={saveState}
+              showCreatedAt={showCreatedAt}
+              onFileClick={onFileClick}
+              onContextMenu={onContextMenu}
             />
-            <FolderIcon className="tree-icon" />
-            <span className="tree-label">{row.name}</span>
-          </button>
-        ) : (
-          <FileRow
-            key={row.document.path}
-            row={row}
-            active={row.document.path === activePath}
-            selected={selectedPaths.has(row.document.relativePath)}
-            saveState={saveState}
-            showCreatedAt={showCreatedAt}
-            onFileClick={onFileClick}
-            onContextMenu={onContextMenu}
-          />
-        ),
-      )}
+          ),
+        )}
+      </SectionRows>
     </section>
   );
 }
@@ -676,22 +693,25 @@ export function Sidebar(props: SidebarProps) {
           onContextMenu={onFileContextMenu}
           action={{ label: "新規ノート", onClick: onNewNote }}
         />
-        <Section
-          label="Archive"
-          rows={archiveRows}
-          activePath={activePath}
-          selectedPaths={selectedSet}
-          saveState={saveState}
-          showCreatedAt={showCreatedAt}
-          onFileClick={onFileClick}
-          onToggleFolder={onToggleFolder}
-          onContextMenu={onFileContextMenu}
-          disclosure={{ open: archiveOpen, onToggle: () => setArchiveOpen((open) => !open) }}
-        />
-
       </nav>
 
       {picker}
+
+      {/*
+        Archive（ADR-023）。Notes をできるだけ多く見せるため、Recent と同じく下端へ固定する。
+      */}
+      <Section
+        label="Archive"
+        rows={archiveRows}
+        activePath={activePath}
+        selectedPaths={selectedSet}
+        saveState={saveState}
+        showCreatedAt={showCreatedAt}
+        onFileClick={onFileClick}
+        onToggleFolder={onToggleFolder}
+        onContextMenu={onFileContextMenu}
+        disclosure={{ open: archiveOpen, onToggle: () => setArchiveOpen((open) => !open) }}
+      />
 
       {/*
         Workspace 外で開いたファイル（ADR-013）。新しい順。

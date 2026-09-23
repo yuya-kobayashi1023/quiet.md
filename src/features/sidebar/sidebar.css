@@ -28,14 +28,15 @@
 }
 
 /* ------------------------------------------------------------------ *
- * Recent（ADR-013）
+ * Archive（ADR-023）と Recent（ADR-013）
  *
- * Notes と一緒にスクロールさせず、Sidebar の下端へ固定する。
- * 上の薄い線は、Notes / Archive が Workspace の中身なのに対し Recent は
- * その外という出所の違いを示すもの。Settings 上に置かない「強い divider」
- * （ui-spec.md §2 禁止事項）とは別物で、border 色を落とした 1px に留める。
+ * Notes と一緒にスクロールさせず、Sidebar の下端へ固定する。畳んでいる間は
+ * 見出し 1 行ぶんしか取らないので、Notes が下端近くまで使える。
+ * 上の薄い線は、スクロールする Notes と固定した区分の境目を示すもの。Settings 上に置かない
+ * 「強い divider」（ui-spec.md §2 禁止事項）とは別物で、border 色を落とした 1px に留める。
  * ------------------------------------------------------------------ */
 
+.sidebar-dock,
 .sidebar-recent {
   flex: none;
   margin: 0 8px;
@@ -83,12 +84,14 @@
  * 高さは 10 行ぶんで頭打ちにする。`More` で残りを出したときはここがスクロールする。
  * 件数が増えても Sidebar のレイアウトが動かないようにするための上限。
  */
+.dock-list,
 .recent-list {
   max-height: calc(26px * 10);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+.sidebar[data-compact="true"] .dock-list,
 .sidebar[data-compact="true"] .recent-list {
   max-height: calc(22px * 10);
 }
