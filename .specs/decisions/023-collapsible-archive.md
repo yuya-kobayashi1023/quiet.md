@@ -1,6 +1,6 @@
 # ADR-023 — Archive 区分を折りたためるようにする
 
-Status: **Accepted**（2026-09-23）
+Status: **Accepted**（2026-09-23、§7 を同日追記）
 
 Amends: ADR-013（Recent の disclosure を Archive にも広げる）
 
@@ -43,6 +43,14 @@ Archive の見出しを押して開閉できるようにし、既定は閉じた
 ### 6. Collapsed rail は変えない
 
 Collapsed rail（ADR-006）の Archive アイコンの挙動は変更せず、従来どおり Sidebar を開く。開いた先で Archive 区分が閉じているかどうかは §3 の規則に従う。
+
+### 7. Sidebar の下端へ固定する（2026-09-23 追記）
+
+Archive 区分は Notes と共にスクロールさせず、Recent と同様に Sidebar の下端（Recent の直上）へ固定する。開くと一覧は上方向へ伸び、その分だけ Notes の表示領域が縮小する。閉じている間は見出し 1 行分のみを占有するため、Notes を下端付近まで広く使える。
+
+開いたときの高さは Recent と同様に 10 行分を上限とし、超過分は Archive 内でのみスクロールする。見出しの上には Recent と同様に薄い区切り線を配置し、スクロールする Notes と下端に固定した区分との境界を示す。
+
+Notes の下に配置したままでは、アーカイブを閉じていても見出しが Notes の末尾に続くため、Notes の行数が多いと見出しがスクロールの奥に隠れる。逆に Archive を開くと、Notes の続きとして一覧が伸びるため、未アーカイブのノートを多く閲覧したいときの妨げになる。下端へ固定すれば、Notes の表示量は Archive の開閉だけで決まる。
 
 ## Consequences
 
