@@ -38,7 +38,11 @@ import {
 import { extractHeadings, HEADING_ID_PREFIX } from "@/domain/document/markdown";
 import { pastedImageFilename } from "@/domain/document/pasted-image";
 import { toggleTaskLine } from "@/domain/document/task-list";
-import { filenameWithExtension, type DocumentSummary } from "@/domain/document/types";
+import {
+  filenameWithExtension,
+  type DocumentSession,
+  type DocumentSummary,
+} from "@/domain/document/types";
 import {
   filenameOf,
   isInsideWorkspace,
@@ -1008,6 +1012,31 @@ export function App() {
    * Render
    * ---------------------------------------------------------------- */
 
+  /**
+   * 保存できなかった文書を、別の場所へ書き出す（Inline banner の操作）。
+   *
+   * ここでも失敗しうる。黙って終わると、ユーザーは退避できたと思い込む。
+   */
+  const saveCopy = useCallback(
+    async (current: DocumentSession, done: string) => {
+      try {
+        const target = await native.saveAsMarkdown(current.filename);
+        if (!target) return;
+        await native.saveDocument({
+          path: target,
+          content: current.text,
+          lineEnding: current.lineEnding,
+          hasBom: current.hasBom,
+          expectedRevision: null,
+        });
+        showToast(done);
+      } catch (error) {
+        showToast(error instanceof NativeError ? error.message : "保存できませんでした");
+      }
+    },
+    [showToast],
+  );
+
   const problemActions = useMemo(() => {
     if (!session?.problem) return [];
     switch (session.problem.kind) {
@@ -1019,46 +1048,14 @@ export function App() {
       case "save_error":
         return [
           { label: "再試行", onClick: () => void documentService.retry() },
-          {
-            label: "名前を付けて保存…",
-            onClick: () => {
-              void (async () => {
-                const target = await native.saveAsMarkdown(session.filename);
-                if (!target) return;
-                await native.saveDocument({
-                  path: target,
-                  content: session.text,
-                  lineEnding: session.lineEnding,
-                  hasBom: session.hasBom,
-                  expectedRevision: null,
-                });
-                showToast("別の場所へ保存しました");
-              })();
-            },
-          },
+          { label: "名前を付けて保存…", onClick: () => void saveCopy(session, "別の場所へ保存しました") },
         ];
       case "missing":
         return [
-          {
-            label: "コピーを保存…",
-            onClick: () => {
-              void (async () => {
-                const target = await native.saveAsMarkdown(session.filename);
-                if (!target) return;
-                await native.saveDocument({
-                  path: target,
-                  content: session.text,
-                  lineEnding: session.lineEnding,
-                  hasBom: session.hasBom,
-                  expectedRevision: null,
-                });
-                showToast("コピーを保存しました");
-              })();
-            },
-          },
+          { label: "コピーを保存…", onClick: () => void saveCopy(session, "コピーを保存しました") },
         ];
     }
-  }, [session, showToast]);
+  }, [session, saveCopy]);
 
   return (
     <>
