@@ -17,6 +17,7 @@ import { selectNextOccurrence, selectSelectionMatches } from "@codemirror/search
 import { listKeymap } from "./list-keymap";
 import { fenceInput } from "./fence-input";
 import { linkPaste } from "./link-paste";
+import { listLayout } from "./list-layout";
 
 /**
  * Markdown の「意味を持つ記号」だけを色付ける。
@@ -150,6 +151,7 @@ export function coreExtensions(): Extension[] {
     // 起動時のバンドルには載らない（ADR-009）。
     markdown({ base: markdownLanguage, codeLanguages }),
     syntaxHighlighting(quietHighlight),
+    listLayout,
     /*
      * `searchKeymap` は丸ごとは入れない。`Mod-f` に `openSearchPanel` が入っており、
      * CodeMirror 標準の search panel が開いてしまう。
