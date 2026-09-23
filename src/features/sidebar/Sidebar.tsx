@@ -43,7 +43,7 @@ import {
   WorkspaceIcon,
 } from "@/ui/components/icons";
 import { ContextMenu, ContextMenuItem } from "@/ui/components/ContextMenu";
-import { Tooltip, useTruncationTooltip } from "@/ui/components/Tooltip";
+import { Tooltip, TooltipButton, useTruncationTooltip } from "@/ui/components/Tooltip";
 import "./sidebar.css";
 
 interface SidebarProps {
@@ -392,7 +392,7 @@ function Section({
   onFileClick: (doc: DocumentSummary, click: SelectionClick) => void;
   onToggleFolder: (path: string) => void;
   onContextMenu: (doc: DocumentSummary, position: { x: number; y: number }) => void;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; shortcut?: string; onClick: () => void };
   /**
    * 見出しごと畳めるようにし、Sidebar の下端へ固定する（ADR-023）。渡さない区分は常に開いたまま。
    * 開くと一覧は見出しの下に出るが、区分ごと下端に据わっているので、見た目は上へ伸びる。
@@ -419,15 +419,14 @@ function Section({
         <div className="section-head">
           <h2 className="section-label">{label}</h2>
           {action ? (
-            <button
-              type="button"
+            <TooltipButton
               className="section-action"
-              aria-label={action.label}
-              title={action.label}
+              label={action.label}
+              shortcut={action.shortcut}
               onClick={action.onClick}
             >
               <PlusIcon />
-            </button>
+            </TooltipButton>
           ) : null}
         </div>
       )}
@@ -580,53 +579,57 @@ export function Sidebar(props: SidebarProps) {
       <aside className="sidebar sidebar--collapsed" data-compact={compact}>
         {/* Top bar と同じ高さの帯。ここも title bar として掴める（ADR-010）。 */}
         <div className="sidebar-top" data-tauri-drag-region="deep">
-          <button
-            type="button"
+          <TooltipButton
             className="icon-btn"
-            aria-label="サイドバーを開く"
-            title="サイドバーを開く (Ctrl+B)"
+            label="サイドバーを開く"
+            shortcut="Ctrl+B"
             onClick={onToggleCollapsed}
           >
             <SidebarIcon />
-          </button>
+          </TooltipButton>
         </div>
         <nav className="rail" aria-label="サイドバー">
           {/* Workspace の切り替えは畳んだままでもできる（ADR-016）。 */}
-          <button
-            type="button"
+          <TooltipButton
             ref={anchorRef}
             className="rail-btn"
-            aria-label="Workspace を切り替える"
-            title="Workspace を切り替える"
+            label="Workspace を切り替える"
             aria-haspopup="menu"
             aria-expanded={pickerOpen}
             onClick={() => setPickerOpen((open) => !open)}
           >
             <WorkspaceIcon />
-          </button>
+          </TooltipButton>
           <div className="rail-divider" aria-hidden="true" />
-          <button type="button" className="rail-btn" aria-label="ノート" onClick={onToggleCollapsed}>
+          <TooltipButton className="rail-btn" label="ノート" onClick={onToggleCollapsed}>
             <FileIcon />
             {hasDirty ? <span className="rail-dot" aria-hidden="true" /> : null}
-          </button>
-          <button type="button" className="rail-btn" aria-label="新規ノート" onClick={onNewNote}>
+          </TooltipButton>
+          <TooltipButton className="rail-btn" label="新規ノート" shortcut="Ctrl+N" onClick={onNewNote}>
             <PlusIcon />
-          </button>
-          <button type="button" className="rail-btn" aria-label="アーカイブ" onClick={onToggleCollapsed}>
+          </TooltipButton>
+          {/* 押した先で Archive が見えるよう、区分も開いてから Sidebar を開く（ADR-023 §6）。 */}
+          <TooltipButton
+            className="rail-btn"
+            label="アーカイブ"
+            onClick={() => {
+              setArchiveOpen(true);
+              onToggleCollapsed();
+            }}
+          >
             <ArchiveIcon />
-          </button>
+          </TooltipButton>
         </nav>
         {picker}
         <div className="sidebar-bottom">
-          <button
-            type="button"
+          <TooltipButton
             className="rail-btn"
-            aria-label="設定"
-            title="設定 (Ctrl+,)"
+            label="設定"
+            shortcut="Ctrl+,"
             onClick={onOpenSettings}
           >
             <SettingsIcon />
-          </button>
+          </TooltipButton>
         </div>
       </aside>
     );
@@ -635,15 +638,14 @@ export function Sidebar(props: SidebarProps) {
   return (
     <aside className="sidebar" data-compact={compact}>
       <div className="sidebar-top" data-tauri-drag-region="deep">
-        <button
-          type="button"
+        <TooltipButton
           className="icon-btn"
-          aria-label="サイドバーを閉じる"
-          title="サイドバーを閉じる (Ctrl+B)"
+          label="サイドバーを閉じる"
+          shortcut="Ctrl+B"
           onClick={onToggleCollapsed}
         >
           <SidebarIcon />
-        </button>
+        </TooltipButton>
       </div>
 
       <nav className="tree" aria-label="ファイル">
@@ -654,17 +656,15 @@ export function Sidebar(props: SidebarProps) {
         <section className="tree-section">
           <div className="section-head">
             <h2 className="section-label">Workspace</h2>
-            <button
-              type="button"
+            <TooltipButton
               className="section-action"
-              aria-label="Workspace を切り替える"
-              title="Workspace を切り替える"
+              label="Workspace を切り替える"
               aria-haspopup="menu"
               aria-expanded={pickerOpen}
               onClick={() => setPickerOpen((open) => !open)}
             >
               <ChevronDownIcon className={`ws-caret${pickerOpen ? " is-open" : ""}`} />
-            </button>
+            </TooltipButton>
           </div>
           <button
             type="button"
@@ -691,7 +691,7 @@ export function Sidebar(props: SidebarProps) {
           onFileClick={onFileClick}
           onToggleFolder={onToggleFolder}
           onContextMenu={onFileContextMenu}
-          action={{ label: "新規ノート", onClick: onNewNote }}
+          action={{ label: "新規ノート", shortcut: "Ctrl+N", onClick: onNewNote }}
         />
       </nav>
 

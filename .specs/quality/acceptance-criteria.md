@@ -34,6 +34,8 @@
 - [ ] Status barにSaved文字を出さない
 - [ ] Collapse時に操作可能なIcon railが残る
 - [ ] Collapse時Settingsは最下部
+- [ ] Rail と Sidebar のアイコンにホバーまたは Keyboard focus すると、名前（ショートカットがあればそれも）が Tooltip で表示される（ADR-027）
+- [ ] Rail の Archive アイコンを押すと、Archive 区分が開いた状態で Sidebar が開く（ADR-023 §6）
 - [ ] サブフォルダを持つWorkspaceでも全ての`.md`へ到達できる（U-024）
 - [ ] ignore対象（dotfolder / `node_modules` / `.quiet`）が一覧に出ない（U-024）
 - [ ] Notes / Archive の各階層で、フォルダ行が名前順に先に並び、ファイル行が作成日時の新しい順に続く（ADR-019）

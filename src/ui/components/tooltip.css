@@ -18,3 +18,14 @@
   text-overflow: ellipsis;
   pointer-events: none;
 }
+
+/* アイコンのボタンの名前。ファイル名ではないので UI の字で出す。 */
+.tooltip--label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.tooltip-key {
+  margin-left: 10px;
+  color: var(--text-muted);
+}

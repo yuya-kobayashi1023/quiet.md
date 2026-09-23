@@ -196,6 +196,8 @@ Settings
 
 Settingsは最下部。
 
+各アイコンには名前を Tooltip で表示する（ADR-027）。
+
 DirtyなActive documentがある場合、Notesアイコンに小さなdotを表示してよい。
 
 ---
