@@ -250,6 +250,9 @@ export const revealInFileManager = (path: string) =>
  */
 export const revealPath = (path: string) => invoke<void>("reveal_path", { path });
 
+/** 書き出した PDF を OS の既定のアプリで開く（ADR-021 §1）。`.pdf` 以外は Native が断る。 */
+export const openPdf = (path: string) => invoke<void>("open_pdf", { path });
+
 export const openExternal = (url: string) =>
   invoke<void>("open_external", { url });
 

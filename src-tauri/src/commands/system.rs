@@ -33,6 +33,41 @@ pub fn reveal_path(path: String) -> Result<()> {
     reveal(&path)
 }
 
+/// 書き出した PDF を OS の既定のアプリで開く（ADR-021 §1）。
+///
+/// 既定のアプリで開くことは実行と同じなので、拡張子が `.pdf` のものに限る。
+/// 拡張子はシンボリックリンクを解決した先で確かめる。
+#[tauri::command]
+pub fn open_pdf(app: AppHandle, path: String) -> Result<()> {
+    let path = paths::canonicalize(Path::new(&path))?;
+    ensure_pdf(&path)?;
+    if !path.exists() {
+        return Err(NativeError::NotFound {
+            path: path.display().to_string(),
+        });
+    }
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_path(path.display().to_string(), None::<&str>)
+        .map_err(|e| NativeError::IoError {
+            message: e.to_string(),
+        })
+}
+
+fn ensure_pdf(path: &Path) -> Result<()> {
+    let is_pdf = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("pdf"));
+    if is_pdf {
+        Ok(())
+    } else {
+        Err(NativeError::OutOfScope {
+            path: path.display().to_string(),
+        })
+    }
+}
+
 fn reveal(path: &Path) -> Result<()> {
     #[cfg(windows)]
     {
@@ -223,4 +258,25 @@ pub fn context_menu_status() -> ContextMenuStatus {
 #[tauri::command]
 pub fn set_context_menu(enabled: bool) -> Result<ContextMenuStatus> {
     shell_integration::set_enabled(enabled)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ensure_pdf_accepts_pdf_in_any_case() {
+        assert!(ensure_pdf(Path::new(r"C:\docs\note.pdf")).is_ok());
+        assert!(ensure_pdf(Path::new(r"C:\docs\NOTE.PDF")).is_ok());
+    }
+
+    #[test]
+    fn ensure_pdf_rejects_other_files() {
+        for path in [r"C:\docs\setup.exe", r"C:\docs\note.pdf.bat", r"C:\docs\pdf", r"C:\docs\note.md"] {
+            assert!(
+                matches!(ensure_pdf(Path::new(path)), Err(NativeError::OutOfScope { .. })),
+                "{path} は開かない"
+            );
+        }
+    }
 }

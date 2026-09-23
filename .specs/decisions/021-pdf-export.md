@@ -1,6 +1,6 @@
 # ADR-021 — Preview を PDF に書き出す
 
-Status: **Accepted**（2026-09-17、§5 を同日追記）
+Status: **Accepted**（2026-09-17、§5 を同日追記、§1 を 2026-09-23 追記）
 
 Related: U-020, U-023, ADR-004, ADR-008, `product/requirements.md` §4（P2 候補）、`ui/ui-spec.md` §11、`architecture/interfaces.md` §7 / §13
 
@@ -17,6 +17,8 @@ Related: U-020, U-023, ADR-004, ADR-008, `product/requirements.md` §4（P2 候�
 常設 UI は追加しない（`AGENTS.md` §4）。コマンドを実行すると OS の保存ダイアログが開き、既定のファイル名は `<タイトル>.pdf` とする。保存先は Workspace の外でもよい。ノートを開いていないときは Toast で通知し、処理を行わない。
 
 出力完了時は Toast「PDF を保存しました」を表示し、「フォルダを開く」から保存先を Explorer / Finder で表示する。失敗時も Toast で通知する。
+
+出力完了時の Toast に「開く」も配置し、書き出した PDF を OS の既定のアプリで直接開けるようにする（2026-09-23 追記）。書き出し結果を確認するたびにフォルダを経由する手間を省くためである。既定のアプリで開く操作は実行と同じ扱いになるため、Native は拡張子が `.pdf` のファイルのみを開く。
 
 ### 2. 変換は WebView 自身で行う
 

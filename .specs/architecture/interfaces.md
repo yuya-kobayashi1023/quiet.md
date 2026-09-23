@@ -267,6 +267,9 @@ MVPではSearch Allを後回しにする推奨。
  * 保存先は Save dialog で決めた絶対パスで、Workspace の外でもよい。
  */
 exportPdf(path: string): Promise<void>
+
+/** 書き出した PDF を OS の既定のアプリで開く。拡張子が `.pdf` でなければ `OUT_OF_SCOPE` を返す。 */
+openPdf(path: string): Promise<void>
 ```
 
 - Windows: WebView2 の `PrintToPdf` を使用する（A4 縦、余白 15mm、背景色あり、ヘッダ / フッタなし）。

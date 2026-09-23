@@ -46,7 +46,7 @@ export function ProblemBanner({
 export interface ToastState {
   id: number;
   message: string;
-  action?: BannerAction;
+  actions: BannerAction[];
 }
 
 export function Toast({
@@ -62,7 +62,7 @@ export function Toast({
     if (!toast) return;
     if (timer.current) clearTimeout(timer.current);
     // Action を持つ場合 6 秒、持たない場合 3 秒（U-026）。
-    timer.current = setTimeout(onDismiss, toast.action ? 6000 : 3000);
+    timer.current = setTimeout(onDismiss, toast.actions.length > 0 ? 6000 : 3000);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
@@ -73,18 +73,19 @@ export function Toast({
   return (
     <div className="toast" role="status" aria-live="polite">
       <span className="toast-message">{toast.message}</span>
-      {toast.action ? (
+      {toast.actions.map((action) => (
         <button
+          key={action.label}
           type="button"
           className="toast-action"
           onClick={() => {
-            toast.action?.onClick();
+            action.onClick();
             onDismiss();
           }}
         >
-          {toast.action.label}
+          {action.label}
         </button>
-      ) : null}
+      ))}
     </div>
   );
 }
