@@ -29,6 +29,7 @@ import {
   SidebarIcon,
   WorkspaceIcon,
 } from "@/ui/components/icons";
+import { ContextMenu, ContextMenuItem } from "@/ui/components/ContextMenu";
 import { Tooltip, useTruncationTooltip } from "@/ui/components/Tooltip";
 import "./sidebar.css";
 
@@ -653,41 +654,6 @@ export function Sidebar(props: SidebarProps) {
   );
 }
 
-/**
- * Context menu の位置合わせと閉じ方（interactions.md §13）。
- *
- * 画面の右端・下端からはみ出さない位置へ寄せ、Escape と外側クリックで閉じる。
- */
-function useMenuPosition(position: { x: number; y: number }, onClose: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [adjusted, setAdjusted] = useState(position);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    setAdjusted({
-      x: Math.min(position.x, window.innerWidth - rect.width - 8),
-      y: Math.min(position.y, window.innerHeight - rect.height - 8),
-    });
-  }, [position]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    const onDown = () => onClose();
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("mousedown", onDown);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("mousedown", onDown);
-    };
-  }, [onClose]);
-
-  return { ref, style: { left: adjusted.x, top: adjusted.y } };
-}
-
 /** Context menu（interactions.md §13）。 */
 export function FileContextMenu({
   document: doc,
@@ -704,8 +670,6 @@ export function FileContextMenu({
   onClose: () => void;
   onAction: (action: string, doc: DocumentSummary) => void;
 }) {
-  const { ref, style } = useMenuPosition(position, onClose);
-
   const run = useCallback(
     (action: string) => {
       onAction(action, doc);
@@ -715,40 +679,24 @@ export function FileContextMenu({
   );
 
   return (
-    <div
-      ref={ref}
-      className="context-menu"
-      role="menu"
-      style={style}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <button type="button" role="menuitem" onClick={() => run("open")}>
-        開く
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("open-new-window")}>
+    <ContextMenu position={position} onClose={onClose}>
+      <ContextMenuItem onClick={() => run("open")}>開く</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("open-new-window")}>
         新しいウィンドウで開く
-      </button>
+      </ContextMenuItem>
       <hr />
-      <button type="button" role="menuitem" onClick={() => run("rename")}>
-        名前を変更
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("duplicate")}>
-        複製
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("copy-path")}>
-        パスをコピー
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("reveal")}>
-        エクスプローラーで表示
-      </button>
+      <ContextMenuItem onClick={() => run("rename")}>名前を変更</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("duplicate")}>複製</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("copy-path")}>パスをコピー</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("reveal")}>エクスプローラーで表示</ContextMenuItem>
       <hr />
-      <button type="button" role="menuitem" onClick={() => run(pinned ? "unpin" : "pin")}>
+      <ContextMenuItem onClick={() => run(pinned ? "unpin" : "pin")}>
         {pinned ? "ピン止めを外す" : "ピン止め"}
-      </button>
-      <button type="button" role="menuitem" onClick={() => run(archived ? "restore" : "archive")}>
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => run(archived ? "restore" : "archive")}>
         {archived ? "アーカイブから戻す" : "アーカイブ"}
-      </button>
-    </div>
+      </ContextMenuItem>
+    </ContextMenu>
   );
 }
 
@@ -769,42 +717,26 @@ export function RecentContextMenu({
   onClose: () => void;
   onAction: (action: string, file: RecentFile) => void;
 }) {
-  const { ref, style } = useMenuPosition(position, onClose);
-
   const run = (action: string) => {
     onAction(action, file);
     onClose();
   };
 
   return (
-    <div
-      ref={ref}
-      className="context-menu"
-      role="menu"
-      style={style}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <button type="button" role="menuitem" onClick={() => run("open")}>
-        開く
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("open-new-window")}>
+    <ContextMenu position={position} onClose={onClose}>
+      <ContextMenuItem onClick={() => run("open")}>開く</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("open-new-window")}>
         新しいウィンドウで開く
-      </button>
+      </ContextMenuItem>
       <hr />
-      <button type="button" role="menuitem" onClick={() => run("open-folder")}>
+      <ContextMenuItem onClick={() => run("open-folder")}>
         このフォルダを Workspace として開く
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("copy-path")}>
-        パスをコピー
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("reveal")}>
-        エクスプローラーで表示
-      </button>
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => run("copy-path")}>パスをコピー</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("reveal")}>エクスプローラーで表示</ContextMenuItem>
       <hr />
-      <button type="button" role="menuitem" onClick={() => run("forget")}>
-        履歴から削除
-      </button>
-    </div>
+      <ContextMenuItem onClick={() => run("forget")}>履歴から削除</ContextMenuItem>
+    </ContextMenu>
   );
 }
 
@@ -824,39 +756,23 @@ export function WorkspaceContextMenu({
   onClose: () => void;
   onAction: (action: string, entry: WorkspaceEntry) => void;
 }) {
-  const { ref, style } = useMenuPosition(position, onClose);
-
   const run = (action: string) => {
     onAction(action, entry);
     onClose();
   };
 
   return (
-    <div
-      ref={ref}
-      className="context-menu"
-      role="menu"
-      style={style}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <button type="button" role="menuitem" onClick={() => run("open")}>
-        開く
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("open-new-window")}>
+    <ContextMenu position={position} onClose={onClose}>
+      <ContextMenuItem onClick={() => run("open")}>開く</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("open-new-window")}>
         新しいウィンドウで開く
-      </button>
+      </ContextMenuItem>
       <hr />
-      <button type="button" role="menuitem" onClick={() => run("copy-path")}>
-        パスをコピー
-      </button>
-      <button type="button" role="menuitem" onClick={() => run("reveal")}>
-        エクスプローラーで表示
-      </button>
+      <ContextMenuItem onClick={() => run("copy-path")}>パスをコピー</ContextMenuItem>
+      <ContextMenuItem onClick={() => run("reveal")}>エクスプローラーで表示</ContextMenuItem>
       <hr />
-      <button type="button" role="menuitem" onClick={() => run("forget")}>
-        履歴から削除
-      </button>
-    </div>
+      <ContextMenuItem onClick={() => run("forget")}>履歴から削除</ContextMenuItem>
+    </ContextMenu>
   );
 }
 

@@ -18,6 +18,8 @@ import "./find.css";
 
 interface FindBarProps {
   view: EditorView | null;
+  /** 開いた時点で入れておく検索語。本文の右クリックから渡ってくる（ADR-025 §2）。 */
+  initialQuery?: string;
   onClose: () => void;
 }
 
@@ -39,8 +41,8 @@ function findMatches(text: string, query: string, caseSensitive: boolean): Match
   return matches;
 }
 
-export function FindBar({ view, onClose }: FindBarProps) {
-  const [query, setQuery] = useState("");
+export function FindBar({ view, initialQuery = "", onClose }: FindBarProps) {
+  const [query, setQuery] = useState(initialQuery);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [current, setCurrent] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);

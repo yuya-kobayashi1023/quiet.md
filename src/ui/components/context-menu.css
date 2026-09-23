@@ -1,0 +1,52 @@
+/* Context menu — interactions.md §13。 */
+
+.context-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 200px;
+  padding: 5px;
+  border-radius: var(--radius);
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-flyout);
+}
+
+.context-menu button {
+  display: block;
+  width: 100%;
+  padding: 5px 9px;
+  border-radius: 3px;
+  color: var(--text-prose);
+  font-size: var(--size-ui);
+  text-align: left;
+}
+
+.context-menu button.has-shortcut {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+}
+
+.context-menu kbd {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-subtle);
+}
+
+.context-menu button:not(:disabled):hover {
+  background: var(--selected);
+  color: var(--text-primary);
+}
+
+.context-menu button:disabled {
+  color: var(--text-subtle);
+  cursor: default;
+}
+
+.context-menu hr {
+  height: 0;
+  margin: 4px 6px;
+  border: 0;
+  border-top: 1px solid var(--border);
+}

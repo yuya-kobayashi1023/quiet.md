@@ -88,6 +88,7 @@ CodeMirror へ渡すのは Front Matter を除いた本文。Front Matter は Me
 | AUTO-050 | クリップボードの画像を貼り付けた際、画像を保存し、ノートからの相対パスで `![](...)` を挿入する。保存先は、Workspace 内のノートなら `<root>/assets/`、Workspace 外の単体ファイルなら `<ノートのフォルダ>/assets/` とする。ファイル名は `image-YYYYMMDD-HHMMSS.<ext>`（ローカル時刻。タイトルは含めない。png / jpg / gif / webp のみ）とし、同名ファイルが存在する場合は Rust 側で `-2`、`-3` … を付与する。画像のバイト列は base64 で IPC 経由で渡す。`assets/` は `.md` のみを対象とするサイドバーには表示しない。 | Medium |
 | AUTO-052 | サイドバーのピン止めアイコンには `--accent` を適用する。design-system の Accent 限定リストにはないが、Workspace 一覧の現在地アイコン（ADR-016）と同じ非文字の小要素であるため、`--accent-text` は使用しない。 | Low |
 | AUTO-053 | IME 確定時の半角化は、その composition で確定した範囲 `[compositionFrom, head)` に限定する。開始位置は ViewPlugin が `compositionstart` で記録し、変換中の変更に沿って移動させる。行頭の Markdown 記号（AUTO-040）の判定を先に行い、そちらで修正された場合は半角化を実行しない。直接入力（inputHandler）も同じ表で変換する。 | Medium |
+| AUTO-054 | 本文の右クリックメニュー（ADR-025）のうち、ADR に記載のない箇所の扱い。ブロック書式は、対象行に接頭辞を持つ行と持たない行が混在する場合、持たない行にのみ付与する。行頭で終わる選択範囲は、その行を対象に含めない。「"◯◯" を検索」の表示は、空白を 1 つに畳んだうえで 20 文字で省略する。切り取りとコピーがクリップボードへ書き込めなかった場合も、貼り付けと同様に Toast で通知する。 | Low |
 
 ## 未実装リスト
 

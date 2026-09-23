@@ -16,6 +16,10 @@ import {
 import { StatusBar, TopBar } from "@/features/shell/TopBar";
 import { useSyncScroll } from "@/features/shell/use-sync-scroll";
 import { Editor } from "@/features/editor/Editor";
+import {
+  EditorContextMenu,
+  type EditorContextTarget,
+} from "@/features/editor/EditorContextMenu";
 import { Preview } from "@/features/preview/Preview";
 import { PrintSheet } from "@/features/preview/PrintSheet";
 import { Metadata } from "@/features/frontmatter/Metadata";
@@ -119,7 +123,8 @@ export function App() {
   const [tocOpen, setTocOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [findOpen, setFindOpen] = useState(false);
+  /** Find bar。開いているあいだの初期検索語も持つ（ADR-025 §2）。 */
+  const [find, setFind] = useState<{ query: string } | null>(null);
   const [searchAllOpen, setSearchAllOpen] = useState(false);
   /** Search All から飛んできた行き先。文書を開いた後に消費する。 */
   const [pendingHit, setPendingHit] = useState<SearchHit | null>(null);
@@ -154,6 +159,7 @@ export function App() {
     entry: WorkspaceEntry;
     position: { x: number; y: number };
   } | null>(null);
+  const [editorMenu, setEditorMenu] = useState<EditorContextTarget | null>(null);
 
   const editorView = useRef<EditorView | null>(null);
   const titleInput = useRef<HTMLTextAreaElement | null>(null);
@@ -163,6 +169,8 @@ export function App() {
   const showToast = useCallback((message: string, action?: ToastState["action"]) => {
     setToast({ id: Date.now(), message, action });
   }, []);
+
+  const openFind = useCallback((query = "") => setFind({ query }), []);
 
   /**
    * 絶対パスで文書を開く（ADR-013）。
@@ -933,7 +941,7 @@ export function App() {
       { id: "split", label: "Split", shortcut: "Ctrl+2", run: () => setView("split") },
       { id: "read", label: "Read", shortcut: "Ctrl+3", run: () => setView("read") },
       { id: "settings", label: "設定", shortcut: "Ctrl+,", run: () => setSettingsOpen(true) },
-      { id: "find", label: "この文書内を検索", shortcut: "Ctrl+F", run: () => setFindOpen(true) },
+      { id: "find", label: "この文書内を検索", shortcut: "Ctrl+F", run: () => openFind() },
       {
         id: "search-all",
         label: "ワークスペース内を検索",
@@ -968,7 +976,7 @@ export function App() {
         e.preventDefault();
         // Shift 付きは Workspace 全体（ADR-011）、無しは現在の文書（U-025）。
         if (e.shiftKey) setSearchAllOpen(true);
-        else setFindOpen(true);
+        else openFind();
       } else if (key === "n") {
         e.preventDefault();
         void newNote();
@@ -985,7 +993,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [newNote, openFile]);
+  }, [newNote, openFile, openFind]);
 
   /* ---------------------------------------------------------------- *
    * Render
@@ -1099,8 +1107,14 @@ export function App() {
             {session ? (
               <>
                 <section className="pane editor-pane" ref={editorPane}>
-                  {findOpen ? (
-                    <FindBar view={editorView.current} onClose={() => setFindOpen(false)} />
+                  {find ? (
+                    // 選択文字列で開き直したときに入力欄へ入れ直すため、検索語を key にする。
+                    <FindBar
+                      key={find.query}
+                      view={editorView.current}
+                      initialQuery={find.query}
+                      onClose={() => setFind(null)}
+                    />
                   ) : null}
                   <div className="editor-wrap">
                     {session.problem ? (
@@ -1169,6 +1183,7 @@ export function App() {
                         restoreCursor(view, session.path);
                       }}
                       onPasteImage={savePastedImage}
+                      onContextMenu={setEditorMenu}
                     />
                   </div>
                 </section>
@@ -1262,6 +1277,16 @@ export function App() {
         />
       ) : null}
 
+      {editorMenu ? (
+        <EditorContextMenu
+          target={editorMenu}
+          view={editorView.current}
+          onSearch={openFind}
+          onError={showToast}
+          onClose={() => setEditorMenu(null)}
+        />
+      ) : null}
+
       {moreMenu ? (
         <div
           className="context-menu"
@@ -1286,7 +1311,7 @@ export function App() {
             type="button"
             role="menuitem"
             onClick={() => {
-              setFindOpen(true);
+              openFind();
               setMoreMenu(null);
             }}
           >

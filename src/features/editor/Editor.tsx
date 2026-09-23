@@ -15,8 +15,10 @@
 import { useEffect, useRef } from "react";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { redoDepth, undoDepth } from "@codemirror/commands";
 import { indentUnit } from "@codemirror/language";
 import { baseTheme, coreExtensions } from "./extensions";
+import type { EditorContextTarget } from "./EditorContextMenu";
 import { fullWidthInput } from "./fullwidth-input";
 import { imagePaste, type ImageSaver } from "./image-paste";
 import "./editor.css";
@@ -39,6 +41,8 @@ interface EditorProps {
   onReady: (view: EditorView) => void;
   /** クリップボードの画像を保存して相対パスを返す。無ければ画像の貼り付けは既定のまま。 */
   onPasteImage?: ImageSaver;
+  /** 本文の右クリック（ADR-025）。無ければ WebView の既定メニューのまま。 */
+  onContextMenu?: (target: EditorContextTarget) => void;
 }
 
 export function Editor({
@@ -54,6 +58,7 @@ export function Editor({
   onCursorChange,
   onReady,
   onPasteImage,
+  onContextMenu,
 }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -66,8 +71,8 @@ export function Editor({
 
   // 最新の callback を ref 経由で参照する。
   // これらの変化で Editor を作り直すと、そのたびにカーソルが飛ぶ（U-008）。
-  const callbacks = useRef({ onChange, onCursorChange, onReady, onPasteImage });
-  callbacks.current = { onChange, onCursorChange, onReady, onPasteImage };
+  const callbacks = useRef({ onChange, onCursorChange, onReady, onPasteImage, onContextMenu });
+  callbacks.current = { onChange, onCursorChange, onReady, onPasteImage, onContextMenu };
   const initial = useRef({
     initialText,
     fontSize,
@@ -103,6 +108,29 @@ export function Editor({
       ),
       // アプリ側の saver が要るので coreExtensions には入れない。
       imagePaste(() => callbacks.current.onPasteImage),
+      EditorView.domEventHandlers({
+        contextmenu: (event, view) => {
+          const handler = callbacks.current.onContextMenu;
+          if (!handler) return false;
+          event.preventDefault();
+
+          // 選択の外を押したらそこへカーソルを移す。項目の対象を見た目と合わせる（ADR-025 §3）。
+          const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+          const before = view.state.selection.main;
+          if (pos != null && (pos < before.from || pos > before.to)) {
+            view.dispatch({ selection: { anchor: pos } });
+          }
+
+          const selection = view.state.selection.main;
+          handler({
+            position: { x: event.clientX, y: event.clientY },
+            selected: view.state.sliceDoc(selection.from, selection.to),
+            canUndo: undoDepth(view.state) > 0,
+            canRedo: redoDepth(view.state) > 0,
+          });
+          return true;
+        },
+      }),
       baseTheme,
       wrapCompartment.current.of(settings.lineWrap ? EditorView.lineWrapping : []),
       tabCompartment.current.of([
