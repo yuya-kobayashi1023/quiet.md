@@ -2,7 +2,8 @@
  * Tooltip。
  *
  * ui-spec.md §2 / interactions.md §11:
- * - 実際に省略されている場合だけ出す
+ * - ファイル名は実際に省略されている場合だけ出す
+ * - アイコンだけのボタンは常に名前を出す（`TooltipButton`）
  * - Browser native `title` に依存しない
  * - Keyboard focus でも出す
  * - Tooltip に操作を置かない
@@ -10,7 +11,15 @@
  * Screen reader からも参照できるよう aria-describedby で結ぶ。
  */
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type Ref,
+} from "react";
 import { createPortal } from "react-dom";
 import "./tooltip.css";
 
@@ -20,10 +29,13 @@ export function Tooltip({
   id,
   text,
   anchor,
+  shortcut,
 }: {
-  id: string;
+  id?: string;
   text: string;
   anchor: DOMRect;
+  /** 渡すとボタンの名前として出す（UI の字）。渡さなければファイル名・パス用（等幅）。 */
+  shortcut?: string | null;
 }) {
   const [style, setStyle] = useState<React.CSSProperties>({
     left: anchor.right + 9,
@@ -48,8 +60,15 @@ export function Tooltip({
   }, [anchor]);
 
   return createPortal(
-    <div ref={ref} id={id} role="tooltip" className="tooltip" style={style}>
+    <div
+      ref={ref}
+      id={id}
+      role="tooltip"
+      className={shortcut === undefined ? "tooltip" : "tooltip tooltip--label"}
+      style={style}
+    >
       {text}
+      {shortcut ? <span className="tooltip-key">{shortcut}</span> : null}
     </div>,
     document.body,
   );
@@ -99,4 +118,76 @@ export function useTruncationTooltip(text: string, options?: { always?: boolean 
       "aria-describedby": anchor ? id : undefined,
     },
   };
+}
+
+/**
+ * アイコンだけのボタン。名前（と shortcut）を Tooltip で出す。
+ *
+ * 名前は aria-label で読み上げるので、Tooltip は aria-describedby で結ばない。
+ * マウスで押したときの focus では出さない。押した直後に吹き出しが残るため。
+ */
+export function TooltipButton({
+  label,
+  shortcut,
+  ref,
+  onMouseEnter,
+  onMouseLeave,
+  onFocus,
+  onBlur,
+  onPointerDown,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  label: string;
+  /** 表示用の書き方（例: `Ctrl+B`）。 */
+  shortcut?: string;
+  ref?: Ref<HTMLButtonElement>;
+}) {
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const show = (target: HTMLElement) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setAnchor(target.getBoundingClientRect()), DELAY);
+  };
+  const hide = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setAnchor(null);
+  };
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  return (
+    <button
+      type="button"
+      {...props}
+      ref={ref}
+      aria-label={label}
+      aria-keyshortcuts={shortcut?.replace("Ctrl", "Control")}
+      onMouseEnter={(e) => {
+        show(e.currentTarget);
+        onMouseEnter?.(e);
+      }}
+      onMouseLeave={(e) => {
+        hide();
+        onMouseLeave?.(e);
+      }}
+      onFocus={(e) => {
+        if (e.currentTarget.matches(":focus-visible")) show(e.currentTarget);
+        onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        hide();
+        onBlur?.(e);
+      }}
+      onPointerDown={(e) => {
+        hide();
+        onPointerDown?.(e);
+      }}
+    >
+      {props.children}
+      {anchor ? <Tooltip text={label} shortcut={shortcut ?? null} anchor={anchor} /> : null}
+    </button>
+  );
 }

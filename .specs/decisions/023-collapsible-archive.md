@@ -40,9 +40,9 @@ Archive の見出しを押して開閉できるようにし、既定は閉じた
 
 現状の挙動を維持し、アーカイブが 1 件もない Workspace では Archive の見出しも表示しない。
 
-### 6. Collapsed rail は変えない
+### 6. Collapsed rail の Archive アイコンは Archive 区分も開く（2026-09-23 改訂）
 
-Collapsed rail（ADR-006）の Archive アイコンの挙動は変更せず、従来どおり Sidebar を開く。開いた先で Archive 区分が閉じているかどうかは §3 の規則に従う。
+Collapsed rail（ADR-006）の Archive アイコンを押すと、Archive 区分を開いた状態で Sidebar を開く。当初は Sidebar を開くだけとしていたが、区分が閉じたままだと押してもアーカイブが表示されなかったためである。
 
 ### 7. Sidebar の下端へ固定する（2026-09-23 追記）
 
