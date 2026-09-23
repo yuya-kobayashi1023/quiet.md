@@ -47,15 +47,16 @@
 /*
  * 見出しごと disclosure にする。既定は畳んだ状態。
  * Recent（ADR-013 Amendment）と Archive（ADR-023）が共有する。
+ *
+ * ホバーで背景は塗らない。caret で開閉できることは分かるうえ、下端に並ぶ 2 つの見出しは
+ * 間が詰まっていて、塗ると隣の区切り線にかかる。文字色の変化だけに留める。
  */
 .section-head--toggle {
   width: 100%;
-  border-radius: var(--radius);
-  transition: background var(--duration-hover) var(--ease);
 }
 
-.section-head--toggle:hover {
-  background: var(--selected);
+.section-head--toggle .section-label {
+  transition: color var(--duration-hover) var(--ease);
 }
 
 .section-head--toggle:hover .section-label {
