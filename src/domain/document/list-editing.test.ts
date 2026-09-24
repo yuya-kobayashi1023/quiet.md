@@ -111,6 +111,32 @@ describe("項目 + Tab", () => {
   it("リストでない行では何もしない", () => {
     expect(handleIndent("plain text|".replace("|", ""), 5)).toBeNull();
   });
+
+  it("番号付きの項目は 1 から振り直し、親の本文の頭まで下げる", () => {
+    expectTransition("1. A\n2. B|", handleIndent, "1. A\n   1. B|");
+  });
+
+  it("下げた先に番号付きの兄弟があれば続きの番号にする", () => {
+    expectTransition(
+      "1. A\n   1. B\n   2. C\n2. D|",
+      handleIndent,
+      "1. A\n   1. B\n   2. C\n   3. D|",
+    );
+  });
+
+  it("番号の区切り文字は保つ", () => {
+    expectTransition("1) A\n2) B|", handleIndent, "1) A\n   1) B|");
+  });
+
+  it("桁の多い番号の下では、その本文の頭まで下げる", () => {
+    expectTransition("10. A\n11. B|", handleIndent, "10. A\n    1. B|");
+  });
+
+  it("本文の頭より字下げ幅が広ければ字下げ幅を使う", () => {
+    const { text, pos } = cursorOf("1. A\n2. B|");
+    const result = apply(text, handleIndent(text, pos, 4)!);
+    expect(result.text).toBe("1. A\n    1. B");
+  });
 });
 
 /* ------------------------------------------------------------------ *
@@ -127,6 +153,14 @@ describe("項目 + Shift+Tab", () => {
       "- A\n  - B\n    - C|",
       handleOutdent,
       "- A\n  - B\n  - C|",
+    );
+  });
+
+  it("番号付きの項目は戻り先の続きの番号にする", () => {
+    expectTransition(
+      "1. A\n2. B\n   1. C\n   2. D|",
+      handleOutdent,
+      "1. A\n2. B\n   1. C\n3. D|",
     );
   });
 
