@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  handleBackspace,
   handleEnter,
   handleIndent,
   handleOutdent,
@@ -111,6 +112,32 @@ describe("項目 + Tab", () => {
   it("リストでない行では何もしない", () => {
     expect(handleIndent("plain text|".replace("|", ""), 5)).toBeNull();
   });
+
+  it("番号付きの項目は 1 から振り直し、親の本文の頭まで下げる", () => {
+    expectTransition("1. A\n2. B|", handleIndent, "1. A\n   1. B|");
+  });
+
+  it("下げた先に番号付きの兄弟があれば続きの番号にする", () => {
+    expectTransition(
+      "1. A\n   1. B\n   2. C\n2. D|",
+      handleIndent,
+      "1. A\n   1. B\n   2. C\n   3. D|",
+    );
+  });
+
+  it("番号の区切り文字は保つ", () => {
+    expectTransition("1) A\n2) B|", handleIndent, "1) A\n   1) B|");
+  });
+
+  it("桁の多い番号の下では、その本文の頭まで下げる", () => {
+    expectTransition("10. A\n11. B|", handleIndent, "10. A\n    1. B|");
+  });
+
+  it("本文の頭より字下げ幅が広ければ字下げ幅を使う", () => {
+    const { text, pos } = cursorOf("1. A\n2. B|");
+    const result = apply(text, handleIndent(text, pos, 4)!);
+    expect(result.text).toBe("1. A\n    1. B");
+  });
 });
 
 /* ------------------------------------------------------------------ *
@@ -127,6 +154,14 @@ describe("項目 + Shift+Tab", () => {
       "- A\n  - B\n    - C|",
       handleOutdent,
       "- A\n  - B\n  - C|",
+    );
+  });
+
+  it("番号付きの項目は戻り先の続きの番号にする", () => {
+    expectTransition(
+      "1. A\n2. B\n   1. C\n   2. D|",
+      handleOutdent,
+      "1. A\n2. B\n   1. C\n3. D|",
     );
   });
 
@@ -271,5 +306,42 @@ describe("parseListItem", () => {
   it("空判定はチェックボックスを本文に数えない", () => {
     const { text, pos } = cursorOf("- [ ] |");
     expect(isEmptyItem(parseListItem(text, pos)!)).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * 記号だけの項目 + Backspace → 行ごと消して上の行末へ
+ * ------------------------------------------------------------------ */
+
+describe("記号だけの項目 + Backspace", () => {
+  it("行ごと消して 1 つ上の行末へ戻る", () => {
+    expectTransition("- Item A\n- |", handleBackspace, "- Item A|");
+  });
+
+  it("字下げされた項目も 1 回で消す", () => {
+    expectTransition("- A\n  - B\n    - |", handleBackspace, "- A\n  - B|");
+  });
+
+  it("番号付きとチェックボックスだけの項目も消す", () => {
+    expectTransition("1. A\n2. |", handleBackspace, "1. A|");
+    expectTransition("- [ ] A\n- [ ] |", handleBackspace, "- [ ] A|");
+  });
+
+  it("後ろの行はそのまま残す", () => {
+    expectTransition("- A\n- |\n- C", handleBackspace, "- A|\n- C");
+  });
+
+  it("文書の先頭行なら記号だけを消す", () => {
+    expectTransition("- |\n次の行", handleBackspace, "|\n次の行");
+  });
+
+  it("本文がある項目には介入しない", () => {
+    const { text, pos } = cursorOf("- A|");
+    expect(handleBackspace(text, pos)).toBeNull();
+  });
+
+  it("カーソルが記号より前にあれば介入しない", () => {
+    const { text, pos } = cursorOf("- A\n  |- ");
+    expect(handleBackspace(text, pos)).toBeNull();
   });
 });

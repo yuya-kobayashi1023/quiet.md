@@ -286,24 +286,77 @@ export function handleEnter(text: string, pos: number, tabWidth = 2): EditChange
   };
 }
 
-function shiftIndent(item: ListItem, nextIndent: string, pos: number): EditChange {
-  const removed = item.indent.length;
+/** indent と marker を差し替える。本文から見たカーソル位置は保つ。 */
+function reshape(
+  item: ListItem,
+  nextIndent: string,
+  nextMarkerText: string,
+  pos: number,
+): EditChange {
+  const removed = item.indent.length + item.marker.length;
+  const inserted = nextIndent + nextMarkerText;
   const cursorInLine = Math.max(pos - item.lineStart, removed);
   return {
     from: item.lineStart,
     to: item.lineStart + removed,
-    insert: nextIndent,
-    cursor: item.lineStart + cursorInLine - removed + nextIndent.length,
+    insert: inserted,
+    cursor: item.lineStart + cursorInLine - removed + inserted.length,
   };
 }
 
-/** Tab。1 段深くする。 */
+/**
+ * 移った先の階層で使う marker。
+ *
+ * 番号付きの項目は、その階層に先行する番号付きの兄弟がいれば続きの番号、
+ * いなければ 1 から振り直す。字下げした項目が親の連番を引き継がないように。
+ */
+function markerAt(
+  item: ListItem,
+  lines: RawLine[],
+  lineIndex: number,
+  targetWidth: number,
+  tabWidth: number,
+): string {
+  if (!item.ordered) return item.marker;
+  const sibling = findSiblingAt(lines, lineIndex, targetWidth, tabWidth);
+  if (sibling?.ordered) {
+    return nextMarker({
+      marker: sibling.parsed.marker,
+      ordered: true,
+      number: sibling.number,
+    });
+  }
+  return `1${item.marker.slice(-1)}`;
+}
+
+/**
+ * Tab。1 段深くする。
+ *
+ * 直前の兄弟の本文の頭までは必ず下げる。`1. ` の下を 2 桁しか下げないと、
+ * CommonMark では子ではなく同じリストの兄弟として読まれるため。
+ */
 export function handleIndent(text: string, pos: number, tabWidth = 2): EditChange | null {
   const item = parseListItem(text, pos, tabWidth);
   if (!item) return null;
-  // タブでインデントされた文書はタブのまま、それ以外は空白で揃える。
-  const unit = item.indent.includes("\t") ? "\t" : " ".repeat(tabWidth);
-  return shiftIndent(item, item.indent + unit, pos);
+
+  const lines = splitLines(text);
+  const lineIndex = lineIndexAt(lines, pos);
+  const ownWidth = widthOf(item.indent, tabWidth);
+
+  let nextIndent: string;
+  if (item.indent.includes("\t")) {
+    // タブでインデントされた文書はタブのまま。
+    nextIndent = item.indent + "\t";
+  } else {
+    const parent = findSiblingAt(lines, lineIndex, ownWidth, tabWidth);
+    const parentContent = parent
+      ? ownWidth + parent.parsed.marker.length + widthOf(parent.parsed.spacing, tabWidth)
+      : 0;
+    nextIndent = " ".repeat(Math.max(ownWidth + tabWidth, parentContent));
+  }
+
+  const marker = markerAt(item, lines, lineIndex, widthOf(nextIndent, tabWidth), tabWidth);
+  return reshape(item, nextIndent, marker, pos);
 }
 
 /** Shift+Tab。1 段浅くする。すでに一番外側なら何もしない。 */
@@ -324,5 +377,28 @@ export function handleOutdent(text: string, pos: number, tabWidth = 2): EditChan
       ? item.indent.slice(0, -1)
       : " ".repeat(targetWidth);
 
-  return shiftIndent(item, nextIndent, pos);
+  const marker = markerAt(item, lines, lineIndex, widthOf(nextIndent, tabWidth), tabWidth);
+  return reshape(item, nextIndent, marker, pos);
+}
+
+/**
+ * Backspace。記号だけの項目を行ごと消し、1 つ上の行末へ戻る。
+ *
+ * 既定の動作では字下げ、記号、空白を 1 つずつ消すことになり、何度も押す必要がある。
+ * 本文がある項目や、カーソルが記号より前にあるときは既定の動作に任せる。
+ */
+export function handleBackspace(text: string, pos: number, tabWidth = 2): EditChange | null {
+  const item = parseListItem(text, pos, tabWidth);
+  if (!item || !isEmptyItem(item)) return null;
+
+  const prefixEnd =
+    item.lineStart +
+    item.indent.length +
+    item.marker.length +
+    item.spacing.length +
+    (item.checkbox?.length ?? 0);
+  if (pos < prefixEnd) return null;
+
+  const from = Math.max(0, item.lineStart - 1);
+  return { from, to: item.lineEnd, insert: "", cursor: from };
 }
