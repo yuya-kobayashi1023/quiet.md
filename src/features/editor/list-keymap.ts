@@ -7,6 +7,7 @@
 
 import { keymap, type Command, type EditorView } from "@codemirror/view";
 import {
+  handleBackspace,
   handleEnter,
   handleIndent,
   handleOutdent,
@@ -39,6 +40,7 @@ function run(view: EditorView, handler: Handler): boolean {
 const enterInList: Command = (view) => run(view, handleEnter);
 const indentInList: Command = (view) => run(view, handleIndent);
 const outdentInList: Command = (view) => run(view, handleOutdent);
+const backspaceInList: Command = (view) => run(view, handleBackspace);
 
 /**
  * テストから直接叩くための入口。
@@ -50,6 +52,7 @@ export const listCommands = {
   enter: enterInList,
   indent: indentInList,
   outdent: outdentInList,
+  backspace: backspaceInList,
 };
 
 /**
@@ -65,4 +68,5 @@ export const listKeymap = keymap.of([
   { key: "Enter", run: enterInList },
   { key: "Tab", run: indentInList },
   { key: "Shift-Tab", run: outdentInList },
+  { key: "Backspace", run: backspaceInList },
 ]);

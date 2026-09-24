@@ -380,3 +380,25 @@ export function handleOutdent(text: string, pos: number, tabWidth = 2): EditChan
   const marker = markerAt(item, lines, lineIndex, widthOf(nextIndent, tabWidth), tabWidth);
   return reshape(item, nextIndent, marker, pos);
 }
+
+/**
+ * Backspace。記号だけの項目を行ごと消し、1 つ上の行末へ戻る。
+ *
+ * 既定の動作では字下げ、記号、空白を 1 つずつ消すことになり、何度も押す必要がある。
+ * 本文がある項目や、カーソルが記号より前にあるときは既定の動作に任せる。
+ */
+export function handleBackspace(text: string, pos: number, tabWidth = 2): EditChange | null {
+  const item = parseListItem(text, pos, tabWidth);
+  if (!item || !isEmptyItem(item)) return null;
+
+  const prefixEnd =
+    item.lineStart +
+    item.indent.length +
+    item.marker.length +
+    item.spacing.length +
+    (item.checkbox?.length ?? 0);
+  if (pos < prefixEnd) return null;
+
+  const from = Math.max(0, item.lineStart - 1);
+  return { from, to: item.lineEnd, insert: "", cursor: from };
+}

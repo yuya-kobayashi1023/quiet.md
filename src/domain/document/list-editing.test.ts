@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  handleBackspace,
   handleEnter,
   handleIndent,
   handleOutdent,
@@ -305,5 +306,42 @@ describe("parseListItem", () => {
   it("空判定はチェックボックスを本文に数えない", () => {
     const { text, pos } = cursorOf("- [ ] |");
     expect(isEmptyItem(parseListItem(text, pos)!)).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * 記号だけの項目 + Backspace → 行ごと消して上の行末へ
+ * ------------------------------------------------------------------ */
+
+describe("記号だけの項目 + Backspace", () => {
+  it("行ごと消して 1 つ上の行末へ戻る", () => {
+    expectTransition("- Item A\n- |", handleBackspace, "- Item A|");
+  });
+
+  it("字下げされた項目も 1 回で消す", () => {
+    expectTransition("- A\n  - B\n    - |", handleBackspace, "- A\n  - B|");
+  });
+
+  it("番号付きとチェックボックスだけの項目も消す", () => {
+    expectTransition("1. A\n2. |", handleBackspace, "1. A|");
+    expectTransition("- [ ] A\n- [ ] |", handleBackspace, "- [ ] A|");
+  });
+
+  it("後ろの行はそのまま残す", () => {
+    expectTransition("- A\n- |\n- C", handleBackspace, "- A|\n- C");
+  });
+
+  it("文書の先頭行なら記号だけを消す", () => {
+    expectTransition("- |\n次の行", handleBackspace, "|\n次の行");
+  });
+
+  it("本文がある項目には介入しない", () => {
+    const { text, pos } = cursorOf("- A|");
+    expect(handleBackspace(text, pos)).toBeNull();
+  });
+
+  it("カーソルが記号より前にあれば介入しない", () => {
+    const { text, pos } = cursorOf("- A\n  |- ");
+    expect(handleBackspace(text, pos)).toBeNull();
   });
 });
