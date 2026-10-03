@@ -58,6 +58,8 @@
   --statusbar-height: 28px;
   --editor-column: 760px;
   --preview-column: 700px;
+  /* Read はペインを独り占めするので、Split のプレビューより広く取る。17px で全角およそ 50 字。 */
+  --read-column: 860px;
 
   /* --- Radius（§5） --- */
   --radius: 4px;
