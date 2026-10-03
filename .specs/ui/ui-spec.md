@@ -29,6 +29,7 @@ DesktopのContent Areaは次を基本とする。
 | Status bar | 28px |
 | Main editor column | max 760px |
 | Preview column | max 700px |
+| Read column | max 860px |
 
 数値変更は許可するが、Productionで大きく変える場合はDesign review対象。
 
